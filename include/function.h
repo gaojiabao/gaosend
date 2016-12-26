@@ -33,7 +33,7 @@ uint8_t	GetRandomLayer4Pro();
 char*	ChangeLayer4HexToString(uint16_t);
 uint16_t	GetL3Hex(char*);
 uint8_t	GetL4Hex(char*);
-void	ProgramProcessingSchedule(int, int);
+void	ProgramProgress(int, int);
 char*	subs(char*, int, int);
 void	DisplayPacketData(char*, int);
 int		ProtocolConversion(char* );

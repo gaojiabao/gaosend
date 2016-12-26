@@ -428,7 +428,7 @@ void chgip6(char* file)
         }
         //_ip6hdr* ip6_hdr = (_ip6hdr*)ipbuf;
         //matching
-        if (compare(ipbuf,buf1_temp)) {
+        if (CompareIpv6Address(ipbuf,buf1_temp)) {
             //amend
             for(i=0;i<sizeof(struct in6_addr);i++) {
                 ipbuf[8+i]=buf1[i];

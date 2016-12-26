@@ -376,26 +376,20 @@ uint8_t GetL4Hex(char* pro)
 }
 
 /* to show program process */
-void ProgramProcessingSchedule(int iVaribleNum, int iStanderNum)
+void ProgramProgress(int iVaribleNum, int iStanderNum)
 {
     // to display program process with 20 '>'
-    int iProgressBarLongth = 20;
-    int iProgressTotleLongth = iProgressBarLongth;
-    int iProgressPercent = iVaribleNum * iProgressBarLongth / iStanderNum ;
-    static int iLastPercent = -1;
+    int iProgressBarLength = 20;
+    int iProgressPercent = iVaribleNum * iProgressBarLength / iStanderNum ;
+    static int iProgressPercentLength = 2; // percentage position length
+    static int iLastPercent = -1; // remeber last percent, can't equal
     static unsigned int iCounter = 1;
 
     int i, j, k;
     if (iProgressPercent != iLastPercent) {
         if (iCounter != 1) {
-            // deal with precent
-            if (iCounter > 3) {
-                iProgressTotleLongth += 3;
-            } else {
-                iProgressTotleLongth += 2;
-            }
             // back to init state
-            for (i=0; i<iProgressTotleLongth; i++) {
+            for (i=0; i<iProgressBarLength+iProgressPercentLength; i++) {
                 putchar('\b');
             }
         }
@@ -404,42 +398,21 @@ void ProgramProcessingSchedule(int iVaribleNum, int iStanderNum)
         for (j=0; j<iProgressPercent; j++) {
             putchar('>');
         }
-        for (k=iProgressBarLongth-1; k>=iProgressPercent; k--) {
+        for (k=iProgressBarLength-1; k>=iProgressPercent; k--) {
             putchar('=');
         }
-        printf("%d%%", iProgressPercent * 5); // true percentage
+        printf("%d%%", iProgressPercent * (100 / iProgressBarLength)); // true percentage
+
         iLastPercent = iProgressPercent;
         fflush(stdout);
+
+        // deal with precent which grate than 10%
+        if (iProgressPercent > 1) {
+            iProgressPercentLength = 3;
+        }
         iCounter++;
     }
 }
-
-/*
-void ProgramProcessingSchedule(int iVaribleNum, int iStanderNum)
-{
-    // to display program process with 5 "*"
-    if (!iStanderNum) {
-        return;
-    }
-
-    if (iStanderNum < 10) {
-        if (iVaribleNum == iStanderNum) {
-            printf(".....\n");
-        }
-    } else {
-        if (iVaribleNum == (int)(iStanderNum * 0.2) ||
-                iVaribleNum == (int)(iStanderNum * 0.4) ||
-                iVaribleNum == (int)(iStanderNum * 0.6) ||
-                iVaribleNum == (int)(iStanderNum * 0.8)) {
-            printf(".");
-            fflush(stdout);
-        }
-        if (iVaribleNum == iStanderNum) {
-            printf(".\n");
-        }
-    }
-}
-*/
 
 /* to DisplayPacketData a packet */
 void DisplayPacketData(char* pcPacket, int iPacketLength)
@@ -462,8 +435,8 @@ void memPcpy(char* dst, int pos, char* src, int len)
         dst[pos+i] = src[i];
 }
 
-/* compare ip */
-int compare(unsigned char* src,unsigned char* dst)
+/* compare ipv6 address */
+int CompareIpv6Address(unsigned char* src,unsigned char* dst)
 {
     int len = sizeof(struct in6_addr), i;
     for (i=0; i<len; i++) {

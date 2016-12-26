@@ -558,7 +558,7 @@ void BuildPacket()
         usleep(interval);
 
         /* display program process */
-        ProgramProcessingSchedule(++iLoopNum, counter);
+        ProgramProgress(++iLoopNum, counter);
     }//end of while
     printf("\n");
 

@@ -39,7 +39,6 @@ typedef struct pseudohdr{
     uint16_t	len;
 }_pseudohdr;
 
-
 typedef struct machdr {
     unsigned char	dmac[6];
     unsigned char	smac[6];

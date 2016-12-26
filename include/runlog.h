@@ -1,15 +1,7 @@
 #ifndef __RUNLOG_H__
 #define __RUNLOG_H__
 
-/*
-#define	ERROR	"ERROR"
-#define	WARNING	"WARNING"
-#define DEBUG	"DEBUG"
-#define INFO	"INFO"
-*/
-
-enum 
-{
+enum {
 	ERROR,
 	WARNING,
 	DEBUG,

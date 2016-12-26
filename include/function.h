@@ -15,25 +15,31 @@ char	ChangeHexToString(int);
 char*	GetUrlString();
 int		GetRandomNumber();
 char*	GetRandomCharactor(int);
-char*	GetIncreaseMacAddress(int);
-char*	GetRandomMacAddress(int);
 int		mac_type_change (char *, char *);
-char*	GetRandomIpAddress(int);
+
+char*	GetIncreaseMacAddress(int);
 char*	GetIncreaseIpAddress(int);
 int		GetIncreasePort(int);
-int		GetRandomPort();
-int		GetRandomPacketLength();
 int		GetIncreasePacketLength();
 int		GetIncreaseVlan(int);
+
+char*	GetRandomMacAddress(int);
+char*	GetRandomIpAddress(int);
+int		GetRandomPort();
 int		GetRandomVlan();
+int		GetRandomPacketLength();
 uint8_t	GetRandomLayer4Pro();
+
 char*	ChangeLayer4HexToString(uint16_t);
-uint16_t	GetHex(char*);
+uint16_t	GetL3Hex(char*);
+uint8_t	GetL4Hex(char*);
 void	ProgramProcessingSchedule(int, int);
 char*	subs(char*, int, int);
 void	DisplayPacketData(char*, int);
-char*	m_option(int ,char** );
 int		ProtocolConversion(char* );
 
+int CheckIpLegal(char* );
+#define FALSE 0
+#define SUCCESS 1
 #endif
 

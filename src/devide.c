@@ -5,61 +5,61 @@
 #include "packet.h"
 #include "default.h"
 #include "runlog.h"
+#include "storage.h"
+#include "function.h"
 
 void memPcpy(char*, int, char*, int);
-void UseTimesFunction(int);
 
-void devide(char* file)
+void DevidePacket()
 {
-	int  iFdIn,iFdOut;
-	int  totle_len;
-	int  iFileNameSuffix = 1;
-	char name[20];
-	char pcaphdr[PCAPHDRLEN];
-	char pkthdr[PKTHDRLEN];
-	char data[PKTMAXLEN];
-	char packet[PKTMAXLEN];
+    int  iFdIn,iFdOut;
+    int  totle_len;
+    int  iFileNameSuffix = 1;
+    char name[20];
+    char pcaphdr[PCAPHDRLEN];
+    char pkthdr[PKTHDRLEN];
+    char data[PKTMAXLEN];
+    char packet[PKTMAXLEN];
+    char* file = GetcValue("readfile");
+    _pkthdr *p = (_pkthdr*)pkthdr;
 
-	UseTimesFunction(+1);
+    LOGRECORD(DEBUG, "Devide Packet start...");
+    if ((iFdIn = open(file, O_RDWR)) < 0) {
+        LOGRECORD(ERROR, "open file error");
+    }
 
-	_pkthdr *p = (_pkthdr*)pkthdr;
+    if (read(iFdIn, pcaphdr, PCAPHDRLEN) < 0) {
+        LOGRECORD(ERROR, "read pcaphdr error");
+    }
 
-	if((iFdIn = open(file, O_RDWR)) < 0){
-		LOGRECORD(ERROR, "open file error");
-	}
+    char *fileName = strtok(file, ".");
+    while (read(iFdIn, pkthdr, PKTHDRLEN)) {
+        DisplayPacketData(pkthdr, 16);
+        sprintf(name, "%s-%d.pcap", fileName,iFileNameSuffix++);
+        memPcpy(packet, 0, pcaphdr, PCAPHDRLEN);
+        memPcpy(packet, PCAPHDRLEN, pkthdr, PKTHDRLEN);
 
-	if(read(iFdIn, pcaphdr, PKTHDRLEN) < 0){
-		LOGRECORD(ERROR, "read pcaphdr error");
-	}
+        if (read(iFdIn, data, p->len) < 0) {
+            LOGRECORD(ERROR, "read data error");
+        }
+        memPcpy(packet, PCAPHDRLEN+PKTHDRLEN, data, p->len);
+        totle_len = PCAPHDRLEN + PKTHDRLEN + p->len;
+        
+        if ((iFdOut = open(name, O_RDWR | O_APPEND | O_CREAT, PERM)) < 0) {
+            LOGRECORD(ERROR, "open file error");
+        }
 
-	char *fileName = strtok(file, ".");
-	while(read(iFdIn, pkthdr, PKTHDRLEN)){
-		sprintf(name, "%s-%d.pcap", fileName,iFileNameSuffix++);
-		memPcpy(packet, 0, pcaphdr, PCAPHDRLEN);
-		memPcpy(packet, PCAPHDRLEN, pkthdr, PKTHDRLEN);
+        if (write(iFdOut, packet, totle_len) < 0) {
+            LOGRECORD(ERROR, "write file error");
+        }
+        memset(packet, 0, sizeof(packet));
+        memset(pkthdr, 0, sizeof(pkthdr));
+        memset(data, 0, sizeof(data));
 
-		if(read(iFdIn, data, p->len) < 0){
-			LOGRECORD(ERROR, "read data error");
-		}
-		memPcpy(packet, PCAPHDRLEN+PKTHDRLEN, data, p->len);
-		totle_len = PCAPHDRLEN + PKTHDRLEN + p->len;
-		
-		if((iFdOut = open(name, O_RDWR | O_APPEND | O_CREAT, PERM)) < 0){
-			LOGRECORD(ERROR, "open file error");
-		}
+        close(iFdOut);
+    }// end of while
 
-		if(write(iFdOut, packet, totle_len) < 0){
-			LOGRECORD(ERROR, "write file error");
-		}
-		memset(packet, 0, sizeof(packet));
-		memset(pkthdr, 0, sizeof(pkthdr));
-		memset(data, 0, sizeof(data));
-
-		close(iFdOut);
-	}// end of while
-
-	close(iFdIn);
-	LOGRECORD(DEBUG, "pcap file devide finished");
-	PROGRAMEND();
+    close(iFdIn);
+    LOGRECORD(DEBUG, "Devide Packet finished...");
 }
 

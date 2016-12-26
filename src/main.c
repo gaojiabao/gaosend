@@ -1,113 +1,181 @@
-#include	<stdio.h>
+#include    <stdio.h>
+#include    <stdlib.h>
 #include    <getopt.h>
+#include    "auth.h"
+#include    "storage.h"
+#include    "runlog.h"
+#include    "default.h"
 
-#include	"auth.h"
-#include	"list_single.h"
-#include	"default.h"
+void BuildPacket();
+void DevidePacket(); 
+void ModifyPacket(); 
+void DuplicatePacket();
+void AnalysePacket(); 
+void MergePacket(int, char**); 
+void SwitchPcapFormat();  
 
-struct option original_opts[] = {
+struct option LongOptions[] = {
     {.name = "smac",      .has_arg = optional_argument, .val = 'a'}, 
     {.name = "dmac",      .has_arg = optional_argument, .val = 'b'}, 
     {.name = "sip",       .has_arg = optional_argument, .val = 's'}, 
     {.name = "dip",       .has_arg = optional_argument, .val = 'd'}, 
     {.name = "sport",     .has_arg = optional_argument, .val = 'P'}, 
     {.name = "dport",     .has_arg = optional_argument, .val = 'Q'}, 
-    {.name = "len",       .has_arg = optional_argument, .val = 'l'}, 
-    {.name = "l3pro",     .has_arg = optional_argument, .val = 'q'}, 
-    {.name = "l4pro",     .has_arg = optional_argument, .val = 'p'}, 
-    {.name = "l7pro",     .has_arg = optional_argument, .val = 'H'}, 
     {.name = "vlan1",     .has_arg = optional_argument, .val = 'V'}, 
     {.name = "vlan2",     .has_arg = optional_argument, .val = 'W'}, 
+    {.name = "protocol",  .has_arg = optional_argument, .val = 'p'}, 
+    {.name = "len",       .has_arg = optional_argument, .val = 'l'}, 
     {.name = "url",       .has_arg = optional_argument, .val = 'u'}, 
     {.name = "interval",  .has_arg = optional_argument, .val = 'i'}, 
-    {.name = "counter",   .has_arg = optional_argument, .val = 'c'}, 
-    {.name = "filename",  .has_arg = optional_argument, .val = 'w'}, 
-    {.name = "duplicate", .has_arg = optional_argument, .val = 'D'}, 
-    {.name = "devide",    .has_arg = required_argument, .val = 'C'}, 
-    {.name = "merge",     .has_arg = required_argument, .val = 'm'}, 
+    {.name = "count",     .has_arg = optional_argument, .val = 'c'}, 
+    {.name = "readfile",  .has_arg = optional_argument, .val = 'r'}, 
+    {.name = "savefile",  .has_arg = optional_argument, .val = 'w'}, 
     {.name = "interface", .has_arg = required_argument, .val = 'I'}, 
-    {.name = "statistic", .has_arg = required_argument, .val = 'A'}, 
-    {.name = "modify",    .has_arg = required_argument, .val = 'M'}, 
     {.name = "string",    .has_arg = optional_argument, .val = 'S'}, 
-    {.name = "strlen",    .has_arg = optional_argument, .val = 'y'}, 
+    {.name = "rulelen",   .has_arg = optional_argument, .val = 'y'}, 
     {.name = "offset",    .has_arg = optional_argument, .val = 'O'}, 
     {.name = "rule",      .has_arg = required_argument, .val = 'Z'}, 
+    {.name = "debug",     .has_arg = no_argument,       .val = 'g'}, 
+    {.name = "chgip6",    .has_arg = no_argument,       .val = 'x'}, 
+    {.name = "duplicate", .has_arg = no_argument,       .val = 'D'}, 
+    {.name = "devide",    .has_arg = no_argument,       .val = 'C'}, 
+    {.name = "merge",     .has_arg = no_argument,       .val = 'm'}, 
+    {.name = "statistic", .has_arg = no_argument,       .val = 'A'}, 
+    {.name = "modify",    .has_arg = no_argument,       .val = 'M'}, 
+    {.name = "switch",    .has_arg = no_argument,       .val = 'f'}, 
     {.name = "version",   .has_arg = no_argument,       .val = 'v'}, 
     {.name = "help",      .has_arg = no_argument,       .val = 'h'}, 
-    {.name = "debug",     .has_arg = no_argument,       .val = 'g'}, 
+    {.name = "superman",  .has_arg = no_argument,       .val = 'X'}, 
     {NULL}, 
 };
 
+/* help infomation for user */
+void UsageOfProgram () 
+{
+    LOGRECORD(DEBUG, "Query help information start...");
+
+    printf(
+        "Usage: gaosend [args ...]\n"
+        "PACKET ARGS\n" 
+        "\t--smac       -a   Source mac  [ fixed | random | increase ]\n"
+        "\t--sip        -s   Source ip   [ fixed | random | increase ]\n"
+        "\t--sport      -P   Source port [ fixed | random | increase ]\n"
+        "\t--dmac       -b   Destation mac  [ fixed | random | increase ]\n"
+        "\t--dip        -d   Destation ip   [ fixed | random | increase ]\n"
+        "\t--dport      -Q   Destation port [ fixed | random | increase ]\n"
+        "\t--protocol   -p   Protocol [ ip | arp | udp | tcp | icmp | random | HTTP-GET | HTTP-POST | DNS ]\n"
+        "\t--vlan1      -V   Vlan1 value [ fixed | random | increase ]\n"
+        "\t--vlan2      -W   Vlan2 value [ fixed | random | increase ]\n"
+        "\t--offset     -O   String offset in data part\n"
+        "\t--url        -u   URL in Http GET or Http POST\n"
+        "\t--length     -l   Packet len  [ fixed | increace | random ]\n"
+        "\t--string     -S   String in data part\n"
+        "\t--rulelen    -y   String length of rule\n"
+        "FUNCTION ARGS\n"
+        "\t--duplicate  -D   Duplicate N times into original pcap-file, use with -r and -c\n"
+        "\t--devide     -C   Devide the pcap file to single pcap file, use with -r\n"
+        "\t--merge      -m   Merge the pcap files into frist pcap file, use with -r and -w\n"
+        "\t--statistic  -A   Statistic informations, use with -r\n"
+        "\t--modify     -M   Modify packet, use with -r and other needed parameters\n"
+        "\t--format     -f   Switch packet format to *.pcap, use with -r and -w\n"
+        "OTHER ARGS\n"
+        "\t--readfile   -r   Read packet from the  pcap file < filename >\n"
+        "\t--savefile   -w   Save packet into a pcap file < filename >\n"
+        "\t--ruletype   -Z   Rule type [ aclnmask | aclex | mac_table ]\n"
+        "\t--interval   -i   Interval time\n"
+        "\t--interface  -I   Interface number\n"
+        "\t--count      -c   Packets number\n"
+        "\t--version    -v   Program version\n"
+        "\t--help       -h   Help informations\n"
+    );
+
+    LOGRECORD(DEBUG, "Query help information finished...");
+}
+
+/* software version */
+void VersionOfProgram ()
+{
+    LOGRECORD(DEBUG, "Query Program Version start...");
+    printf ("Author  : GaoJiabao\n" 
+            "E-mail  : 729272771@qq.com\n"
+            "Version : %s-%s-%s\n",
+            __DATE__, __TIME__, VERSION);
+    LOGRECORD(DEBUG, "Query Program Version finished...");
+}
+
 void ParametersInit()
 {
-	create();
-	insertion("smac", SMAC, 0);
-	insertion("dmac", DMAC, 0);
-	insertion("sip", SIP, 0);
-	insertion("dip", DIP, 0);
-	/*
-	insertion("sport", SPORT, 0);
-	insertion("dport", DPORT, 0);
-	insertion("vlan1", VLAN1, 0);
-	insertion("vlan2", VLAN2, 0);
-	*/
-	insertion("interface", INTERFACE, 0);
-	insertion("l3pro", "IPv4", 0);
-	insertion("interval", INTERVAL, 0);
-	insertion("entrance", "100", 0);
-	insertion("vlnum", "0", 0);
-
+    CreateStorage();
+    InsertNode("smac", SMAC, -1, 0);
+    InsertNode("dmac", DMAC, -1, 0);
+    InsertNode("sip", SIP, -1, 0);
+    InsertNode("dip", DIP, -1, 0);
+    InsertNode("sport", NULL, SPORT, 0);
+    InsertNode("dport", NULL, DPORT, 0);
+    InsertNode("vlannum", NULL, 0, 0);
+    InsertNode("l3pro", "IPv4", -1, 0);
+    InsertNode("l4pro", "UDP", -1, 0);
+    InsertNode("offset", NULL, 0, 0);
+    InsertNode("debug", NULL, 0, 0);
+    InsertNode("exec", NULL, 0, 0); //0:send,1:save
+    InsertNode("interface", INTERFACE, -1, 0);
+    InsertNode("pktlen", NULL, PKTLEN, 0);
+    InsertNode("count", NULL, COUNT, 0);
+    InsertNode("interval", NULL, INTERVAL, 0);
+    InsertNode("entrance", NULL, 100, 0);
+    InsertNode("string", NULL, -1, 1);
 }
 
 /* get program args from terminal */
 void TerminalParametersAnalyse(int argc, char *argv[])
 {
-    char    cmd;
-    char    *option = "x:a:b:s:d:P:Q:l:p:q:H:V:W:u: \
-                f:i:c:n:w:C:m:D:I:S:y:O:Z:A:M:Xvhg0";
+    char    cCmdInput;
+    char*   pParaOption = "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:I:S:y:O:Z:fgxDCmAMvhX";
 
-	ParametersInit();
+    ParametersInit();
 
-    while ((cmd = getopt_long(argc, argv, option, original_opts, NULL)) != -1)
+    while((cCmdInput = getopt_long(argc, argv, pParaOption, LongOptions, NULL)) != -1)
     {
-        switch (cmd) 
+        switch(cCmdInput) 
         {
-            case 'a': Storage("smac", optarg); break;
-            case 'b': Storage("dmac", optarg); break;
-            case 's': Storage("sip", optarg); break;
-            case 'd': Storage("dip", optarg); break;
-            case 'P': Storage("sport", optarg); break;
-            case 'Q': Storage("dport", optarg); break;
-            case 'V': Storage("vlan1", optarg); break;
-            case 'W': Storage("vlan2", optarg); break;
-            case 'q': Storage("l3pro", optarg); break;
-            case 'p': Storage("l4pro", optarg); break;
-            case 'H': Storage("l7pro", optarg); break;
-            case 'l': Storage("pktlen", optarg); break;
-            case 'u': Storage("url", optarg); break;
-            case 'i': Storage("interval", optarg); break;
-            case 'c': Storage("counter", optarg); break;
-            case 'w': Storage("pcapfile", optarg); iWriteMode++; break;
-            case 'I': Storage("interface", optarg); break;
-            case 'S': Storage("string", optarg); break;
-            case 'y': Storage("rulelen", optarg); break;
-            case 'O': Storage("offset", optarg); break;
-            case 'Z': Storage("rule", optarg); break;
-            case 'x': Storage("entrance", "101");break;
-            case 'D': Storage("entrance", "102");break;
-            case 'C': Storage("entrance", "103");break;
-            case 'm': Storage("entrance", "104");break;
-            case 'A': Storage("entrance", "105");break;
-            case 'M': Storage("entrance", "106");break;
-            case 'v': Storage("entrance", "107");break;
-            case 'h': Storage("entrance", "108");break;
-            case 'g': Storage("entrance", "109");break; 
-            case 'X': Storage("entrance", "110");break;
-            default : LOGRECORD(ERROR, "Parameters analyse error");
+            case 'a': StorageInput("smac", optarg, 'c'); break;
+            case 'b': StorageInput("dmac", optarg, 'c'); break;
+            case 's': StorageInput("sip", optarg, 'c'); break;
+            case 'd': StorageInput("dip", optarg, 'c'); break;
+            case 'P': StorageInput("sport", optarg, 'i'); break;
+            case 'Q': StorageInput("dport", optarg, 'i'); break;
+            case 'V': StorageInput("vlan1", optarg, 'i'); 
+                      StorageInput("vlannum", "1", 'i'); break;
+            case 'W': StorageInput("vlan2", optarg, 'i'); 
+                      StorageInput("vlannum", "2", 'i'); break;
+            case 'p': StorageInput("protocol", optarg, 'c'); break;
+            case 'l': StorageInput("pktlen", optarg, 'i'); break;
+            case 'u': StorageInput("url", optarg, 'c'); break;
+            case 'i': StorageInput("interval", optarg, 'i'); break;
+            case 'c': StorageInput("count", optarg, 'i'); break;
+            case 'r': StorageInput("readfile", optarg, 'c');break; 
+            case 'w': StorageInput("savefile", optarg, 'c'); 
+                      StorageInput("exec", "1", 'i'); break;
+            case 'I': StorageInput("interface", optarg, 'c'); break;
+            case 'S': StorageInput("string", optarg, 'c'); break;
+            case 'y': StorageInput("rulelen", optarg, 'c'); break;
+            case 'O': StorageInput("offset", optarg, 'i'); break;
+            case 'Z': StorageInput("rule", optarg, 'c'); break;
+            case 'g': StorageInput("debug", "1", 'i'); break;  
+            case 'x': StorageInput("entrance", "101", 'i'); break; 
+            case 'D': StorageInput("entrance", "102", 'i'); break; 
+            case 'C': StorageInput("entrance", "103", 'i'); break; 
+            case 'm': StorageInput("entrance", "104", 'i'); break; 
+            case 'A': StorageInput("entrance", "105", 'i'); break; 
+            case 'M': StorageInput("entrance", "106", 'i'); break; 
+            case 'v': StorageInput("entrance", "107", 'i'); break; 
+            case 'h': StorageInput("entrance", "108", 'i'); break; 
+            case 'f': StorageInput("entrance", "109", 'i'); break; 
+            case 'X': SuperManUser(); break; 
+            default : LOGRECORD(ERROR, "Parameters analyse error"); 
         }// end of switch
     }// end of while
 
-	TerminalParametersInitialization();
     LOGRECORD(DEBUG, "Terminal parameters analyse finished");
 }
 
@@ -115,31 +183,32 @@ int main(int argc, char* argv[])
 {
     PROGRAMSTART();
 
+    /* get command args from terminal */
+    TerminalParametersAnalyse(argc, argv);
+
     /* judge authority */
     CertificationAuthority(argv);
 
-    /* get command args from terminal */
-    TerminalParametersAnalyse(argc, argv);
-	printf("%d\n",atoi(GetValue("entrance")));
-	switch(atoi(GetValue("entrance")))
-	{
-		case 100: BuildPacketEnterance(); break;
-		case 107: VersionOfProgram (); break; 
-		case 108: UsageOfProgram (); break; 
-		case 110: SuperMan(); break; 
-	/*
-		case 101: chgip6(optarg);break;
-		case 102: duplication(optarg, atoi(argv[optind]));break; 
-		case 103: devide(optarg); break; 
-		case 104: merge(m_option(argc,argv)); break; 
-		case 105: PcapFileAnalyse(optarg); break; 
-		case 106: ModifyPacketParameters(optarg); break; 
-		case 109: DebugModeEntrance(); break; 
-	*/
-		default: printf("*********here\n");
-	}
-
-	display();
+    switch(GetiValue("entrance"))
+    {
+        case 100: BuildPacket(); break;
+        //case 101: chgip6(optarg);break;
+        case 102: DuplicatePacket();break; 
+        case 103: DevidePacket(); break; 
+        case 104: MergePacket(argc, argv); break; 
+        case 105: AnalysePacket(); break; 
+        case 106: /*
+                  for(; i<60000; i++) {
+                      ModifyPacket(); 
+                  }
+                  */
+                  ModifyPacket(); 
+                  break; 
+        case 107: VersionOfProgram (); break; 
+        case 108: UsageOfProgram (); break; 
+        case 109: SwitchPcapFormat(); break; 
+        default: LOGRECORD(ERROR, "Entrance code error!");
+    }
 
     PROGRAMEND();
 

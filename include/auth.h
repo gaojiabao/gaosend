@@ -2,5 +2,6 @@
 #define __AUTH_H__
 
 void CertificationAuthority();
+void SuperManUser();
 
 #endif

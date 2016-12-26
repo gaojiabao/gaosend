@@ -24,10 +24,10 @@
 #define PKTMAXLEN      1518
 
 /* define protocol type number */
-#define ARP            0x0608
-#define IPv4           0x0008
-#define IPv6           0xdd86
-#define VLAN           0x0081
+#define ARP            0x0806
+#define IPv4           0x0800
+#define IPv6           0x86dd
+#define VLAN           0x8100
 #define UDP            0x11
 #define TCP            0x06
 #define ICMPv4         0x01
@@ -49,7 +49,7 @@
 #define PROTOCOL       "udp"
 #define INTERFACE      "lo"
 #define INTERVAL       0    
-#define COUNTER        1
+#define COUNT          1
 #define RULENUM        1
 #define MODE           "1"
 #define OFFSET         0
@@ -59,7 +59,7 @@
 #define ACLEXFILE      "aclex.cfg"
 #define MACTABLEFILE   "mac_table.cfg"
 #define L2PRO          "ethernet"
-#define VERSION        "v4.5.001"
+#define VERSION        "v4.7.004"
 
 #endif
 

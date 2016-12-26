@@ -15,7 +15,7 @@
 #define VLANLEN        4
 #define IP4HDRLEN      20
 #define IP6HDRLEN      40
-#define ICMPv4HDRLEN   8  
+#define ICMP4HDRLEN    8  
 #define UDPHDRLEN      8
 #define TCPHDRLEN      20
 #define DNSHDRLEN      12

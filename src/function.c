@@ -428,7 +428,7 @@ void DisplayPacketData(char* pcPacket, int iPacketLength)
 }
 
 /* copy function */
-void memPcpy(char* dst, int pos, char* src, int len)
+void BufferCopy(char* dst, int pos, char* src, int len)
 {
     int i;
     for (i=0; i<len; i++)

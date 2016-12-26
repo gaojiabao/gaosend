@@ -15,15 +15,16 @@
 #include    "socket.h"
 
 /* packet structure */
-extern _pcaphdr* pPcapHdr;
-extern _pkthdr*  pPktHdr;
-extern _machdr*  pMacHdr;
-extern _vlanhdr* pVlanHdr1;
-extern _vlanhdr* pVlanHdr2;
-extern _arphdr*  pArpHdr;
-extern _ip4hdr*  pIp4Hdr;
-extern _udphdr*  pUdpHdr;
-extern _tcphdr*  pTcpHdr;
+extern _pcaphdr*    pPcapHdr;
+extern _pkthdr*     pPktHdr;
+extern _machdr*     pMacHdr;
+extern _vlanhdr*    pVlanHdr1;
+extern _vlanhdr*    pVlanHdr2;
+extern _arphdr*     pArpHdr;
+extern _ip4hdr*     pIp4Hdr;
+extern _udphdr*     pUdpHdr;
+extern _tcphdr*     pTcpHdr;
+extern _icmphdr*    pIcmpHdr;
 
 char packet[1518];
 extern void BuildVlanField(_vlanhdr*, uint16_t, uint16_t);
@@ -42,8 +43,8 @@ printf("vlan num:%d\n", vlnum);
     pVlanHdr1   = (_vlanhdr *)(packet + VLAN1OFFSET);
     pVlanHdr2   = (_vlanhdr *)(packet + VLAN2OFFSET);
     pArpHdr     = (_arphdr *) (packet + ARPOFFSET(iVlanCount));
-    pIp4Hdr     = (_ip4hdr *) (packet + IPOFFSET(iVlanCount));
-    //pIcmpHdr  = (_icmphdr *)(packet + ICMPv4OFFSET(iVlanCount));
+    pIp4Hdr     = (_ip4hdr *) (packet + IP4OFFSET(iVlanCount));
+    pIcmpHdr  = (_icmphdr *)(packet + ICMP4OFFSET(iVlanCount));
     pUdpHdr     = (_udphdr *) (packet + UDPOFFSET(iVlanCount));
     pTcpHdr     = (_tcphdr *) (packet + TCPOFFSET(iVlanCount));
 
@@ -223,11 +224,11 @@ void ModifyLayer3(uint16_t pro)
         unsigned char buf2[sizeof(struct in6_addr)];
         if (sip_tag) {
             pIp4Hdr->srcip = inet_pton(AF_INET6, sip, buf1);
-            memPcpy(packetbuf, 32, buf1, sizeof(struct in6_addr));
+            BufferCopy(packetbuf, 32, buf1, sizeof(struct in6_addr));
         }
         if (dip_tag) {
             pIp4Hdr->dstip = inet_pton(AF_INET6, dip, buf2);
-            memPcpy(packetbuf, 48, buf2, sizeof(struct in6_addr));
+            BufferCopy(packetbuf, 48, buf2, sizeof(struct in6_addr));
         }
         if (ip6_hdr->protocol == TCP) { // Layer 4
             if (sport_tag) pTcpHdr->sport = htons(sport);

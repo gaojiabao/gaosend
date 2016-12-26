@@ -8,7 +8,7 @@
 #include "storage.h"
 #include "function.h"
 
-void memPcpy(char*, int, char*, int);
+void BufferCopy(char*, int, char*, int);
 
 void DevidePacket()
 {
@@ -36,13 +36,13 @@ void DevidePacket()
     while (read(iFdIn, pkthdr, PKTHDRLEN)) {
         DisplayPacketData(pkthdr, 16);
         sprintf(name, "%s-%d.pcap", fileName,iFileNameSuffix++);
-        memPcpy(packet, 0, pcaphdr, PCAPHDRLEN);
-        memPcpy(packet, PCAPHDRLEN, pkthdr, PKTHDRLEN);
+        BufferCopy(packet, 0, pcaphdr, PCAPHDRLEN);
+        BufferCopy(packet, PCAPHDRLEN, pkthdr, PKTHDRLEN);
 
         if (read(iFdIn, data, p->len) < 0) {
             LOGRECORD(ERROR, "read data error");
         }
-        memPcpy(packet, PCAPHDRLEN+PKTHDRLEN, data, p->len);
+        BufferCopy(packet, PCAPHDRLEN+PKTHDRLEN, data, p->len);
         totle_len = PCAPHDRLEN + PKTHDRLEN + p->len;
         
         if ((iFdOut = open(name, O_RDWR | O_APPEND | O_CREAT, PERM)) < 0) {

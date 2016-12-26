@@ -35,10 +35,10 @@ void PktStrucInit(int iVlanCount)
     pVlanHdr1 = (_vlanhdr *)(cPacketBuf + VLAN1OFFSET);
     pVlanHdr2 = (_vlanhdr *)(cPacketBuf + VLAN2OFFSET);
     pArpHdr = (_arphdr *) (cPacketBuf + ARPOFFSET(iVlanCount));
-    pIp4Hdr = (_ip4hdr *) (cPacketBuf + IPOFFSET(iVlanCount));
+    pIp4Hdr = (_ip4hdr *) (cPacketBuf + IP4OFFSET(iVlanCount));
     pUdpHdr = (_udphdr *) (cPacketBuf + UDPOFFSET(iVlanCount));
     pTcpHdr = (_tcphdr *) (cPacketBuf + TCPOFFSET(iVlanCount));
-    pIp6Hdr = (_ip6hdr *) (cPacketBuf + IPOFFSET(iVlanCount));
+    pIp6Hdr = (_ip6hdr *) (cPacketBuf + IP4OFFSET(iVlanCount));
 }
 
 void StatisticUpperUdp(int iIpVersion)

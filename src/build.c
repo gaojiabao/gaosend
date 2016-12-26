@@ -200,10 +200,10 @@ void PacketStrcutureInitialization()
     pVlanHdr1   = (_vlanhdr *)(packet + VLAN1OFFSET);
     pVlanHdr2   = (_vlanhdr *)(packet + VLAN2OFFSET);
     pArpHdr     = (_arphdr *) (packet + ARPOFFSET(vlNum));
-    pIp4Hdr     = (_ip4hdr *) (packet + IPOFFSET(vlNum));
+    pIp4Hdr     = (_ip4hdr *) (packet + IP4OFFSET(vlNum));
     pPseudoHdr  = (_pseudohdr*) chksum;
     virtual     = (char*)(chksum + PSEUDOHDRLEN);
-    pIcmpHdr    = (_icmphdr *)(packet + ICMPv4OFFSET(vlNum));
+    pIcmpHdr    = (_icmphdr *)(packet + ICMP4OFFSET(vlNum));
     pUdpHdr     = (_udphdr *) (packet + UDPOFFSET(vlNum));
     pTcpHdr     = (_tcphdr *) (packet + TCPOFFSET(vlNum));
 
@@ -440,8 +440,8 @@ void BuildLayer7Header()
             BuildDataContexts(paylen);
         }
     } else if (l4pro == ICMPv4) {
-        data = packet + ICMPv4DATAOFFSET(vlNum);
-        paylen = ICMPv4PAYLEN(pktlen, vlNum);
+        data = packet + ICMP4DATAOFFSET(vlNum);
+        paylen = ICMP4PAYLEN(pktlen, vlNum);
         BuildDataContexts(paylen);
     }
 }

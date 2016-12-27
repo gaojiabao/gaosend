@@ -99,4 +99,3 @@ void DisplayStatisticsResults()
     LOGRECORD(INFO, "---------------------------------------------");
 }
 
-

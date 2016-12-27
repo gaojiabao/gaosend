@@ -41,5 +41,6 @@ int		ProtocolConversion(char* );
 int CheckIpLegal(char* );
 #define FALSE 0
 #define SUCCESS 1
+
 #endif
 

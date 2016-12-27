@@ -205,7 +205,6 @@ void ModifyLayer2()
             LOGRECORD(INFO, "QinQ has nothing to do");
         }
     }
-
 }
 
 void ModifyLayer3(uint16_t pro)
@@ -243,7 +242,6 @@ void ModifyLayer3(uint16_t pro)
         }
     } 
     */
-
 }
 
 void ModifyLayer4(uint8_t pro)
@@ -278,7 +276,6 @@ void ErrorHanding(int fdin, int fdout, char* filename)
     close(fdout);
     remove(filename);
     LOGRECORD(DEBUG, "ErrorHanding finished !");
-
 }
 
 void ModifyPacket()

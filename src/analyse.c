@@ -5,9 +5,10 @@
 #include    <unistd.h>
 #include    <string.h>
 #include    <sys/time.h>
+#include    "auth.h"
 #include    "packet.h"
 #include    "default.h"
-#include    "function.h"
+#include    "common.h"
 #include    "structure.h"
 #include    "statistic.h"
 #include    "runlog.h"
@@ -80,6 +81,9 @@ void AnalysePacket()
     PktStrucInit(iVlanCount);
     memset(cPacketBuf, 0, sizeof(cPacketBuf));
 
+    // turn on flow assoition
+    CreateStreamStorage();
+
     if ((iFd = open(pFileName, O_RDWR)) < 0) {
         LOGRECORD(ERROR, "open pcap file error");
     }
@@ -115,6 +119,12 @@ void AnalysePacket()
                 RecordStatisticsInfo(EMPRO_UDP);
                 StatisticUpperUdp(V4);
             } else if (pIp4Hdr->protocol == TCP) { // Layer 4
+                // TCP stream check
+                char iFiveTupleSum[32];
+                sprintf(iFiveTupleSum, "%d", pIp4Hdr->srcip + pIp4Hdr->dstip
+                    + pTcpHdr->sport + pTcpHdr->dport + pIp4Hdr->protocol);
+                StoreStreamInfo(MD5Digest(iFiveTupleSum));
+
                 RecordStatisticsInfo(EMPRO_TCP);
                 StatisticUpperTcp(V4);
             } else if (pIp4Hdr->protocol == ICMPv4) { // Layer 4
@@ -142,6 +152,7 @@ void AnalysePacket()
 
     close(iFd);
     DisplayStatisticsResults();
+    //DisplayAllStreamMD5();
     LOGRECORD(DEBUG, "Analyse cPacketBuf finished...");
 }
     

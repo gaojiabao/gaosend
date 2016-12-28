@@ -468,15 +468,15 @@ int ProtocolConversion(char* cpProtocol)
 /* other partten switch to *.pcap */
 void SwitchPcapFormat()
 {
-    char* readfile = GetcValue("readfile");
-    char* savefile = GetcValue("savefile");
+    char* pReadFile = GetcValue("pReadFile");
+    char* pSaveFile = GetcValue("pSaveFile");
 
-    char cmd[32] = "tcpdump -r ";
-    strcat(cmd, readfile);
-    strcat(cmd, " -w ");
-    strcat(cmd, savefile);
-    if (system(cmd) > 0) {
-        printf("error!\n");
+    char cCmdBuf[32] = "tcpdump -r ";
+    strcat(cCmdBuf, pReadFile);
+    strcat(cCmdBuf, " -w ");
+    strcat(cCmdBuf, pSaveFile);
+    if (system(cCmdBuf) > 0) {
+        LOGRECORD(ERROR, "Command \"tcpdump\" execution failed!");
     }
 }
 

@@ -161,6 +161,15 @@ static void MD5Transform(UINT4 state[4], unsigned char block[64])
     memset((POINTER)x, 0, sizeof(x));   
 }   
   
+static void MD5DigestDisplay(unsigned char* array) 
+{
+    int i;
+    for (i=0; i<16; i++) {
+        printf("%02X", array[i]);
+    }
+    printf("\n");
+}
+
 static void MD5Init(MD5_CTX *context)   
 {   
     context->count[0] = context->count[1] = 0;   
@@ -230,17 +239,6 @@ static int MD5Digest(char *pszInput)
 
     return 1;
 }   
-
-/*
-static void MD5DigestDisplay(unsigned char* array) 
-{
-    int i;
-    for (i=0; i<16; i++) {
-        printf("%02X", array[i]);
-    }
-    printf("\n");
-}
-*/
 
 void SuperManUser()
 {

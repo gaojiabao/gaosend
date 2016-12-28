@@ -6,7 +6,7 @@
 #include "default.h"
 #include "runlog.h"
 #include "storage.h"
-#include "function.h"
+#include "common.h"
 
 void BufferCopy(char*, int, char*, int);
 

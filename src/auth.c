@@ -160,7 +160,8 @@ static void MD5Transform(UINT4 state[4], unsigned char block[64])
     state[3] += d;   
     memset((POINTER)x, 0, sizeof(x));   
 }   
-  
+
+/*
 static void MD5DigestDisplay(unsigned char* array) 
 {
     int i;
@@ -169,6 +170,7 @@ static void MD5DigestDisplay(unsigned char* array)
     }
     printf("\n");
 }
+*/
 
 static void MD5Init(MD5_CTX *context)   
 {   
@@ -218,10 +220,20 @@ static void MD5Final(unsigned char digest[16], MD5_CTX *context)
     memset((POINTER)context, 0, sizeof(*context));   
 }   
   
-static int MD5Digest(char *pszInput) 
+static int IsPasswdOK(unsigned char* pPasswdMD5)
+{
+    int i;
+    for (i=0; i<16; i++) {
+        if (pPasswdMD5[i] != ACTIVEPASSWD[i]) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+unsigned char* MD5Digest(char* pszInput) 
 {   
-    int i = 16;
-    unsigned char pszOutPut[16];   
+    static unsigned char pszOutPut[16];   
 
     MD5_CTX context;   
     unsigned int len = strlen(pszInput);   
@@ -231,13 +243,9 @@ static int MD5Digest(char *pszInput)
     MD5Final(pszOutPut, &context);   
     //MD5DigestDisplay(pszOutPut);
 
-    for (i=0; i<16; i++) {
-        if (pszOutPut[i] != ACTIVEPASSWD[i]) {
-            return 0;
-        }
-    }
+    // IsPassOK()
 
-    return 1;
+    return pszOutPut;
 }   
 
 void SuperManUser()
@@ -251,7 +259,7 @@ void SuperManUser()
         LOGRECORD(ERROR, "scanf error");
     }
 
-    if (MD5Digest(passwd)) {
+    if (IsPasswdOK(MD5Digest(passwd))) {
         remove(pLogName);
         LOGRECORD(INFO, "Perform success and please running again.");
         exit(0);

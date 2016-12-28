@@ -6,8 +6,7 @@
  *             used in whole programs.
  */
 
-#include    "function.h"
-#include    <unistd.h>
+#include    "common.h"
 #include    "default.h"
 #include    "packet.h"
 #include    "runlog.h"

@@ -7,7 +7,7 @@
 #include    <sys/time.h>
 #include    "packet.h"
 #include    "default.h"
-#include    "function.h"
+#include    "common.h"
 #include    "structure.h"
 #include    "statistic.h"
 #include    "runlog.h"

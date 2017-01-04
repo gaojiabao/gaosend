@@ -68,7 +68,7 @@ void UsageOfProgram ()
         "\t--vlan2      -W   Vlan2 value [ fixed | random | increase ]\n"
         "\t--offset     -O   String offset in data part\n"
         "\t--url        -u   URL in Http GET or Http POST\n"
-        "\t--length     -l   Packet len  [ fixed | increace | random ]\n"
+        "\t--length     -l   Packet length  [ fixed | increace | random ]\n"
         "\t--string     -S   String in data part\n"
         "\t--rulelen    -y   String length of rule\n"
         "FUNCTION ARGS\n"
@@ -207,7 +207,7 @@ int main(int argc, char* argv[])
         case 107: VersionOfProgram (); break; 
         case 108: UsageOfProgram (); break; 
         case 109: SwitchPcapFormat(); break; 
-        default: LOGRECORD(ERROR, "Entrance code error!");
+        default : LOGRECORD(ERROR, "Entrance code error!");
     }
 
     PROGRAMEND();

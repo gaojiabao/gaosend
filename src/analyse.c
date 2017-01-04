@@ -123,7 +123,7 @@ void AnalysePacket()
                 char iFiveTupleSum[32];
                 sprintf(iFiveTupleSum, "%d", pIp4Hdr->srcip + pIp4Hdr->dstip
                     + pTcpHdr->sport + pTcpHdr->dport + pIp4Hdr->protocol);
-                StoreStreamInfo(MD5Digest(iFiveTupleSum));
+                //StoreStreamInfo(MD5Digest(iFiveTupleSum));
 
                 RecordStatisticsInfo(EMPRO_TCP);
                 StatisticUpperTcp(V4);

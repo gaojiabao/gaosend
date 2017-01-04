@@ -344,7 +344,7 @@ char* ChangeLayer4HexToString(uint16_t pro)
     }
 }
 
-/* return hex L3 protocal */
+/* return hex L3 protocol */
 uint16_t GetL3Hex(char* pro)
 {
     uint16_t tmp = 0;
@@ -359,7 +359,7 @@ uint16_t GetL3Hex(char* pro)
     return tmp;
 }
 
-/* return hex L4 protocal */
+/* return hex L4 protocol */
 uint8_t GetL4Hex(char* pro)
 {
     uint8_t tmp = 0;
@@ -445,7 +445,7 @@ int CompareIpv6Address(unsigned char* src,unsigned char* dst)
     return 0;
 }
 
-/* string protocal switch to hex protocal*/
+/* string protocol switch to hex protocol*/
 int ProtocolConversion(char* cpProtocol)
 {
     if (strcmp(cpProtocol, "ip") == 0) {

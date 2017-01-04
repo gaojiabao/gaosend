@@ -268,7 +268,7 @@ void RefreshParameter()
 /* entrance for input parameters */
 void StorageInput(char* title, char* value, char mode)
 {
-    // deal with all layer protocal
+    // deal with all layer protocol
     if (strcmp(title, "protocol") == 0) {
         unsigned int iCounter = 0;
         char cProtocal[8];
@@ -280,7 +280,7 @@ void StorageInput(char* title, char* value, char mode)
             cProtocal[iCounter] = toupper(value[iCounter]);
         }
 
-        // deal with association protocal
+        // deal with association protocol
         if (strcmp(cProtocal, "ARP") == 0) {
             UpdateNode("l3pro", "ARP", -1, 0);
             UpdateNode("l4pro", NULL, -1, 0);

@@ -8,7 +8,6 @@
 #include "storage.h"
 #include "common.h"
 
-void BufferCopy(char*, int, char*, int);
 
 void DevidePacket()
 {

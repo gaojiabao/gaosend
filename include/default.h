@@ -23,6 +23,9 @@
 #define PKTMINLEN      64 
 #define PKTMAXLEN      1518
 
+/* define md5 len */
+#define MD5LEN         16
+
 /* define protocol type number */
 #define ARP            0x0806
 #define IPv4           0x0800
@@ -59,7 +62,7 @@
 #define ACLEXFILE      "aclex.cfg"
 #define MACTABLEFILE   "mac_table.cfg"
 #define L2PRO          "ethernet"
-#define VERSION        "v4.8.001"
+#define VERSION        "v4.8.002"
 
 #endif
 

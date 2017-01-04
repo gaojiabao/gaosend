@@ -165,7 +165,7 @@ static void MD5Transform(UINT4 state[4], unsigned char block[64])
 static void MD5DigestDisplay(unsigned char* array) 
 {
     int i;
-    for (i=0; i<16; i++) {
+    for (i=0; i<MD5LEN; i++) {
         printf("%02X", array[i]);
     }
     printf("\n");
@@ -222,9 +222,9 @@ static void MD5Final(unsigned char digest[16], MD5_CTX *context)
   
 static int IsPasswdOK(unsigned char* pPasswdMD5)
 {
-    int i;
-    for (i=0; i<16; i++) {
-        if (pPasswdMD5[i] != ACTIVEPASSWD[i]) {
+    int iCounter;
+    for (iCounter=0; iCounter<MD5LEN; iCounter++) {
+        if (pPasswdMD5[iCounter] != ACTIVEPASSWD[iCounter]) {
             return 0;
         }
     }
@@ -233,17 +233,14 @@ static int IsPasswdOK(unsigned char* pPasswdMD5)
 
 unsigned char* MD5Digest(char* pszInput) 
 {   
-    static unsigned char pszOutPut[16];   
+    static unsigned char pszOutPut[MD5LEN];   
 
     MD5_CTX context;   
-    unsigned int len = strlen(pszInput);   
       
     MD5Init(&context);   
-    MD5Update(&context, (unsigned char *)pszInput, len);   
+    MD5Update(&context, (unsigned char *)pszInput, MD5LEN);
     MD5Final(pszOutPut, &context);   
     //MD5DigestDisplay(pszOutPut);
-
-    // IsPassOK()
 
     return pszOutPut;
 }   

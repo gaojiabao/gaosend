@@ -11,54 +11,57 @@
 
 void DevidePacket()
 {
-    int  iFdIn,iFdOut;
-    int  totle_len;
-    int  iFileNameSuffix = 1;
-    char name[20];
-    char pcaphdr[PCAPHDRLEN];
-    char pkthdr[PKTHDRLEN];
-    char data[PKTMAXLEN];
-    char packet[PKTMAXLEN];
-    char* file = GetcValue("readfile");
-    _pkthdr *p = (_pkthdr*)pkthdr;
+    int  iFdIn;
+    int  iFdOut;
+    int  iNewPktLen;
+    int  iNameSuffix = 1;
+    char cSaveFileName[20];
+    char cPcapHdrBuf[PCAPHDRLEN];
+    char cPktHdrBuf[PKTHDRLEN];
+    char cDataBuf[PKTMAXLEN];
+    char cPacket[PKTMAXLEN];
+    char* pReadFileName = GetcValue("readfile");
+    _pkthdr* pPktHdr = (_pkthdr*)cPktHdrBuf;
 
-    LOGRECORD(DEBUG, "Devide Packet start...");
-    if ((iFdIn = open(file, O_RDWR)) < 0) {
+    LOGRECORD(DEBUG, "Devide cPacket start...");
+    if ((iFdIn = open(pReadFileName, O_RDWR)) < 0) {
         LOGRECORD(ERROR, "open file error");
     }
 
-    if (read(iFdIn, pcaphdr, PCAPHDRLEN) < 0) {
-        LOGRECORD(ERROR, "read pcaphdr error");
+    if (read(iFdIn, cPcapHdrBuf, PCAPHDRLEN) < 0) {
+        LOGRECORD(ERROR, "read cPcapHdrBuf error");
     }
 
-    char *fileName = strtok(file, ".");
-    while (read(iFdIn, pkthdr, PKTHDRLEN)) {
-        DisplayPacketData(pkthdr, 16);
-        sprintf(name, "%s-%d.pcap", fileName,iFileNameSuffix++);
-        BufferCopy(packet, 0, pcaphdr, PCAPHDRLEN);
-        BufferCopy(packet, PCAPHDRLEN, pkthdr, PKTHDRLEN);
+    char *pNamePrefix = strtok(pReadFileName, ".");
 
-        if (read(iFdIn, data, p->len) < 0) {
-            LOGRECORD(ERROR, "read data error");
+    while (read(iFdIn, cPktHdrBuf, PKTHDRLEN)) {
+        DisplayPacketData(cPktHdrBuf, PKTHDRLEN);
+        sprintf(cSaveFileName, "%s-%d.pcap", pNamePrefix,iNameSuffix++);
+        BufferCopy(cPacket, 0, cPcapHdrBuf, PCAPHDRLEN);
+        BufferCopy(cPacket, PCAPHDRLEN, cPktHdrBuf, PKTHDRLEN);
+
+        if (read(iFdIn, cDataBuf, pPktHdr->len) < 0) {
+            LOGRECORD(ERROR, "read cDataBuf error");
         }
-        BufferCopy(packet, PCAPHDRLEN+PKTHDRLEN, data, p->len);
-        totle_len = PCAPHDRLEN + PKTHDRLEN + p->len;
+
+        BufferCopy(cPacket, PCAPHDRLEN+PKTHDRLEN, cDataBuf, pPktHdr->len);
+        iNewPktLen = PCAPHDRLEN + PKTHDRLEN + pPktHdr->len;
         
-        if ((iFdOut = open(name, O_RDWR | O_APPEND | O_CREAT, PERM)) < 0) {
+        if ((iFdOut = open(cSaveFileName, O_RDWR | O_APPEND | O_CREAT, PERM)) < 0) {
             LOGRECORD(ERROR, "open file error");
         }
 
-        if (write(iFdOut, packet, totle_len) < 0) {
+        if (write(iFdOut, cPacket, iNewPktLen) < 0) {
             LOGRECORD(ERROR, "write file error");
         }
-        memset(packet, 0, sizeof(packet));
-        memset(pkthdr, 0, sizeof(pkthdr));
-        memset(data, 0, sizeof(data));
+        memset(cPacket, 0, sizeof(cPacket));
+        memset(cPktHdrBuf, 0, sizeof(cPktHdrBuf));
+        memset(cDataBuf, 0, sizeof(cDataBuf));
 
         close(iFdOut);
-    }// end of while
+    } // end of while
 
     close(iFdIn);
-    LOGRECORD(DEBUG, "Devide Packet finished...");
+    LOGRECORD(DEBUG, "Devide cPacket finished...");
 }
 

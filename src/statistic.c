@@ -65,9 +65,9 @@ void RecordStatisticsInfo(int iEmProNum)
     }
 }
 
-float PercentCalc(int a, int b)
+float PercentCalc(int iCount, int iSum)
 {
-    return ((a * 100.0)/b);
+    return ((iCount * 100.0) / iSum);
 }
 
 void DisplayStatisticsResults()

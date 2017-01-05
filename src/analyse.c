@@ -82,7 +82,9 @@ void AnalysePacket()
     memset(cPacketBuf, 0, sizeof(cPacketBuf));
 
     // turn on flow assoition
-    CreateStreamStorage();
+    if(GetiValue("flow") == 1) {
+        CreateStreamStorage();
+    }
 
     if ((iFd = open(pFileName, O_RDWR)) < 0) {
         LOGRECORD(ERROR, "open pcap file error");
@@ -123,7 +125,9 @@ void AnalysePacket()
                 char iFiveTupleSum[32];
                 sprintf(iFiveTupleSum, "%d", pIp4Hdr->srcip + pIp4Hdr->dstip
                     + pTcpHdr->sport + pTcpHdr->dport + pIp4Hdr->protocol);
-                //StoreStreamInfo(MD5Digest(iFiveTupleSum));
+                if(GetiValue("flow") == 1) {
+                    StoreStreamInfo(MD5Digest(iFiveTupleSum));
+                }
 
                 RecordStatisticsInfo(EMPRO_TCP);
                 StatisticUpperTcp(V4);
@@ -152,7 +156,9 @@ void AnalysePacket()
 
     close(iFd);
     DisplayStatisticsResults();
-    //DisplayAllStreamMD5();
+    if(GetiValue("flow") == 1) {
+        DisplayAllStreamMD5();
+    }
     LOGRECORD(DEBUG, "Analyse cPacketBuf finished...");
 }
     

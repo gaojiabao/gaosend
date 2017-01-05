@@ -26,7 +26,7 @@ extern _udphdr*     pUdpHdr;
 extern _tcphdr*     pTcpHdr;
 extern _icmphdr*    pIcmpHdr;
 
-char packet[1518];
+char packet[2000];
 extern void BuildVlanField(_vlanhdr*, uint16_t, uint16_t);
 
 #define SRC 0 
@@ -35,7 +35,6 @@ extern void BuildVlanField(_vlanhdr*, uint16_t, uint16_t);
 /* init packet struct */
 void PktStrcInit(int vlnum)
 {
-printf("vlan num:%d\n", vlnum);
     int iVlanCount    = vlnum;
     pPcapHdr    = (_pcaphdr*) packet;
     pPktHdr     = (_pkthdr*) packet;
@@ -250,7 +249,7 @@ void ModifyLayer4(uint8_t pro)
         if (IsNeedModify("sport")) ModifyPortNumber("sport", pro, SRC);
         if (IsNeedModify("dport")) ModifyPortNumber("dport", pro, DST);
     } else if (pro == ICMPv4) { 
-        LOGRECORD(INFO, "ICMP Nothing to perform");
+        LOGRECORD(DEBUG, "ICMP Nothing to perform");
     }
 }
 
@@ -327,6 +326,9 @@ void ModifyPacket()
             exit(0);
         }
 
+        if (GetiValue("exec") == 0) { //send
+            SendPacketProcess(packet+PKTHDRLEN, pPktHdr->len);
+        }
         RefreshParameter();
 
         ModifyLayer2();

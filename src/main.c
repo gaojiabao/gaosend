@@ -13,6 +13,7 @@ void DuplicatePacket();
 void AnalysePacket(); 
 void MergePacket(int, char**); 
 void SwitchPcapFormat();  
+void ReplayPacket();
 
 struct option LongOptions[] = {
     {.name = "smac",      .has_arg = optional_argument, .val = 'a'}, 
@@ -35,8 +36,11 @@ struct option LongOptions[] = {
     {.name = "rulelen",   .has_arg = optional_argument, .val = 'y'}, 
     {.name = "offset",    .has_arg = optional_argument, .val = 'O'}, 
     {.name = "rule",      .has_arg = required_argument, .val = 'Z'}, 
+    {.name = "flow",      .has_arg = no_argument,       .val = 'F'}, 
     {.name = "debug",     .has_arg = no_argument,       .val = 'g'}, 
     {.name = "chgip6",    .has_arg = no_argument,       .val = 'x'}, 
+    {.name = "build",     .has_arg = no_argument,       .val = 'B'}, 
+    {.name = "replay",    .has_arg = no_argument,       .val = 'R'}, 
     {.name = "duplicate", .has_arg = no_argument,       .val = 'D'}, 
     {.name = "devide",    .has_arg = no_argument,       .val = 'C'}, 
     {.name = "merge",     .has_arg = no_argument,       .val = 'm'}, 
@@ -72,6 +76,8 @@ void UsageOfProgram ()
         "\t--string     -S   String in data part\n"
         "\t--rulelen    -y   String length of rule\n"
         "FUNCTION ARGS\n"
+        "\t--build      -B   Build packet with send or write mode\n"
+        "\t--replay     -R   Replay packet, use with -r -I and -c\n"
         "\t--duplicate  -D   Duplicate N times into original pcap-file, use with -r and -c\n"
         "\t--devide     -C   Devide the pcap file to single pcap file, use with -r\n"
         "\t--merge      -m   Merge the pcap files into frist pcap file, use with -r and -w\n"
@@ -81,6 +87,7 @@ void UsageOfProgram ()
         "OTHER ARGS\n"
         "\t--readfile   -r   Read packet from the  pcap file < filename >\n"
         "\t--savefile   -w   Save packet into a pcap file < filename >\n"
+        "\t--flowcheck  -F   Turn on flow check switch, only use with -A\n"
         "\t--ruletype   -Z   Rule type [ aclnmask | aclex | mac_table ]\n"
         "\t--interval   -i   Interval time\n"
         "\t--interface  -I   Interface number\n"
@@ -117,12 +124,13 @@ void ParametersInit()
     InsertNode("l4pro", "UDP", -1, 0);
     InsertNode("offset", NULL, 0, 0);
     InsertNode("debug", NULL, 0, 0);
+    InsertNode("flow", NULL, 0, 0);
     InsertNode("exec", NULL, 0, 0); //0:send,1:save
     InsertNode("interface", INTERFACE, -1, 0);
     InsertNode("pktlen", NULL, PKTLEN, 0);
     InsertNode("count", NULL, COUNT, 0);
     InsertNode("interval", NULL, INTERVAL, 0);
-    InsertNode("entrance", NULL, 100, 0);
+    InsertNode("entrance", NULL, 99, 0);
     InsertNode("string", NULL, -1, 1);
 }
 
@@ -130,7 +138,7 @@ void ParametersInit()
 void TerminalParametersAnalyse(int argc, char *argv[])
 {
     char    cCmdInput;
-    char*   pParaOption = "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:I:S:y:O:Z:fgxDCmAMvhX";
+    char*   pParaOption = "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:I:S:y:O:Z:fFgxDCmAMvhRX";
 
     ParametersInit();
 
@@ -161,7 +169,9 @@ void TerminalParametersAnalyse(int argc, char *argv[])
             case 'y': StorageInput("rulelen", optarg, 'c'); break;
             case 'O': StorageInput("offset", optarg, 'i'); break;
             case 'Z': StorageInput("rule", optarg, 'c'); break;
+            case 'F': StorageInput("flow", "1", 'i'); break;
             case 'g': StorageInput("debug", "1", 'i'); break;  
+            case 'B': StorageInput("entrance", "100", 'i'); break; 
             case 'x': StorageInput("entrance", "101", 'i'); break; 
             case 'D': StorageInput("entrance", "102", 'i'); break; 
             case 'C': StorageInput("entrance", "103", 'i'); break; 
@@ -171,6 +181,7 @@ void TerminalParametersAnalyse(int argc, char *argv[])
             case 'v': StorageInput("entrance", "107", 'i'); break; 
             case 'h': StorageInput("entrance", "108", 'i'); break; 
             case 'f': StorageInput("entrance", "109", 'i'); break; 
+            case 'R': StorageInput("entrance", "110", 'i'); break; 
             case 'X': SuperManUser(); break; 
             default : LOGRECORD(ERROR, "Parameters analyse error"); 
         }// end of switch
@@ -207,7 +218,9 @@ int main(int argc, char* argv[])
         case 107: VersionOfProgram (); break; 
         case 108: UsageOfProgram (); break; 
         case 109: SwitchPcapFormat(); break; 
-        default : LOGRECORD(ERROR, "Entrance code error!");
+        case 110: ReplayPacket(); break; 
+        default : BuildPacket();
+       // LOGRECORD(ERROR, "Entrance code error!");
     }
 
     PROGRAMEND();

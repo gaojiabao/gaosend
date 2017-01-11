@@ -31,5 +31,7 @@ enum
 
 void RecordStatisticsInfo(int );
 void DisplayStatisticsResults();
+void StatisticUpperUdp(int, int);
+void StatisticUpperTcp(int, int);
 
 #endif

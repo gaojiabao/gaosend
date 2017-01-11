@@ -28,6 +28,33 @@ static  int iL3OtherNum     = 0;
 static  int iL4OtherNum     = 0; 
 static  int iL4Other6Num    = 0; 
 
+void StatisticUpperUdp(int sport, int dport)
+{
+    if (sport == 53 || dport == 53) {
+        RecordStatisticsInfo(EMPRO_DNS);
+    }
+}
+
+void StatisticUpperTcp(int sport, int dport)
+{
+    if (dport == 25) {
+        RecordStatisticsInfo(EMPRO_SMTP);
+    } else if (sport == 80 || dport == 80 
+            || sport == 8080 || dport == 8080) {
+        RecordStatisticsInfo(EMPRO_HTTP);
+    } else if (dport == 110) {
+        RecordStatisticsInfo(EMPRO_POP3);
+    } else if (sport == 143 || dport == 143) {
+        RecordStatisticsInfo(EMPRO_IMAP);
+    } else if (sport == 139 || dport == 139 
+            || sport == 445 || dport == 445) {
+        RecordStatisticsInfo(EMPRO_SMB);
+    } else if (sport == 20 || dport == 20 
+            || sport == 21 || dport == 21) {
+        RecordStatisticsInfo(EMPRO_FTP);
+    }
+}
+
 void RecordStatisticsInfo(int iEmProNum)
 {
     switch(iEmProNum) {
@@ -35,21 +62,16 @@ void RecordStatisticsInfo(int iEmProNum)
                               iTotleNum++;   break;
         case EMPRO_VLAN     : iVlanNum++;    break;
         case EMPRO_QinQ     : iQinQNum++;    break;
-        case EMPRO_IPv4     : iIpv4Num++;    break;
+        case EMPRO_IPv4     : iIpv4Num++;    
+                              iTotleNum++;   break;
         case EMPRO_IPv6     : iIpv6Num++; 
                               iTotleNum++;   break;
-        case EMPRO_ICMPv4   : iIcmpv4Num++;  
-                              iTotleNum++;   break;
+        case EMPRO_ICMPv4   : iIcmpv4Num++;  break;
         case EMPRO_ICMPv6   : iIcmpv6Num++;  break;
-                              //iTotleNum++;   break;
-        case EMPRO_UDP      : iUdpNum++;     
-                              iTotleNum++;   break;
-        case EMPRO_TCP      : iTcpNum++;
-                              iTotleNum++;   break;
-        case EMPRO_UDP6      : iUdp6Num++;    break; 
-                              //iTotleNum++;   break;
-        case EMPRO_TCP6      : iTcp6Num++;   break;
-                              //iTotleNum++;   break;
+        case EMPRO_UDP      : iUdpNum++;     break;
+        case EMPRO_TCP      : iTcpNum++;     break;
+        case EMPRO_UDP6     : iUdp6Num++;    break; 
+        case EMPRO_TCP6     : iTcp6Num++;    break;
         case EMPRO_HTTP     : iHttpNum++;    break;
         case EMPRO_DNS      : iDnsNum++;     break;
         case EMPRO_SMB      : iSmbNum++;     break;
@@ -57,8 +79,7 @@ void RecordStatisticsInfo(int iEmProNum)
         case EMPRO_SMTP     : iSmtpNum++;    break;
         case EMPRO_POP3     : iPop3Num++;    break;
         case EMPRO_IMAP     : iImapNum++;    break;
-        case EMPRO_L4OTHER  : iL4OtherNum++;    
-                              iTotleNum++;   break;
+        case EMPRO_L4OTHER  : iL4OtherNum++; break;   
         case EMPRO_L4OTHER6 : iL4Other6Num++;break;   
         case EMPRO_L3OTHER  : iL3OtherNum++;     
                               iTotleNum++;   break;

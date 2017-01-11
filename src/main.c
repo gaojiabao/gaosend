@@ -10,10 +10,10 @@ void BuildPacket();
 void DevidePacket(); 
 void ModifyPacket(); 
 void DuplicatePacket();
-void AnalysePacket(); 
 void MergePacket(int, char**); 
 void SwitchPcapFormat();  
 void ReplayPacket();
+void DeepPacketInspection();
 
 struct option LongOptions[] = {
     {.name = "smac",      .has_arg = optional_argument, .val = 'a'}, 
@@ -54,7 +54,7 @@ struct option LongOptions[] = {
 };
 
 /* help infomation for user */
-void UsageOfProgram () 
+void UsageOfProgram() 
 {
     LOGRECORD(DEBUG, "Query help information start...");
 
@@ -100,7 +100,7 @@ void UsageOfProgram ()
 }
 
 /* software version */
-void VersionOfProgram ()
+void VersionOfProgram()
 {
     LOGRECORD(DEBUG, "Query Program Version start...");
     printf ("Author  : GaoJiabao\n" 
@@ -176,13 +176,13 @@ void TerminalParametersAnalyse(int argc, char *argv[])
             case 'D': StorageInput("entrance", "102", 'i'); break; 
             case 'C': StorageInput("entrance", "103", 'i'); break; 
             case 'm': StorageInput("entrance", "104", 'i'); break; 
-            case 'A': StorageInput("entrance", "105", 'i'); break; 
+            //case 'A': StorageInput("entrance", "105", 'i'); break; 
             case 'M': StorageInput("entrance", "106", 'i'); break; 
             case 'v': StorageInput("entrance", "107", 'i'); break; 
             case 'h': StorageInput("entrance", "108", 'i'); break; 
             case 'f': StorageInput("entrance", "109", 'i'); break; 
             case 'R': StorageInput("entrance", "110", 'i'); break; 
-            case 'X': SuperManUser(); break; 
+            case 'X': StorageInput("entrance", "111", 'i'); break; 
             default : LOGRECORD(ERROR, "Parameters analyse error"); 
         }// end of switch
     }// end of while
@@ -207,7 +207,7 @@ int main(int argc, char* argv[])
         case 102: DuplicatePacket();break; 
         case 103: DevidePacket(); break; 
         case 104: MergePacket(argc, argv); break; 
-        case 105: AnalysePacket(); break; 
+        //case 105: AnalysePacket(); break; 
         case 106: /*
                   for(; i<60000; i++) {
                       ModifyPacket(); 
@@ -219,8 +219,7 @@ int main(int argc, char* argv[])
         case 108: UsageOfProgram (); break; 
         case 109: SwitchPcapFormat(); break; 
         case 110: ReplayPacket(); break; 
-        default : BuildPacket();
-       // LOGRECORD(ERROR, "Entrance code error!");
+        default : DeepPacketInspection(); break; 
     }
 
     PROGRAMEND();

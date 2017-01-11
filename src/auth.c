@@ -8,6 +8,7 @@
 #include    <arpa/inet.h>
 #include    "default.h"
 #include    "runlog.h"
+#include    "storage.h"
 
 #define     MAXUSETIMES 500
 
@@ -161,16 +162,17 @@ static void MD5Transform(UINT4 state[4], unsigned char block[64])
     memset((POINTER)x, 0, sizeof(x));   
 }   
 
-/*
-static void MD5DigestDisplay(unsigned char* array) 
+static char* MD5DigestDisplay(unsigned char* array) 
 {
+    static char cMd5Buf[100];
+
     int i;
     for (i=0; i<MD5LEN; i++) {
-        printf("%02X", array[i]);
+        sprintf(&cMd5Buf[i], "%02X", array[i]);
     }
-    printf("\n");
+
+    return cMd5Buf;
 }
-*/
 
 static void MD5Init(MD5_CTX *context)   
 {   
@@ -234,13 +236,16 @@ static int IsPasswdOK(unsigned char* pPasswdMD5)
 unsigned char* MD5Digest(char* pszInput) 
 {   
     static unsigned char pszOutPut[MD5LEN];   
+    unsigned int len = strlen(pszInput); 
 
     MD5_CTX context;   
       
     MD5Init(&context);   
-    MD5Update(&context, (unsigned char *)pszInput, MD5LEN);
+    MD5Update(&context, (unsigned char *)pszInput, len);
     MD5Final(pszOutPut, &context);   
-    //MD5DigestDisplay(pszOutPut);
+    if (GetiValue("debug")) {
+        LOGRECORD(DEBUG, "User Input MD5: %s", MD5DigestDisplay(pszOutPut));
+    }
 
     return pszOutPut;
 }   
@@ -259,7 +264,6 @@ void SuperManUser()
     if (IsPasswdOK(MD5Digest(passwd))) {
         remove(pLogName);
         LOGRECORD(INFO, "Perform success and please running again.");
-        exit(0);
     } else {
         LOGRECORD(ERROR, "Password input error");
     }
@@ -269,7 +273,7 @@ void SuperManUser()
 
 static void UseTimesFunction(int iUseNumber, int iNum)
 {
-    int        iUseFd;
+    int     iUseFd;
     char    cUseNumber[10];
 
     if ((iUseFd = open(pLogName, O_WRONLY | O_CREAT, PERM)) < 0) {
@@ -277,11 +281,6 @@ static void UseTimesFunction(int iUseNumber, int iNum)
     }
 
     memset(cUseNumber, 0, sizeof(cUseNumber));
-    /*
-    if ((read(iUseFd, cUseNumber, sizeof(cUseNumber)) < 0)) {
-        LOGRECORD(ERROR, "Read use-time error");
-    }
-    */
     iUseNumber += iNum;
     sprintf(cUseNumber, "%d", iUseNumber);
 
@@ -296,10 +295,14 @@ static void UseTimesFunction(int iUseNumber, int iNum)
 /* judge authority */
 void CertificationAuthority()
 {
-    int        iUseFd;
+    int     iUseFd;
     int     iUseNumber;
     char    cUseNumber[10];
 
+    if (GetiValue("entrance") == 111) {
+        SuperManUser();
+        PROGRAMEND();
+    }
     if ((iUseFd = open(pLogName, O_RDONLY | O_CREAT, PERM)) < 0) {
         LOGRECORD(ERROR, "License file open error");
     }

@@ -15,7 +15,7 @@
 #include    "socket.h"
 #include    "auth.h"
 
-/* cPacketBuf structure */
+/* packet structure */
 static _pcaphdr*    pPcapHdr;
 static _pkthdr*     pPktHdr;
 static _machdr*     pMacHdr;
@@ -30,10 +30,15 @@ static _icmphdr*    pIcmpHdr;
 static int  iFdRead = 0;
 static int  iCursor = 0;
 static char cPacketBuf[2000];
+static char cPcapHdrBuf[PCAPHDRLEN];
+static char cPktHdrBuf[PKTHDRLEN];
 
-void PcapHdrInspection()
+void ExtractMessage(char*, int );
+void PacketProcessing();
+
+/* pcap file header parsing */
+char* PcapHdrInspection()
 {
-    char cPcapHdrBuf[PCAPHDRLEN];
     pPcapHdr = (_pcaphdr*) cPcapHdrBuf;
     
     if (read(iFdRead, cPcapHdrBuf, sizeof(cPcapHdrBuf)) < 0) {
@@ -43,11 +48,13 @@ void PcapHdrInspection()
     if (htonl(pPcapHdr->magic) != 0xd4c3b2a1) {
         LOGRECORD(ERROR, "File format not supported");
     }
+    //ExtractMessage(cPcapHdrBuf, PCAPHDRLEN);
+    return cPcapHdrBuf;
 }
 
+/* message header information analysis */
 int PktHdrInspection()
 {
-    char cPktHdrBuf[PKTHDRLEN];
     pPktHdr = (_pkthdr*) cPktHdrBuf;
     if (read(iFdRead, cPktHdrBuf, sizeof(cPktHdrBuf)) < 1) {
         LOGRECORD(DEBUG, "Packet Inspection finished");
@@ -57,13 +64,41 @@ int PktHdrInspection()
     return pPktHdr->len;
 }
 
-U16 L2HdrInspection()
+/* layer four protocol analysis */
+void L4HdrInspection(U8 pro)
 {
-    pMacHdr = (_machdr *) (cPacketBuf + iCursor);
-    iCursor += MACHDRLEN;
-    return htons(pMacHdr->pro2);
+    char * pL4Hdr =  cPacketBuf + iCursor;
+
+    if (pro == TCP) {
+        iCursor += TCPHDRLEN;
+        pTcpHdr = (_tcphdr *) pL4Hdr;
+        // TCP stream check
+        if(GetiValue("flow") == 1) {
+            char iFiveTupleSum[32];
+            sprintf(iFiveTupleSum, "%d", pIp4Hdr->srcip + pIp4Hdr->dstip
+                + pTcpHdr->sport + pTcpHdr->dport + pIp4Hdr->protocol);
+            StoreStreamInfo(MD5Digest(iFiveTupleSum));
+        }
+        //PacketProcessing();
+
+        RecordStatisticsInfo(EMPRO_TCP);
+        StatisticUpperTcp(htons(pTcpHdr->sport), htons(pTcpHdr->dport));
+    } else if (pro == UDP) {
+        iCursor += UDPHDRLEN;
+        pUdpHdr = (_udphdr *) pL4Hdr;
+        RecordStatisticsInfo(EMPRO_UDP);
+        StatisticUpperUdp(htons(pUdpHdr->sport), htons(pUdpHdr->dport));  
+    } else if (pro == ICMPv4) {
+        pIcmpHdr = (_icmphdr *) pL4Hdr;
+        RecordStatisticsInfo(EMPRO_ICMPv4);
+    } else if (pro == ICMPv6) {
+        pIcmpHdr = (_icmphdr *) pL4Hdr;
+    } else {
+        RecordStatisticsInfo(EMPRO_L4OTHER);
+    }
 }
 
+/* layer three protocol analysis */
 U8 L3HdrInspection(U16 pro)
 {
     U8 iPro = 0;
@@ -71,9 +106,10 @@ U8 L3HdrInspection(U16 pro)
 
     if (pro == IPv4) {
         iCursor += IP4HDRLEN;
-        _ip4hdr* pIp4Hdr = (_ip4hdr *) pL3Hdr;
+        pIp4Hdr = (_ip4hdr *) pL3Hdr;
         iPro = pIp4Hdr->protocol;
         RecordStatisticsInfo(EMPRO_IPv4);
+        L4HdrInspection(iPro);
     } else if (pro == VLAN) {
         iCursor += VLANLEN;
         pVlanHdr = (_vlanhdr *) pL3Hdr;
@@ -83,13 +119,14 @@ U8 L3HdrInspection(U16 pro)
             RecordStatisticsInfo(EMPRO_QinQ);
         }
     } else if (pro == ARP) {
-        //_arphdr* pArpHdr = (_arphdr *) pL3Hdr;
+        pArpHdr = (_arphdr *) pL3Hdr;
         RecordStatisticsInfo(EMPRO_ARP);
     } else if (pro == IPv6) {
         iCursor += IP6HDRLEN;
-        _ip6hdr* pIp6Hdr = (_ip6hdr *) pL3Hdr;
+        pIp6Hdr = (_ip6hdr *) pL3Hdr;
         iPro = pIp6Hdr->protocol;
         RecordStatisticsInfo(EMPRO_IPv6);
+        L4HdrInspection(iPro);
     } else {
         RecordStatisticsInfo(EMPRO_L3OTHER);
     }
@@ -97,38 +134,36 @@ U8 L3HdrInspection(U16 pro)
     return iPro;
 }
 
-void L4HdrInspection(U8 pro)
+/* layer two protocol analysis */
+void L2HdrInspection()
 {
-    char * pL4Hdr =  cPacketBuf + iCursor;
+    pMacHdr = (_machdr *) (cPacketBuf + iCursor);
+    iCursor += MACHDRLEN;
+    L3HdrInspection(htons(pMacHdr->pro2));
+}
 
-    if (pro == TCP) {
-        iCursor += TCPHDRLEN;
-        _tcphdr* pTcpHdr = (_tcphdr *) pL4Hdr;
-        // TCP stream check
-        if(GetiValue("flow") == 1) {
-            char iFiveTupleSum[32];
-            sprintf(iFiveTupleSum, "%d", pIp4Hdr->srcip + pIp4Hdr->dstip
-            + pTcpHdr->sport + pTcpHdr->dport + pIp4Hdr->protocol);
-            StoreStreamInfo(MD5Digest(iFiveTupleSum));
-        }
-
-        RecordStatisticsInfo(EMPRO_TCP);
-        StatisticUpperTcp(htons(pTcpHdr->sport), htons(pTcpHdr->dport));
-    } else if (pro == UDP) {
-        iCursor += UDPHDRLEN;
-        _udphdr* pUdpHdr = (_udphdr *) pL4Hdr;
-        RecordStatisticsInfo(EMPRO_UDP);
-        StatisticUpperUdp(htons(pUdpHdr->sport), htons(pUdpHdr->dport));  
-    } else if (pro == ICMPv4) {
-        //_icmphdr* pIcmpHdr = (_icmphdr *) pL4Hdr;
-        RecordStatisticsInfo(EMPRO_ICMPv4);
-    } else if (pro == ICMPv6) {
-        //_icmphdr* pIcmpHdr = (_icmphdr *) pL4Hdr;
-    } else {
-        RecordStatisticsInfo(EMPRO_L4OTHER);
+/* data content resolution portal */
+void PacketPrase()
+{
+    L2HdrInspection();
+    if (GetcValue("savefile") != NULL) {
+        PacketProcessing();
     }
 }
 
+/* extracting data message */
+void PacketProcessing()
+{
+    static int iNum = 1;
+    if (iNum == 1) {
+        ExtractMessage(cPcapHdrBuf, PCAPHDRLEN);
+        iNum++;
+    }
+    ExtractMessage(cPktHdrBuf, PKTHDRLEN);
+    ExtractMessage(cPacketBuf, pPktHdr->len);
+}
+
+/* deep packet inspection portal */
 void DeepPacketInspection()
 {
     LOGRECORD(DEBUG, "Deep packet inspection start...");
@@ -149,13 +184,15 @@ void DeepPacketInspection()
         if (read(iFdRead, cPacketBuf, iPktLen) < 0) {
             LOGRECORD(ERROR, "read packethdr error");
         }
-        U16 iL3Pro = L2HdrInspection();
-        U32 iL4Pro = L3HdrInspection(iL3Pro);
-        L4HdrInspection(iL4Pro);
+        
+        PacketPrase();
         iCursor = 0;
     } // end of while
 
     DisplayStatisticsResults();
+    if(GetiValue("flow") == 1) {
+        DisplayAllStreamMD5();
+    }
 
     LOGRECORD(DEBUG, "Deep packet inspection finished...");
 

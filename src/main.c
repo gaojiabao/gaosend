@@ -5,15 +5,17 @@
 #include    "storage.h"
 #include    "runlog.h"
 #include    "default.h"
+#include    <string.h>
 
 void BuildPacket();
-void DevidePacket(); 
+void SplitPacket(); 
 void ModifyPacket(); 
 void DuplicatePacket();
 void MergePacket(int, char**); 
 void SwitchPcapFormat();  
 void ReplayPacket();
 void DeepPacketInspection();
+char* ParseReadList(char* pCmd);
 
 struct option LongOptions[] = {
     {.name = "smac",      .has_arg = optional_argument, .val = 'a'}, 
@@ -81,7 +83,7 @@ void UsageOfProgram()
         "\t--duplicate  -D   Duplicate N times into original pcap-file, use with -r and -c\n"
         "\t--devide     -C   Devide the pcap file to single pcap file, use with -r\n"
         "\t--merge      -m   Merge the pcap files into frist pcap file, use with -r and -w\n"
-        "\t--statistic  -A   Statistic informations, use with -r\n"
+        //"\t--statistic  -A   Statistic informations, use with -r\n"
         "\t--modify     -M   Modify packet, use with -r and other needed parameters\n"
         "\t--format     -f   Switch packet format to *.pcap, use with -r and -w\n"
         "OTHER ARGS\n"
@@ -134,12 +136,28 @@ void ParametersInit()
     InsertNode("string", NULL, -1, 1);
 }
 
+void SaveCommandLine(char* pCmdBuf)
+{
+
+}
+
 /* get program args from terminal */
 void TerminalParametersAnalyse(int argc, char *argv[])
 {
     char    cCmdInput;
     char*   pParaOption = "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:I:S:y:O:Z:fFgxDCmAMvhRX";
 
+    int     iCounter = 0;
+    char    cCmdBuf[100];
+
+    // save command line input
+    memset(cCmdBuf, 0 , sizeof(cCmdBuf));
+    for (; iCounter<argc; iCounter++) {
+        strcat(cCmdBuf, argv[iCounter]);
+        strcat(cCmdBuf, " ");
+    }
+
+    // storage container initialization
     ParametersInit();
 
     while((cCmdInput = getopt_long(argc, argv, pParaOption, LongOptions, NULL)) != -1)
@@ -161,7 +179,8 @@ void TerminalParametersAnalyse(int argc, char *argv[])
             case 'u': StorageInput("url", optarg, 'c'); break;
             case 'i': StorageInput("interval", optarg, 'i'); break;
             case 'c': StorageInput("count", optarg, 'i'); break;
-            case 'r': StorageInput("readfile", optarg, 'c');break; 
+            case 'r': StorageInput("readfile", optarg, 'c'); 
+                      StorageInput("filelist", ParseReadList(cCmdBuf), 'c'); break; 
             case 'w': StorageInput("savefile", optarg, 'c'); 
                       StorageInput("exec", "1", 'i'); break;
             case 'I': StorageInput("interface", optarg, 'c'); break;
@@ -176,17 +195,18 @@ void TerminalParametersAnalyse(int argc, char *argv[])
             case 'D': StorageInput("entrance", "102", 'i'); break; 
             case 'C': StorageInput("entrance", "103", 'i'); break; 
             case 'm': StorageInput("entrance", "104", 'i'); break; 
-            //case 'A': StorageInput("entrance", "105", 'i'); break; 
+            case 'A': StorageInput("entrance", "105", 'i'); break; 
             case 'M': StorageInput("entrance", "106", 'i'); break; 
             case 'v': StorageInput("entrance", "107", 'i'); break; 
             case 'h': StorageInput("entrance", "108", 'i'); break; 
             case 'f': StorageInput("entrance", "109", 'i'); break; 
             case 'R': StorageInput("entrance", "110", 'i'); break; 
             case 'X': StorageInput("entrance", "111", 'i'); break; 
-            default : LOGRECORD(ERROR, "Parameters analyse error"); 
+            default : LOGRECORD(ERROR, "Without this parameter '%c'", cCmdInput); 
         }// end of switch
     }// end of while
 
+    
     LOGRECORD(DEBUG, "Terminal parameters analyse finished");
 }
 
@@ -205,9 +225,9 @@ int main(int argc, char* argv[])
         case 100: BuildPacket(); break;
         //case 101: chgip6(optarg);break;
         case 102: DuplicatePacket();break; 
-        case 103: DevidePacket(); break; 
+        case 103: SplitPacket(); break; 
         case 104: MergePacket(argc, argv); break; 
-        //case 105: AnalysePacket(); break; 
+        case 105: DeepPacketInspection(); break; 
         case 106: /*
                   for(; i<60000; i++) {
                       ModifyPacket(); 
@@ -219,7 +239,7 @@ int main(int argc, char* argv[])
         case 108: UsageOfProgram (); break; 
         case 109: SwitchPcapFormat(); break; 
         case 110: ReplayPacket(); break; 
-        default : DeepPacketInspection(); break; 
+        default : BuildPacket(); break;
     }
 
     PROGRAMEND();

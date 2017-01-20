@@ -1,50 +1,48 @@
+#include    <time.h>
+#include    <fcntl.h>
 #include    <stdio.h>
 #include    <stdlib.h>
 #include    <stdarg.h>
-#include    <fcntl.h>
 #include    <unistd.h>
 #include    <string.h>
 #include    <libgen.h>
-#include    <time.h>
 #include    <sys/time.h>
-#include    "default.h"
 #include    "runlog.h"
+#include    "common.h"
+#include    "default.h"
 
-static char cTimeBuf[256];
+
+static char cTimeBuf[SIZE_128B*2];
 
 static void RecordRunningLog(char* pcLog)
 {
-    int      iLogFd;
-    char*    cLogFileName = "/etc/.sendlog";
+    int iLogFd = 0;
 
-    /* open log */
-    if ((iLogFd = open(cLogFileName, O_RDWR 
-        | O_APPEND | O_CREAT, PERM)) < 0) {
-        LOGRECORD(ERROR, "log open error! [fd]:%d", iLogFd);
+    if ((iLogFd = open("/etc/.sendlog", \
+        O_WRONLY | O_CREAT | O_APPEND, PERM)) < 0 ) {
+        LOGRECORD(ERROR, "Open log failed");
     }
 
-    /* write log */
+    /* Record running log */
     if (write(iLogFd, pcLog, strlen(pcLog)) < 0) {
-        LOGRECORD(ERROR, "log write error");
+        LOGRECORD(ERROR, "Record log failed");
     }
 
-    /* close log */
     close(iLogFd);
 }
 
 static void ErrorProcessingEntrance(char* pcLog, char* pcInfo)
 {
     RecordRunningLog(pcLog);
-    printf("Error:%s\n",pcInfo);
-    PROGRAMEND();
+    printf("Error:%s\n", pcInfo);
 
-    exit(0);
+    PROGRAMEND();
 }
 
 static void WarningProcessingEntrance(char* pcLog, char* pcInfo)
 {
     RecordRunningLog(pcLog);
-    printf("WARNING:%s\n",pcInfo);
+    printf("WARNING:%s\n", pcInfo);
 }
 
 static void DebugProcessingEntrance(char* pcLog)
@@ -55,22 +53,22 @@ static void DebugProcessingEntrance(char* pcLog)
 static void InfoProcessingEntrance(char* pcLog, char* pcInfo)
 {
     RecordRunningLog(pcLog);
-    printf("%s\n",pcInfo);
+    printf("%s\n", pcInfo);
 }
 
 static void GetCurrentTime()
 {
-    char    cTimeTmp[128];
-    time_t    tRawTime;
-    struct    tm*        stTimeInfo;
-    struct    timeval tp;
+    char    cTimeTmp[SIZE_128B];
+    time_t  tRawTime;
+    struct  tm* stTimeInfo;
+    struct  timeval tp;
 
     gettimeofday(&tp, NULL);
 
     time(&tRawTime);
     stTimeInfo = localtime(&tRawTime);
     memset(cTimeBuf, 0, sizeof(cTimeBuf));
-    strftime(cTimeBuf, 20,"%x %X", stTimeInfo);
+    strftime(cTimeBuf, 20, "%x %X", stTimeInfo);
 
     sprintf(cTimeTmp, ".%ld", tp.tv_usec);
     strcat(cTimeBuf, cTimeTmp);
@@ -78,8 +76,8 @@ static void GetCurrentTime()
 
 void LogProcessingEntrance(char* filename, int line, int level, char* fmt,...)
 {
-    char       cLogBuf[256];
-    char       cTmpBuf[256];
+    char       cLogBuf[SIZE_1K*4];
+    char       cTmpBuf[SIZE_1K*4];
     va_list    vaArgPtr;
 
     va_start(vaArgPtr, fmt);

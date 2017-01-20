@@ -1,4 +1,3 @@
-#include    <stdio.h>
 #include    <stdlib.h>
 #include    <getopt.h>
 #include    "auth.h"
@@ -6,6 +5,7 @@
 #include    "runlog.h"
 #include    "default.h"
 #include    <string.h>
+
 
 void BuildPacket();
 void SplitPacket(); 
@@ -17,6 +17,7 @@ void ReplayPacket();
 void DeepPacketInspection();
 char* ParseReadList(char* pCmd);
 
+/* Command line parameter control table */
 struct option LongOptions[] = {
     {.name = "smac",      .has_arg = optional_argument, .val = 'a'}, 
     {.name = "dmac",      .has_arg = optional_argument, .val = 'b'}, 
@@ -55,12 +56,10 @@ struct option LongOptions[] = {
     {NULL}, 
 };
 
-/* help infomation for user */
+/* User help manual */
 void UsageOfProgram() 
 {
-    LOGRECORD(DEBUG, "Query help information start...");
-
-    printf(
+    LOGRECORD(INFO, \
         "Usage: gaosend [args ...]\n"
         "PACKET ARGS\n" 
         "\t--smac       -a   Source mac  [ fixed | random | increase ]\n"
@@ -83,7 +82,7 @@ void UsageOfProgram()
         "\t--duplicate  -D   Duplicate N times into original pcap-file, use with -r and -c\n"
         "\t--devide     -C   Devide the pcap file to single pcap file, use with -r\n"
         "\t--merge      -m   Merge the pcap files into frist pcap file, use with -r and -w\n"
-        //"\t--statistic  -A   Statistic informations, use with -r\n"
+        "\t--statistic  -A   Statistic informations, use with -r\n"
         "\t--modify     -M   Modify packet, use with -r and other needed parameters\n"
         "\t--format     -f   Switch packet format to *.pcap, use with -r and -w\n"
         "OTHER ARGS\n"
@@ -98,20 +97,20 @@ void UsageOfProgram()
         "\t--help       -h   Help informations\n"
     );
 
-    LOGRECORD(DEBUG, "Query help information finished...");
+    LOGRECORD(DEBUG, "Query user manual finished");
 }
 
-/* software version */
+/* Software version information */
 void VersionOfProgram()
 {
-    LOGRECORD(DEBUG, "Query Program Version start...");
-    printf ("Author  : GaoJiabao\n" 
+    LOGRECORD(INFO, "Author  : GaoJiabao\n" 
             "E-mail  : 729272771@qq.com\n"
-            "Version : %s-%s-%s\n",
+            "Version : %s-%s-%s",
             __DATE__, __TIME__, VERSION);
-    LOGRECORD(DEBUG, "Query Program Version finished...");
+    LOGRECORD(DEBUG, "Query software version finished");
 }
 
+/* command line parameter storage container initialization */
 void ParametersInit()
 {
     CreateStorage();
@@ -127,7 +126,7 @@ void ParametersInit()
     InsertNode("offset", NULL, 0, 0);
     InsertNode("debug", NULL, 0, 0);
     InsertNode("flow", NULL, 0, 0);
-    InsertNode("exec", NULL, 0, 0); //0:send,1:save
+    InsertNode("exec", NULL, 0, 0); // 0:send,1:save
     InsertNode("interface", INTERFACE, -1, 0);
     InsertNode("pktlen", NULL, PKTLEN, 0);
     InsertNode("count", NULL, COUNT, 0);
@@ -136,12 +135,7 @@ void ParametersInit()
     InsertNode("string", NULL, -1, 1);
 }
 
-void SaveCommandLine(char* pCmdBuf)
-{
-
-}
-
-/* get program args from terminal */
+/* Analysis of command line parameters */
 void TerminalParametersAnalyse(int argc, char *argv[])
 {
     char    cCmdInput;
@@ -150,14 +144,14 @@ void TerminalParametersAnalyse(int argc, char *argv[])
     int     iCounter = 0;
     char    cCmdBuf[100];
 
-    // save command line input
+    // Save command line input
     memset(cCmdBuf, 0 , sizeof(cCmdBuf));
     for (; iCounter<argc; iCounter++) {
         strcat(cCmdBuf, argv[iCounter]);
         strcat(cCmdBuf, " ");
     }
 
-    // storage container initialization
+    // Storage container initialization
     ParametersInit();
 
     while((cCmdInput = getopt_long(argc, argv, pParaOption, LongOptions, NULL)) != -1)
@@ -203,23 +197,25 @@ void TerminalParametersAnalyse(int argc, char *argv[])
             case 'R': StorageInput("entrance", "110", 'i'); break; 
             case 'X': StorageInput("entrance", "111", 'i'); break; 
             default : LOGRECORD(ERROR, "Without this parameter '%c'", cCmdInput); 
-        }// end of switch
-    }// end of while
+        } // end of switch 
+    } // end of while for parameter analysis
 
     
     LOGRECORD(DEBUG, "Terminal parameters analyse finished");
 }
 
+/* Main program entry */
 int main(int argc, char* argv[])
 {
     PROGRAMSTART();
 
-    /* get command args from terminal */
+    // Get command args from terminal 
     TerminalParametersAnalyse(argc, argv);
 
-    /* judge authority */
+    // User access authentication 
     CertificationAuthority(argv);
 
+    // Functional program entry
     switch(GetiValue("entrance"))
     {
         case 100: BuildPacket(); break;

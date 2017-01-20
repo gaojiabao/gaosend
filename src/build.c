@@ -5,10 +5,6 @@
  *             then make a specifed packet and send it.
  */
 
-#include    <time.h>
-#include    <stdio.h> 
-#include    <stdlib.h>
-#include    <fcntl.h>
 #include    <unistd.h>
 #include    <string.h>
 #include    <sys/time.h>
@@ -20,6 +16,7 @@
 #include    "runlog.h"
 #include    "socket.h"
 #include    "storage.h"
+
 
 /* packet */
 char    packet[PACKETLEN];
@@ -212,21 +209,22 @@ void PacketStrcutureInitialization()
 
 int WriteModeInitialization()
 {
-    int iPcapFd;
+    int iSaveFd = OpenSaveFile(GetcValue("savefile"));;
+
     pPcapHdr = (_pcaphdr*)packet;
     BuildPcapHeader();
-    if ((iPcapFd =open(GetcValue("savefile"), 
-        O_WRONLY|O_EXCL|O_CREAT, PERM)) < 0) {
+    
+    if (iSaveFd < 0) {
         LOGRECORD(ERROR, "pcap file open error or exist");
     }
-    if (write(iPcapFd, packet, PCAPHDRLEN) < 0 ) {
+    if (write(iSaveFd, packet, PCAPHDRLEN) < 0 ) {
         LOGRECORD(ERROR, "save pcap file error");
     }
     if (GetiValue("debug")) {
         DisplayPacketData(packet, PCAPHDRLEN);
     }
 
-    return iPcapFd;
+    return iSaveFd;
 }
 
 void BuildLayer2Header()
@@ -364,7 +362,7 @@ void BuildHttpDataContext(int paylen)
     strcat(Http, "Accept-Encoding: gzip, deflate/r/n");  
     strcat(Http, "Accept-Language: zh-cn\r\n");  
     strcat(Http, "Cookie:");  
-    strcat(Http, GetRandomCharactor(paylen - strlen(Http) - 4));
+    strcat(Http, GetRandomString(paylen - strlen(Http) - 4));
     strcat(Http, "\r\n\r\n");  
     memcpy(data, Http, strlen(Http));
     strcat(Http, uri);  
@@ -385,7 +383,7 @@ void BuildDataContexts(int paylen)
             paylen = rule_str_len;
         }
         */
-        memcpy(data, GetRandomCharactor(paylen), paylen);
+        memcpy(data, GetRandomString(paylen), paylen);
     } else if (strFlag == FG_FIXDATA) {
         char* pString = GetcValue("string");
         int sLength = strlen(pString);
@@ -448,16 +446,16 @@ void BuildLayer7Header()
 
 int RuleModeInitialization()
 {
-    int fd = 0;
+    int iSaveFd = 0;
     if (strcmp(rule_tag, "aclnmask") == 0) {
-        fd=open(ACLNMASKFILE, O_WRONLY|O_CREAT, PERM);
+        iSaveFd = OpenSaveFile(ACLNMASKFILE);
     } else if (strcmp(rule_tag, "aclex") == 0) {
-        fd=open(ACLEXFILE, O_WRONLY|O_CREAT, PERM);
+        iSaveFd = OpenSaveFile(ACLEXFILE);
     } else if (strcmp(rule_tag, "mac_table") == 0) {
-        fd=open(MACTABLEFILE, O_WRONLY|O_CREAT, PERM);
+        iSaveFd = OpenSaveFile(MACTABLEFILE);
     }
 
-    return fd;
+    return iSaveFd;
 }
 
 void RulesGenerationEntrance(int fd, int iRuleNum)

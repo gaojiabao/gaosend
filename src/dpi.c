@@ -1,19 +1,14 @@
-#include    <time.h>
 #include    <stdio.h> 
-#include    <stdlib.h>
-#include    <fcntl.h>
 #include    <unistd.h>
-#include    <string.h>
-#include    <sys/time.h>
-#include    "packet.h"
-#include    "default.h"
-#include    "common.h"
-#include    "structure.h"
-#include    "statistic.h"
-#include    "runlog.h"
-#include    "storage.h"
-#include    "socket.h"
 #include    "auth.h"
+#include    "packet.h"
+#include    "runlog.h"
+#include    "common.h"
+#include    "storage.h"
+#include    "statistic.h"
+
+#define     ON   1 // Switch ON
+#define     OFF  0 // Switch OFF
 
 /* packet structure */
 static _pcaphdr*    pPcapHdr;
@@ -27,7 +22,6 @@ static _udphdr*     pUdpHdr;
 static _tcphdr*     pTcpHdr;
 static _icmphdr*    pIcmpHdr;
 
-static int  iFdRead = 0;
 static int  iCursor = 0;
 static char cPacketBuf[2000];
 static char cPcapHdrBuf[PCAPHDRLEN];
@@ -36,35 +30,36 @@ static char cPktHdrBuf[PKTHDRLEN];
 void ExtractMessage(char*, int );
 void PacketProcessing();
 
-/* pcap file header parsing */
-char* PcapHdrInspection()
+/* Pcap file header parsing */
+char* PcapHdrInspection(int iReadFd)
 {
     pPcapHdr = (_pcaphdr*) cPcapHdrBuf;
     
-    if (read(iFdRead, cPcapHdrBuf, sizeof(cPcapHdrBuf)) < 0) {
+    if (read(iReadFd, cPcapHdrBuf, sizeof(cPcapHdrBuf)) < 0) {
         LOGRECORD(ERROR, "Pcap header read failed");
     }
 
     if (htonl(pPcapHdr->magic) != 0xd4c3b2a1) {
         LOGRECORD(ERROR, "File format not supported");
     }
-    //ExtractMessage(cPcapHdrBuf, PCAPHDRLEN);
+    // ExtractMessage(cPcapHdrBuf, PCAPHDRLEN);
+
     return cPcapHdrBuf;
 }
 
-/* message header information analysis */
-int PktHdrInspection()
+/* Message header information analysis */
+int PktHdrInspection(int iReadFd)
 {
     pPktHdr = (_pkthdr*) cPktHdrBuf;
-    if (read(iFdRead, cPktHdrBuf, sizeof(cPktHdrBuf)) < 1) {
-        LOGRECORD(DEBUG, "Packet Inspection finished");
+    if (read(iReadFd, cPktHdrBuf, sizeof(cPktHdrBuf)) < 1) {
+        LOGRECORD(DEBUG, "Data has been read finished");
         return -1;
     }
 
     return pPktHdr->len;
 }
 
-/* layer four protocol analysis */
+/* Layer four protocol analysis */
 void L4HdrInspection(U8 pro)
 {
     char * pL4Hdr =  cPacketBuf + iCursor;
@@ -72,15 +67,15 @@ void L4HdrInspection(U8 pro)
     if (pro == TCP) {
         iCursor += TCPHDRLEN;
         pTcpHdr = (_tcphdr *) pL4Hdr;
-        // TCP stream check
-        if(GetiValue("flow") == 1) {
+        // TCP flow check
+        if(GetiValue("flow") == ON) {
             char iFiveTupleSum[32];
             sprintf(iFiveTupleSum, "%d", pIp4Hdr->srcip + pIp4Hdr->dstip
                 + pTcpHdr->sport + pTcpHdr->dport + pIp4Hdr->protocol);
             StoreStreamInfo(MD5Digest(iFiveTupleSum));
         }
-        //PacketProcessing();
 
+        // PacketProcessing();
         RecordStatisticsInfo(EMPRO_TCP);
         StatisticUpperTcp(htons(pTcpHdr->sport), htons(pTcpHdr->dport));
     } else if (pro == UDP) {
@@ -98,7 +93,7 @@ void L4HdrInspection(U8 pro)
     }
 }
 
-/* layer three protocol analysis */
+/* Layer three protocol analysis */
 U8 L3HdrInspection(U16 pro)
 {
     U8 iPro = 0;
@@ -134,7 +129,7 @@ U8 L3HdrInspection(U16 pro)
     return iPro;
 }
 
-/* layer two protocol analysis */
+/* Layer two protocol analysis */
 void L2HdrInspection()
 {
     pMacHdr = (_machdr *) (cPacketBuf + iCursor);
@@ -142,7 +137,7 @@ void L2HdrInspection()
     L3HdrInspection(htons(pMacHdr->pro2));
 }
 
-/* data content resolution portal */
+/* Data content resolution portal */
 void PacketPrase()
 {
     L2HdrInspection();
@@ -151,38 +146,35 @@ void PacketPrase()
     }
 }
 
-/* extracting data message */
+/* Extracting data message */
 void PacketProcessing()
 {
-    static int iNum = 1;
-    if (iNum == 1) {
+    static int iNum = ON;
+    if (iNum == ON) {
         ExtractMessage(cPcapHdrBuf, PCAPHDRLEN);
-        iNum++;
+        iNum = OFF;
     }
     ExtractMessage(cPktHdrBuf, PKTHDRLEN);
     ExtractMessage(cPacketBuf, pPktHdr->len);
 }
 
-/* deep packet inspection portal */
+/* Deep packet inspection portal */
 void DeepPacketInspection()
 {
     LOGRECORD(DEBUG, "Deep packet inspection start...");
 
-    // turn on flow assoition
-    if(GetiValue("flow") == 1) {
+    // Turn on flow assoition
+    if(GetiValue("flow") == ON) {
         CreateStreamStorage();
     }
 
-    if ((iFdRead = open(GetcValue("readfile"), O_RDWR)) < 0) {
-        LOGRECORD(ERROR, "Open %s file error", GetcValue("readfile"));
-    }
-
-    PcapHdrInspection();
+    int  iReadFd = OpenReadFile(GetcValue("readfile"));
+    PcapHdrInspection(iReadFd);
 
     int iPktLen = 0;
-    while ((iPktLen = PktHdrInspection()) > 0) {
-        if (read(iFdRead, cPacketBuf, iPktLen) < 0) {
-            LOGRECORD(ERROR, "read packethdr error");
+    while ((iPktLen = PktHdrInspection(iReadFd)) > 0) {
+        if (read(iReadFd, cPacketBuf, iPktLen) < 0) {
+            LOGRECORD(ERROR, "Pcap header read failed");
         }
         
         PacketPrase();
@@ -190,12 +182,12 @@ void DeepPacketInspection()
     } // end of while
 
     DisplayStatisticsResults();
-    if(GetiValue("flow") == 1) {
+    if (GetiValue("flow") == ON) {
         DisplayAllStreamMD5();
     }
 
     LOGRECORD(DEBUG, "Deep packet inspection finished...");
 
-    close(iFdRead);
+    close(iReadFd);
 }
 

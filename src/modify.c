@@ -1,18 +1,11 @@
-#include    <time.h>
-#include    <stdio.h> 
-#include    <stdlib.h>
-#include    <fcntl.h>
 #include    <unistd.h>
 #include    <string.h>
-#include    <sys/time.h>
-#include    "packet.h"
-#include    "default.h"
 #include    "common.h"
-#include    "structure.h"
-#include    "statistic.h"
 #include    "runlog.h"
-#include    "storage.h"
 #include    "socket.h"
+#include    "storage.h"
+#include    "structure.h"
+
 
 /* packet structure */
 extern _pcaphdr*    pPcapHdr;

@@ -1,9 +1,6 @@
-#include    <stdio.h>
-#include    <string.h>
-#include    "default.h"
-#include    "packet.h"
 #include    "runlog.h"
 #include    "statistic.h"
+
 
 static  int iTotleNum       = 0;
 static  int iArpNum         = 0;
@@ -28,6 +25,7 @@ static  int iL3OtherNum     = 0;
 static  int iL4OtherNum     = 0; 
 static  int iL4Other6Num    = 0; 
 
+/* Statistical UDP upper protocol */
 void StatisticUpperUdp(int sport, int dport)
 {
     if (sport == 53 || dport == 53) {
@@ -35,6 +33,7 @@ void StatisticUpperUdp(int sport, int dport)
     }
 }
 
+/* Statistical TCP upper protocol */
 void StatisticUpperTcp(int sport, int dport)
 {
     if (dport == 25) {
@@ -55,6 +54,7 @@ void StatisticUpperTcp(int sport, int dport)
     }
 }
 
+/* Number of statistical protocols */
 void RecordStatisticsInfo(int iEmProNum)
 {
     switch(iEmProNum) {
@@ -86,11 +86,13 @@ void RecordStatisticsInfo(int iEmProNum)
     }
 }
 
+/* Expressed as a percentage */
 float PercentCalc(int iCount, int iSum)
 {
     return ((iCount * 100.0) / iSum);
 }
 
+/* Output protocol statistics */
 void DisplayStatisticsResults()
 {    
     LOGRECORD(INFO, "--------------[statistic]--------------------");

@@ -1,14 +1,11 @@
-#include    <time.h>   
 #include    <stdio.h> 
 #include    <fcntl.h>
 #include    <stdlib.h>
 #include    <unistd.h>
 #include    <string.h>
-#include    <stdlib.h>  
-#include    <arpa/inet.h>
-#include    "default.h"
 #include    "runlog.h"
 #include    "storage.h"
+
 
 #define     MAXUSETIMES 500
 
@@ -162,6 +159,7 @@ static void MD5Transform(UINT4 state[4], unsigned char block[64])
     memset((POINTER)x, 0, sizeof(x));   
 }   
 
+/* Echo MD5 value */
 static char* MD5DigestDisplay(unsigned char* array) 
 {
     static char cMd5Buf[100];
@@ -222,6 +220,7 @@ static void MD5Final(unsigned char digest[16], MD5_CTX *context)
     memset((POINTER)context, 0, sizeof(*context));   
 }   
   
+/* Verify password */
 static int IsPasswdOK(unsigned char* pPasswdMD5)
 {
     int iCounter;
@@ -230,9 +229,11 @@ static int IsPasswdOK(unsigned char* pPasswdMD5)
             return 0;
         }
     }
+
     return 1;
 }
 
+/* MD5 abstract algorithm portal */
 unsigned char* MD5Digest(char* pszInput) 
 {   
     static unsigned char pszOutPut[MD5LEN];   
@@ -250,34 +251,36 @@ unsigned char* MD5Digest(char* pszInput)
     return pszOutPut;
 }   
 
+/* Superman user login authentication */
 void SuperManUser()
 {
     char    passwd[32];
 
-    LOGRECORD(DEBUG, "SuperMan Mode start...");
-    LOGRECORD(INFO, "please input password:");
+    LOGRECORD(DEBUG, "User login authentication start");
+    LOGRECORD(INFO, "Please input password:");
 
     if (scanf("%s", passwd) < 0) {
-        LOGRECORD(ERROR, "scanf error");
+        LOGRECORD(ERROR, "Input error");
     }
 
     if (IsPasswdOK(MD5Digest(passwd))) {
         remove(pLogName);
-        LOGRECORD(INFO, "Perform success and please running again.");
+        LOGRECORD(INFO, "Execute successfully and please run the software again");
     } else {
         LOGRECORD(ERROR, "Password input error");
     }
 
-    LOGRECORD(DEBUG, "SuperMan Mode finished...");
+    LOGRECORD(DEBUG, "User login authentication success");
 }
 
+/* Software use counter */
 static void UseTimesFunction(int iUseNumber, int iNum)
 {
     int     iUseFd;
     char    cUseNumber[10];
 
     if ((iUseFd = open(pLogName, O_WRONLY | O_CREAT, PERM)) < 0) {
-        LOGRECORD(ERROR, "License file open error");
+        LOGRECORD(ERROR, "License file open failed");
     }
 
     memset(cUseNumber, 0, sizeof(cUseNumber));
@@ -285,14 +288,14 @@ static void UseTimesFunction(int iUseNumber, int iNum)
     sprintf(cUseNumber, "%d", iUseNumber);
 
     if (write(iUseFd, cUseNumber, strlen(cUseNumber)) < 0) {
-        LOGRECORD(ERROR, "License file write error");
+        LOGRECORD(ERROR, "License file write failed");
     }
     
     close(iUseFd);
     LOGRECORD(DEBUG, "Use Times: [%d/%d]", iUseNumber, MAXUSETIMES);
 } 
 
-/* judge authority */
+/* Verify user permissions */
 void CertificationAuthority()
 {
     int     iUseFd;
@@ -314,7 +317,7 @@ void CertificationAuthority()
 
     iUseNumber = atoi(cUseNumber);
     if (iUseNumber > MAXUSETIMES) {
-        LOGRECORD(ERROR, "The number of use is over limited[%d]", iUseNumber);
+        LOGRECORD(ERROR, "The number of users has reached the upper limit");
     }
     
     close(iUseFd);

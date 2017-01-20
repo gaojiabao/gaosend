@@ -5,110 +5,105 @@
  *
  */
 
-#include    <stdio.h>
+#include    <unistd.h>
 #include    <string.h>
-#include    <arpa/inet.h>
-#include    <linux/if.h>
 #include    <sys/ioctl.h>
 #include    <linux/if_ether.h>
 #include    <netpacket/packet.h>
-#include    <unistd.h>
-#include    <fcntl.h>
-
 #include    "runlog.h"
-#include    "default.h"
-#include    "packet.h"
-#include    "storage.h"
 #include    "common.h"
+#include    "storage.h"
 
-/* global variable*/
+
+/* Global variable*/
 static    int            iSockFd;
 
-/* network struct */
+/* Network struct */
 struct    ifreq             ifr;
 struct    sockaddr_ll    sockAddr;
 
-/* create socket connection */
+/* Create socket connection */
 void SendModeInitialization(char* interface)
 {
-    /* get a socket fd */
-    if ((iSockFd=socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0) {
-        LOGRECORD(ERROR, "get iSockFd error! iSockFd:%d", iSockFd);
+    if ((iSockFd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0) {
+        LOGRECORD(ERROR, "Sock descriptor acquisition failed[%d]", iSockFd);
     }
 
-    /* set interface interface */
+    // Set interface
     bzero(&ifr, sizeof(ifr));
     strcpy(ifr.ifr_name, interface);
     ioctl(iSockFd, SIOCGIFINDEX, &ifr);
 
-    /* set socket */
+    // Set socket protocol
     bzero(&sockAddr, sizeof(sockAddr));
     sockAddr.sll_family=PF_PACKET;
     sockAddr.sll_protocol=htons(ETH_P_ALL);
     sockAddr.sll_ifindex=ifr.ifr_ifindex;
     
-    /* bind socket interface */
+    // Bind socket interface
     if (bind(iSockFd, (struct sockaddr *)&sockAddr, \
         sizeof(sockAddr)) < 0) {
-        LOGRECORD(ERROR, "bind socket error");
+        LOGRECORD(ERROR, "Socket bind failed");
     }
 }
 
-/* send data to interface */
+/* Send data to interface */
 void SendPacketProcess(char* packet,int len)
 {
-    //DisplayPacketData(packet, len);
+    if (GetiValue("debug") == 1) {
+        DisplayPacketData(packet, len);
+    }
+
     if ((sendto(iSockFd, (const void*)packet, len, 0, \
         (struct sockaddr*)&sockAddr, sizeof(sockAddr)))<0) {
-        LOGRECORD(ERROR, "send packet error");
+        LOGRECORD(ERROR, "Packet send failed");
     }
 }
 
-/* close socket connection */
+/* Close socket connection */
 void CloseSendConnect()
 {
     close(iSockFd);
-    LOGRECORD(DEBUG, "Send packets finished");
+    LOGRECORD(DEBUG, "The packet has been sent");
 }
 
-/* send packet directly */
+/* Send packet directly */
 void SendProcess()
 {
-    char packet[2000];
-    int  iFdRead = 0; 
-    extern _pcaphdr*    pPcapHdr;
-    extern _pkthdr*     pPktHdr;
+    char cPacketBuf[SIZE_1K*2];
+    static _pcaphdr* pPcapHdr = NULL;
+    static _pkthdr*  pPktHdr = NULL;
 
-    pPcapHdr    = (_pcaphdr*) packet;
-    pPktHdr     = (_pkthdr*) packet;
+    pPcapHdr = (_pcaphdr*) cPacketBuf;
+    pPktHdr  = (_pkthdr*) cPacketBuf;
     
-    memset(packet, 0 , sizeof(packet));
-    if ((iFdRead = open(GetcValue("readfile"), O_RDWR)) < 0) {
-        LOGRECORD(ERROR, "open pcap file error");
-    }
-    if (read(iFdRead, packet, PCAPHDRLEN) < 0) {
-        LOGRECORD(ERROR, "read pcaphdr error");
+    int  iReadFd = OpenReadFile(GetcValue("readfile")); 
+    memset(cPacketBuf, 0 , sizeof(cPacketBuf));
+
+    if (read(iReadFd, cPacketBuf, PCAPHDRLEN) < 0) {
+        LOGRECORD(ERROR, "Pcap header read failed");
     }
     if (htonl(pPcapHdr->magic) != 0xd4c3b2a1) {
-        LOGRECORD(ERROR, "file paratarn error");
+        LOGRECORD(ERROR, "File format is not recognized");
     }
 
-    while(read(iFdRead, packet, PKTHDRLEN) > 1 ) {
-        if (read(iFdRead, packet+PKTHDRLEN, pPktHdr->len) < 0) {
-            LOGRECORD(ERROR, "read packethdr error");
+    while(read(iReadFd, cPacketBuf, PKTHDRLEN) > 1 ) {
+        if (read(iReadFd, cPacketBuf+PKTHDRLEN, pPktHdr->len) < 0) {
+            LOGRECORD(ERROR, "Packet read failed");
         }
-        SendPacketProcess(packet+PKTHDRLEN, pPktHdr->len);
+        SendPacketProcess(cPacketBuf+PKTHDRLEN, pPktHdr->len);
     }
 
-    close(iFdRead);
+    close(iReadFd);
 }
 
-/* send packet entrance*/
+/* Send packet entrance*/
 void ReplayPacket()
 {
     unsigned int iCounter = GetiValue("count");
     unsigned int iSum = iCounter;
     SendModeInitialization(GetcValue("interface"));
+
     if (iCounter <= 0) {
         while (1 == 1) {
             SendProcess();
@@ -118,8 +113,9 @@ void ReplayPacket()
             SendProcess();
             ProgramProgress((iSum - iCounter), iSum);
         }
-        printf("\n");
+        LOGRECORD(INFO, NULL);
     }
+
     CloseSendConnect();
 }
 

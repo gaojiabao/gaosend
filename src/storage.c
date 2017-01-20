@@ -1,12 +1,10 @@
-#include "storage.h"
-#include "common.h"
-#include <stdio.h>
-#include "default.h"
-#include "runlog.h"
-#include <stdlib.h>
+#include <ctype.h>
 #include <assert.h>
 #include <string.h>
-#include <ctype.h>
+#include "common.h"
+#include "runlog.h"
+#include "storage.h"
+
 
 static pNode pHead;
 

@@ -10,11 +10,16 @@
 #include    <stdio.h>
 #include    "packet.h"
 
+/* Define buffer size */
+#define SIZE_16B       16
+#define SIZE_128B      128
+#define SIZE_1K        1024
+
 uint16_t    GetCheckSum(uint16_t *, int);
 char        ChangeHexToString(int);
 char*       GetUrlString();
 int         GetRandomNumber();
-char*       GetRandomCharactor(int);
+char*       GetRandomString(int);
 int         mac_type_change (char *, char *);
 
 char*       GetIncreaseMacAddress(int);
@@ -40,6 +45,10 @@ int         ProtocolConversion(char* );
 
 int         CheckIpLegal(char* );
 void        BufferCopy(char*, int, char*, int);
+
+int         OpenReadFile(char* );
+int         OpenSaveFile(char* );
+
 
 #define     FALSE 0
 #define     SUCCESS 1

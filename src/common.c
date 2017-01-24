@@ -118,7 +118,7 @@ char* GetRandomString(int iLength)
 }
 
 /* Get random MAC address */
-char* GetRandomMacAddress(int iSmacOrDmac)
+char* GetRandMacAddr(int iSmacOrDmac)
 {
     int iMacLenth;
     iMacLenth = strlen(cMacAddress[iSmacOrDmac]);
@@ -134,7 +134,7 @@ char* GetRandomMacAddress(int iSmacOrDmac)
 }
 
 /* Get increment MAC address */
-char* GetIncreaseMacAddress(int iSmacOrDmac)
+char* GetIncrMacAddr(int iSmacOrDmac)
 {
     int iMacLenth;
     iMacLenth = strlen(cMacAddress[iSmacOrDmac]) - 1;
@@ -156,23 +156,22 @@ char* GetIncreaseMacAddress(int iSmacOrDmac)
     return cMacAddress[iSmacOrDmac];
 }
 
-/* change mac address type from string to sixteen hexadecimal number*/
-int mac_type_change (char *str, char *mac)
+/* Writes a string MAC address to the packet */
+int FillInMacAddr(char *pMacStr, char *pMacBuf)
 {
-    int i;
-    char *s;
-    char *e;
-
-    if ((mac == NULL) || (str == NULL)) {
+    if ((pMacBuf == NULL) || (pMacStr == NULL)) {
         return -1;
     }
 
-    s = (char *) str;
-    for (i = 0; i < 6; ++i) {
-        mac[i] = s ? strtoul (s, &e, 16) : 0;
-        if (s)
-            s = (*e) ? e + 1 : e;
+    int i = 0;
+    char *pMacTmp = NULL;
+    for (; i < 6; i++) {
+        pMacBuf[i] = pMacStr ? strtoul (pMacStr, &pMacTmp, 16) : 0;
+        if (pMacStr) {
+            pMacStr = (*pMacTmp) ? pMacTmp + 1 : pMacTmp;
+        }
     }
+
     return 0;
 }
 
@@ -220,7 +219,7 @@ int CheckIpLegal(char* pIpStr)
 }
 
 /* Get random IP address */
-char* GetRandomIpAddress(int iSOrDIp)
+char* GetRandIp4Addr(int iSOrDIp)
 {
     sprintf(cIpAddress[iSOrDIp], "%d.%d.%d.%d", 
             GetRandomNumber() % 255 + 1,
@@ -232,7 +231,7 @@ char* GetRandomIpAddress(int iSOrDIp)
 }
 
 /* Get increased IP address */
-char* GetIncreaseIpAddress(int iSOrDIp)
+char* GetIncrIp4Addr(int iSOrDIp)
 {
     if (++iIpArray[iSOrDIp][3] > 255) { 
         iIpArray[iSOrDIp][3] = 1;
@@ -256,13 +255,13 @@ char* GetIncreaseIpAddress(int iSOrDIp)
 }
 
 /* Get increased port */
-int GetIncreasePort(int iSOrDPort)
+int GetIncreasePort(int iSoD)
 {
     static int siPortArray[] = {0, 0};
-    if (siPortArray[iSOrDPort]++ > 65535) {
-        siPortArray[iSOrDPort] = 0;
+    if (siPortArray[iSoD]++ > 65535) {
+        siPortArray[iSoD] = 0;
     }
-    return siPortArray[iSOrDPort];
+    return siPortArray[iSoD];
 }
 
 /* Get random port */
@@ -289,27 +288,27 @@ int GetIncreasePacketLength()
 }
 
 /* Get random VLAN ID */
-int GetRandomVlan()
+int GetRandVlan()
 {
     return (2 + GetRandomNumber() % (4096 - 2));
 }
 
 /* Get increased VLAN ID */
-int GetIncreaseVlan(int flag)
+int GetIncrVlan(int flag)
 {
     int res = -1;
-    static int vlan1 = 0;
-    static int vlan2 = 0;
+    static int vlan = 0;
+    static int qinq = 0;
     if (!flag) {
-        if (vlan1++ > 4094) {
-            vlan1 = 1;
+        if (vlan++ > 4094) {
+            vlan = 1;
         }
-        res = vlan1;
+        res = vlan;
     } else {
-        if (vlan2++ > 4094) {
-            vlan2 = 1;
+        if (qinq++ > 4094) {
+            qinq = 1;
         }
-        res = vlan2;
+        res = qinq;
     }
 
     return res;
@@ -487,8 +486,8 @@ int OpenSaveFile(char* pFileName)
         LOGRECORD(ERROR, "Filename is NULL");
     }
     if ((iSaveFd = open(pFileName, \
-        O_WRONLY | O_CREAT | O_EXCL | O_APPEND, PERM)) < 0 ) {
-        LOGRECORD(ERROR, "Open save-file failed");
+        O_WRONLY | O_CREAT | O_APPEND, PERM)) < 0 ) {
+        LOGRECORD(ERROR, "Open save-file failed:%d", iSaveFd);
     }
 
     return iSaveFd;

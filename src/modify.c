@@ -1,48 +1,17 @@
-#include    <unistd.h>
 #include    <string.h>
 #include    "common.h"
 #include    "runlog.h"
-#include    "socket.h"
 #include    "storage.h"
-#include    "structure.h"
-
-
-/* packet structure */
-extern _pcaphdr*    pPcapHdr;
-extern _pkthdr*     pPktHdr;
-extern _machdr*     pMacHdr;
-extern _vlanhdr*    pVlanHdr1;
-extern _vlanhdr*    pVlanHdr2;
-extern _arphdr*     pArpHdr;
-extern _ip4hdr*     pIp4Hdr;
-extern _udphdr*     pUdpHdr;
-extern _tcphdr*     pTcpHdr;
-extern _icmphdr*    pIcmpHdr;
-
-char packet[2000];
-extern void BuildVlanField(_vlanhdr*, uint16_t, uint16_t);
 
 #define SRC 0 
 #define DST 1
 
-/* init packet struct */
-void PktStrcInit(int vlnum)
-{
-    int iVlanCount    = vlnum;
-    pPcapHdr    = (_pcaphdr*) packet;
-    pPktHdr     = (_pkthdr*) packet;
-    pMacHdr     = (_machdr *) (packet + MACOFFSET);
-    pVlanHdr1   = (_vlanhdr *)(packet + VLAN1OFFSET);
-    pVlanHdr2   = (_vlanhdr *)(packet + VLAN2OFFSET);
-    pArpHdr     = (_arphdr *) (packet + ARPOFFSET(iVlanCount));
-    pIp4Hdr     = (_ip4hdr *) (packet + IP4OFFSET(iVlanCount));
-    pIcmpHdr  = (_icmphdr *)(packet + ICMP4OFFSET(iVlanCount));
-    pUdpHdr     = (_udphdr *) (packet + UDPOFFSET(iVlanCount));
-    pTcpHdr     = (_tcphdr *) (packet + TCPOFFSET(iVlanCount));
+/* packet structure */
+static stPktStrc stPkt;
 
-    LOGRECORD(DEBUG, "Packet strcuture initialization finished");
-}
 
+/* Replace input based on regular expressions */
+/*
 void RegularExpress(uint32_t a, uint32_t b)
 {
     static uint32_t ip1;
@@ -61,7 +30,9 @@ void RegularExpress(uint32_t a, uint32_t b)
         pIp4Hdr->dstip = a;
     }
 }
+*/
 
+/* Determine whether the parameters need to be modified */
 int IsNeedModify(char* title)
 {    
     int iResNum = 0;
@@ -72,393 +43,313 @@ int IsNeedModify(char* title)
     return iResNum;
 }
 
-void ModifyMacAddress(char* title, int isSrcMac) //smac:0,dmac:1
+/* To determine whether the source or destination */
+int JudgeSourceOrDestination(char* title)
 {
-    char* pMac = NULL;
-    pMac = isSrcMac ? (char*)&pMacHdr->dmac : (char*)&pMacHdr->smac;
+    char* pSrc[] = {"smac", "sip", "sport", "vlan"};
+    char* pDst[] = {"dmac", "dip", "dport", "qinq"};
 
-    switch(GetFlag(title)) {
-        case FG_FIXDATA: mac_type_change(GetcValue(title), pMac); break;
-        case FG_RANDOM : mac_type_change(GetRandomMacAddress(isSrcMac), pMac); break;
-        case FG_INCR   : mac_type_change(GetIncreaseMacAddress(isSrcMac), pMac); break;
-    }
-}
-
-void ModifyVlanNumber(char* title, int isFirstVlan) //vlan1:0,vlan2:1
-{
-    uint16_t vlanId = 0;
-
-    switch(GetFlag(title)) {
-        case FG_FIXDATA: vlanId = htons(GetiValue(title)); break;
-        case FG_RANDOM : vlanId = htons(GetRandomVlan(isFirstVlan)); break;
-        case FG_INCR   : vlanId = htons(GetIncreaseVlan(isFirstVlan)); break;
-    }
-
-    isFirstVlan ? (pVlanHdr2->vlan_id = vlanId) : (pVlanHdr1->vlan_id = vlanId);
-}
-
-void InsertVlanHeader()
-{
-    memcpy(packet+PKTHDRLEN+MACHDRLEN+VLANLEN, \
-        packet+PKTHDRLEN+MACHDRLEN, pPktHdr->len-MACHDRLEN);
-    BuildVlanField(pVlanHdr1, htons(100), pMacHdr->pro2);
-    pMacHdr->pro2 = htons(VLAN);
-    pPktHdr->len += VLANLEN;
-    pPktHdr->caplen += VLANLEN;
-}
-
-void ModifyIpAddress(char* title, int isSrcIp) //sip:0,dip:1
-{
-    int iCheckRes = 0;
-    char* pIp = NULL;
-    uint32_t ipaddr = 0;
-    switch(GetFlag(title)) {
-        case FG_FIXDATA: pIp = GetcValue(title);
-                         iCheckRes = CheckIpLegal(pIp);
-                         if (iCheckRes == SUCCESS) ipaddr = inet_addr(pIp);
-                         else if (iCheckRes == FALSE) LOGRECORD(ERROR, "Illegal IP Address !");
-                         break;
-        case FG_RANDOM : ipaddr = inet_addr(GetRandomIpAddress(isSrcIp)); break;
-        case FG_INCR   : ipaddr = inet_addr(GetIncreaseIpAddress(isSrcIp)); break;
-    }
-
-    if (iCheckRes == 2) {
-        char* pTmpSpace = malloc(strlen(pIp));
-        memcpy(pTmpSpace, pIp, strlen(pIp));
-        char *pOriginalIp = strtok(pTmpSpace, ":");
-        char *pReplaceIp  = strtok(NULL, ":");
-
-        if (isSrcIp) {
-            if (pIp4Hdr->dstip == inet_addr(pOriginalIp))
-                pIp4Hdr->dstip =  inet_addr(pReplaceIp); 
-        } else {
-            if (pIp4Hdr->srcip == inet_addr(pOriginalIp)) {
-                pIp4Hdr->srcip =  inet_addr(pReplaceIp); 
-            }
+    int iNum = 0;
+    int iLength = sizeof(pSrc) / sizeof(char*);
+    for (; iNum<iLength; iNum++) {
+        if (strcmp(title, pSrc[iNum]) == 0) {
+            return SRC;
         } 
-        free(pTmpSpace);
-    } else if (iCheckRes == SUCCESS) {
-        isSrcIp ? (pIp4Hdr->dstip = ipaddr) : (pIp4Hdr->srcip = ipaddr);
     }
+
+    iLength = sizeof(pDst) / sizeof(char*);
+    for (iNum=0; iNum<iLength; iNum++) {
+        if (strcmp(title, pDst[iNum]) == 0) {
+            return DST;
+        } 
+    }
+
+    // False
+    LOGRECORD(DEBUG, "Neither the source nor the destination");
+    return -1;
 }
 
-void ModifyPortNumber(char* title, uint8_t pro, int isSrcPort) //sport:0,dport:1
+/* Modify port number */
+void ModifyPortNumber(char* title, U8 iPro) //sport:0,dport:1
 {
-    uint16_t port = 0;
+    U16* pPortPos[] = {
+        (U16 *)&stPkt.pUdpHdr->sport, 
+        (U16 *)&stPkt.pUdpHdr->dport,
+        (U16 *)&stPkt.pTcpHdr->sport, 
+        (U16 *)&stPkt.pTcpHdr->dport
+    }; 
+
+    int iSoD = JudgeSourceOrDestination(title);
+    int iPos = iSoD * ((iPro == UDP) ? 1 : 2);
+
     switch(GetFlag(title)) {
-        case FG_FIXDATA: port = htons(GetiValue(title)); break;
-        case FG_RANDOM : port = htons(GetRandomPort()); break;
-        case FG_INCR   : port = htons(GetIncreasePort(isSrcPort)); break;
-    }
-
-    if (pro == UDP) {
-        isSrcPort ? (pUdpHdr->dport = port) : (pUdpHdr->sport = port);
-    } else if (pro == TCP) {
-        isSrcPort ? (pTcpHdr->dport = port) : (pTcpHdr->sport = port);
+        case FG_FIXD : *pPortPos[iPos] = htons(GetiValue(title)); break;
+        case FG_RAND : *pPortPos[iPos] = htons(GetRandomPort()); break;
+        case FG_INCR : *pPortPos[iPos] = htons(GetIncreasePort(iSoD)); break;
     }
 }
 
-int GetVlanNum()
+/* Modify VLAN ID number */
+void ModifyVlanId(char* title)
 {
-    int iVlanNum = 0;
-    if (htons(pMacHdr->pro2) == VLAN) {
-        iVlanNum++;
-        if (htons(pVlanHdr1->type == VLAN)) {
-            iVlanNum++;
+    U16* pVlanPos[] = {
+        (U16 *)&stPkt.pVlanHdr->id, 
+        (U16 *)&stPkt.pQinQHdr->id
+    }; 
+
+    // iVoQ: vlan or qinq 
+    int iVoQ = JudgeSourceOrDestination(title);
+
+    switch(GetFlag(title)) {
+        case FG_FIXD : *pVlanPos[iVoQ] = htons(GetiValue(title)); break;
+        case FG_RAND : *pVlanPos[iVoQ] = htons(GetRandVlan(iVoQ)); break;
+        case FG_INCR : *pVlanPos[iVoQ] = htons(GetIncrVlan(iVoQ)); break;
+    }
+}
+
+/* Add multilayer VLAN Tags */
+void InsertVlanInfo(int iHasVlanLayer)
+{
+    _vlanhdr* pVlanInfo[] = {
+        stPkt.pVlanHdr,
+        stPkt.pQinQHdr
+    }; 
+
+    int iVlanId = iHasVlanLayer ? GetiValue("qinq") : GetiValue("vlan");
+    int iPktLen = stPkt.pPktHdr->len;
+    int iCursor = MACHDRLEN + iHasVlanLayer * VLANLEN;
+
+    // Move packet
+    int iNum = 0;
+    int iLength = iPktLen - iCursor;
+    for (; iNum<iLength; iNum++) {
+        stPkt.pPacket[iPktLen+VLANLEN-1-iNum] \
+            = stPkt.pPacket[iPktLen-1-iNum]; 
+    }
+
+    // Insert VLAN ID
+    pVlanInfo[iHasVlanLayer] = (_vlanhdr*) (stPkt.pPacket + iCursor);
+    pVlanInfo[iHasVlanLayer]->id = htons(iVlanId);
+    stPkt.pPktHdr->caplen = stPkt.pPktHdr->len += VLANLEN;
+
+    if (iHasVlanLayer == 0) {
+        stPkt.pVlanHdr = pVlanInfo[iHasVlanLayer];
+        pVlanInfo[iHasVlanLayer]->pro = stPkt.pMacHdr->pro;    
+        stPkt.pMacHdr->pro = htons(VLAN);
+    } else if (iHasVlanLayer == 1) {
+        pVlanInfo[iHasVlanLayer]->pro = stPkt.pVlanHdr->pro;    
+        pVlanInfo[iHasVlanLayer-1]->pro = htons(VLAN);   
+    }
+}
+
+/* Delete multilayer VLAN Tags */
+void DeleteVlanInfo(int iHasVlanLayer, int iDirect)
+{
+    int iCursor = 0;
+    if (iHasVlanLayer > 0) {
+        if (iDirect == 0) { // Delete a VLAN ID from the front 
+            iCursor = MACHDRLEN;
+            stPkt.pMacHdr->pro = stPkt.pVlanHdr->pro;
+        } else if (iDirect == 1) { // Delete a VLAN ID from the rear
+            iCursor = MACHDRLEN + (iHasVlanLayer - 1) * VLANLEN;
+            if (iHasVlanLayer == 1) {
+                stPkt.pMacHdr->pro = stPkt.pVlanHdr->pro;
+            } else if (iHasVlanLayer == 2) {
+                stPkt.pVlanHdr->pro = stPkt.pQinQHdr->pro;
+            }
+        }
+
+        // Move the packet
+        int iNum = 0;
+        int iLength = stPkt.pPktHdr->len - iCursor;
+        for (; iNum<iLength; iNum++) {
+            stPkt.pPacket[iCursor+iNum-1] = \
+                stPkt.pPacket[iCursor+VLANLEN+iNum-1];
+        }
+
+        stPkt.pPktHdr->caplen = stPkt.pPktHdr->len -= VLANLEN;
+    } // End of if
+}
+
+/* Modify IP address */
+void ModifyIpAddress(char* title) //sip:0,dip:1
+{
+    U32* pIpPos[] = {
+        (U32 *)&stPkt.pIp4Hdr->srcip, 
+        (U32 *)&stPkt.pIp4Hdr->dstip
+    }; 
+
+    // iSoD: sip or dip
+    int iSoD = JudgeSourceOrDestination(title);
+    switch(GetFlag(title)) {
+        case FG_FIXD : *pIpPos[iSoD] = inet_addr(GetcValue(title)); break;
+        case FG_RAND : *pIpPos[iSoD] = inet_addr(GetRandIp4Addr(iSoD)); break;
+        case FG_INCR : *pIpPos[iSoD] = inet_addr(GetIncrIp4Addr(iSoD)); break;
+    }
+}
+
+/* Modify UDP header information */
+void ModifyUdpHdr() 
+{
+    char* pParaList[] = {"sport", "dport"};
+    int iLength = sizeof(pParaList) / sizeof(char*);
+    
+    int i = 0;
+    for (; i<iLength; i++) {
+        if (IsNeedModify(pParaList[i])) {
+            ModifyPortNumber(pParaList[i], UDP);
         }
     }
-    return iVlanNum;
 }
 
+/* Modify TCP header information */
+void ModifyTcpHdr() 
+{
+    char* pParaList[] = {"sport", "dport"};
+    int iLength = sizeof(pParaList) / sizeof(char*);
+    
+    int iNum = 0;
+    for (; iNum<iLength; iNum++) {
+        if (IsNeedModify(pParaList[iNum])) {
+            ModifyPortNumber(pParaList[iNum], TCP);
+        }
+    }
+}
+
+/* Modify IPv4 header information */
+void ModifyIPv4Hdr()
+{
+    char* pParaList[] = {"sip", "dip"};
+    int iLength = sizeof(pParaList) / sizeof(char*);
+
+    int iNum = 0;
+    for (; iNum<iLength; iNum++) {
+        if (IsNeedModify(pParaList[iNum])) {
+            ModifyIpAddress(pParaList[iNum]);
+        }
+    }
+}
+
+/* Modify VLAN information */
+void ModifyVlanHdr()
+{
+    char* pParaList[] = {"vlan", "qinq"};
+    int iLength = sizeof(pParaList) / sizeof(char*);
+
+    // Get current VLAN layer number
+    int iCurVlanNum = 0;   
+    if (stPkt.pQinQHdr != NULL) {
+        iCurVlanNum = 2;
+    } else if (stPkt.pVlanHdr != NULL) {
+        iCurVlanNum = 1;
+    }
+
+    // Get input VLAN layer number
+    int iNum = 0;
+    int iVlanId = 0;
+    int iInputVlanNum = 0;   
+
+    for (; iNum<iLength; iNum++) {
+        iVlanId = GetiValue(pParaList[iNum]);
+
+        if (iVlanId > 0) {
+            iInputVlanNum++;   
+            if (iCurVlanNum == iNum) {
+                InsertVlanInfo(iCurVlanNum);
+                iCurVlanNum++;
+            } else if (iCurVlanNum > iNum) {
+                ModifyVlanId(pParaList[iNum]);
+            }
+        } else if (iVlanId < 0) { // Delete VLAN tag
+            if (iCurVlanNum >= iNum) {
+                DeleteVlanInfo(iCurVlanNum, iNum);
+                iCurVlanNum--;
+            }
+        }
+    } // End of for
+}
+
+/* Modify IPv6 header information */
+void ModifyIPv6Hdr()
+{
+/*
+    unsigned char buf1[sizeof(struct in6_addr)];
+    unsigned char buf2[sizeof(struct in6_addr)];
+    if (sip_tag) {
+        pIp4Hdr->srcip = inet_pton(AF_INET6, sip, buf1);
+        BufferCopy(packetbuf, 32, buf1, sizeof(struct in6_addr));
+    }
+    if (dip_tag) {
+        pIp4Hdr->dstip = inet_pton(AF_INET6, dip, buf2);
+        BufferCopy(packetbuf, 48, buf2, sizeof(struct in6_addr));
+    }
+*/
+}
+
+/* Modify the MAC address */
+void ModifyMacHdr(char* title) //smac:0,dmac:1
+{
+    char* pMacPos[] = {
+        (char *)stPkt.pMacHdr->smac, 
+        (char *)stPkt.pMacHdr->dmac
+    }; 
+
+    // iSoD: smac or dmac
+    int iSoD = JudgeSourceOrDestination(title);
+
+    char* pMacAddr = GetcValue(title);
+    switch(GetFlag(title)) {
+        case FG_FIXD : FillInMacAddr(pMacAddr, pMacPos[iSoD]); break;
+        case FG_RAND : FillInMacAddr(GetRandMacAddr(iSoD), pMacPos[iSoD]); break;
+        case FG_INCR : FillInMacAddr(GetIncrMacAddr(iSoD), pMacPos[iSoD]); break;
+    }
+}
+
+/* Modify Layer 4 protocol information */
+void ModifyLayer4()
+{
+    U8 iPro = stPkt.pIp4Hdr->protocol;
+    switch (iPro) {
+        case UDP : ModifyUdpHdr(); break;
+        case TCP : ModifyTcpHdr(); break;
+        case ICMPv4 : break;
+    }
+}
+
+/* Modify Layer 3 protocol information */
+void ModifyLayer3()
+{
+    int iL3Pro = ((GetiValue("vlan") != 0 
+        || GetiValue("qinq") != 0)) ? VLAN : stPkt.pMacHdr->pro; 
+
+    switch (iL3Pro) {
+        case IPv4 : ModifyIPv4Hdr(); break;
+        case VLAN : ModifyVlanHdr(); break;
+        case IPv6 : ModifyIPv6Hdr(); break;
+        case ARP  : break;
+    }
+}
+
+/* Modify Layer 2 protocol information */
 void ModifyLayer2()
 {
-    int iVlanNum = GetVlanNum();
-    if (IsNeedModify("smac")) ModifyMacAddress("smac", SRC);
-    if (IsNeedModify("dmac")) ModifyMacAddress("dmac", DST);
-    PktStrcInit(iVlanNum);
+    char* pParaList[] = {"smac", "dmac"};
+    int iLength = sizeof(pParaList) / sizeof(char*);
 
-    if (IsNeedModify("vlan1")) {
-        if (htons(pMacHdr->pro2) == VLAN) {
-            ModifyVlanNumber("vlan1", 0);
-        } else {
-            InsertVlanHeader();
-            PktStrcInit(1);
-        }
-    }
-
-    if (IsNeedModify("vlan2")) {
-        if (iVlanNum > 0) {
-            if (htons(pVlanHdr1->type == VLAN)) {
-                ModifyVlanNumber("vlan2", 0);
-            } else {
-                InsertVlanHeader();
-            }
-        } else {
-            LOGRECORD(INFO, "QinQ has nothing to do");
+    int i = 0;
+    for (; i<iLength; i++) {
+        if (IsNeedModify(pParaList[i])) {
+            ModifyMacHdr(pParaList[i]);
         }
     }
 }
 
-void ModifyLayer3(uint16_t pro)
+/* Message modification program entry */
+void ModifyPacket(stPktStrc stOriginPktStrc)
 {
-    if (pro == ARP) {
-        LOGRECORD(INFO, "ARP Nothing to perform");
-    } else if (pro == IPv4) { 
-        if (IsNeedModify("sip")) ModifyIpAddress("sip", SRC);
-        if (IsNeedModify("dip")) ModifyIpAddress("dip", DST);
-    } else {
-        LOGRECORD(INFO, "Layer3 Nothing to perform");
-    } 
-    /*
-    else if (pro == IPv6) { // Layer 3
-        unsigned char buf1[sizeof(struct in6_addr)];
-        unsigned char buf2[sizeof(struct in6_addr)];
-        if (sip_tag) {
-            pIp4Hdr->srcip = inet_pton(AF_INET6, sip, buf1);
-            BufferCopy(packetbuf, 32, buf1, sizeof(struct in6_addr));
-        }
-        if (dip_tag) {
-            pIp4Hdr->dstip = inet_pton(AF_INET6, dip, buf2);
-            BufferCopy(packetbuf, 48, buf2, sizeof(struct in6_addr));
-        }
-        if (ip6_hdr->protocol == TCP) { // Layer 4
-            if (sport_tag) pTcpHdr->sport = htons(sport);
-            if (dport_tag) pTcpHdr->dport = htons(dport);
-        }else if (ip6_hdr->protocol == UDP) { // Layer 4
-            if (sport_tag) pUdpHdr->sport = htons(sport);
-            if (dport_tag) pUdpHdr->dport = htons(dport);
-        }else if (ip6_hdr->protocol == ICMPv6) { // Layer 4
-            printf("ICMPv6 Nothing to perform\n");
-        } else {
-            printf("ALL Nothing to perform\n");
-        }
-    } 
-    */
+    stPkt = stOriginPktStrc;
+    ModifyLayer2();
+    ModifyLayer3();
+    ModifyLayer4();
 }
 
-void ModifyLayer4(uint8_t pro)
-{
-    if (pro == UDP || pro == TCP) { 
-        if (IsNeedModify("sport")) ModifyPortNumber("sport", pro, SRC);
-        if (IsNeedModify("dport")) ModifyPortNumber("dport", pro, DST);
-    } else if (pro == ICMPv4) { 
-        LOGRECORD(DEBUG, "ICMP Nothing to perform");
-    }
-}
-
-uint16_t GetL3Protocol()
-{
-    uint16_t l3pro;
-    if (htons(pMacHdr->pro2) == VLAN) {
-        if (htons(pVlanHdr1->type == VLAN)) {
-            l3pro = pVlanHdr2->type;
-        } else {
-            l3pro = pVlanHdr1->type;
-        }
-    } else {
-        l3pro = pMacHdr->pro2;
-    }
-
-    return l3pro;
-}
-
-void ErrorHanding(int fdin, int fdout, char* filename)
-{
-    close(fdin);
-    close(fdout);
-    remove(filename);
-    LOGRECORD(DEBUG, "ErrorHanding finished !");
-}
-
-void ModifyPacket()
-{
-    int iFdRead = 0; 
-    int iFdSave = 0; 
-
-    PktStrcInit(GetiValue("vlannum"));
-    //PktStrcInit(1);
-    if (GetiValue("debug")) {
-        ShowParameter();
-    }
-
-    /* how to deal with packets */
-    if (GetiValue("exec") == 0) { //send
-        SendModeInitialization(GetcValue("interface"));
-    } else { //save
-        if ((iFdSave = open(GetcValue("savefile"), O_RDWR | O_CREAT, PERM)) < 0) {
-            LOGRECORD(ERROR, "open result.pcap error");
-        }
-    }
-
-    memset(packet, 0, sizeof(packet));
-
-    if ((iFdRead = open(GetcValue("readfile"), O_RDWR)) < 0) {
-        LOGRECORD(ERROR, "open pcap file error");
-    }
-    if (read(iFdRead, packet, PCAPHDRLEN) < 0) {
-        LOGRECORD(ERROR, "read pcaphdr error");
-    }
-    if (htonl(pPcapHdr->magic) != 0xd4c3b2a1) {
-        LOGRECORD(ERROR, "file paratarn error");
-    }
-
-    if (GetiValue("exec") == 1) { //save
-        if (write(iFdSave, packet, PCAPHDRLEN) < 0) {
-            LOGRECORD(ERROR, "read pcaphdr error");
-        }
-    }
-
-    memset(packet, 0, sizeof(packet));
-
-    LOGRECORD(DEBUG, "Modify packet start...");
-
-    while(read(iFdRead, packet, PKTHDRLEN) > 1 ) 
-    {
-        if (read(iFdRead, packet+PKTHDRLEN, pPktHdr->len) < 0) {
-            LOGRECORD(ERROR, "read packethdr error");
-            exit(0);
-        }
-
-        if (GetiValue("exec") == 0) { //send
-            SendPacketProcess(packet+PKTHDRLEN, pPktHdr->len);
-        }
-        RefreshParameter();
-
-        ModifyLayer2();
-        ModifyLayer3(htons(GetL3Protocol()));
-        ModifyLayer4(pIp4Hdr->protocol);
-
-        //////////////
-        //RegularExpress(sipTmp, dipTmp);
-
-        if (GetiValue("exec") == 0) { //send
-            SendPacketProcess(packet+PKTHDRLEN, pPktHdr->len);
-        } else {
-            //DisplayPacketData(packet, pPktHdr->len+PKTHDRLEN);
-            if (write(iFdSave, packet, pPktHdr->len+PKTHDRLEN) < 0) {
-                LOGRECORD(ERROR, "write packetbuf error");
-            }
-        }
-    }// end of while
-
-    LOGRECORD(DEBUG, "Modify packet finished...");
-
-    if (GetiValue("exec") == 0) { //send
-        CloseSendConnect();
-    } else {
-        close(iFdSave);
-    }
-
-    close(iFdRead);
-}
-
-/* change ipv6 address */
-/*
-void chgip6(char* file)
-{
-    int fdin,fdout;
-    char* result = "result.pcap";
-    if ((fdin = open(file,O_RDWR)) < 0) {
-        perror("open error");
-        exit(0);
-    }
-    if ((fdout = open(result, O_RDWR | O_CREAT, PERM)) < 0) {
-        perror("open error");
-        exit(0);
-    }
-    char pcapbuf[24];
-    if (read(fdin,pcapbuf,24) < 0) {
-        perror("read pcaphdr error !");
-        exit(0);
-    }
-    if (write(fdout,pcapbuf,24) < 0) {
-        perror("write error !");
-        exit(0);
-    }
-
-    int num = 0;
-    char pktbuf[16];
-    while(read(fdin,pktbuf,16)) {
-        _pkthdr* pPktHdr = (_pkthdr*)pktbuf;
-        if (write(fdout,pktbuf,16) < 0) {
-            perror("write error !");
-            exit(0);
-        }
-
-        char macbuf[14];
-        if (read(fdin,macbuf,14) < 0) {
-            perror("read pcaphdr error !");
-            exit(0);
-        }
-        if (write(fdout,macbuf,14) < 0) {
-            perror("write error !");
-            exit(0);
-        }
-
-        unsigned char ipbuf[40];
-        if (read(fdin,ipbuf,40) < 0) {
-            perror("read pcaphdr error !");
-            exit(0);
-        }
-        unsigned char buf1[sizeof(struct in6_addr)];
-        unsigned char buf2[sizeof(struct in6_addr)];
-        unsigned char buf1_temp[sizeof(struct in6_addr)];
-//      unsigned char buf2_temp[sizeof(struct in6_addr)];
-
-        inet_pton(AF_INET6,"2400:fe00:f000:0601::29",buf1);
-        inet_pton(AF_INET6,"2100:fe00:f000:0601::30",buf2);
-        unsigned int i;
-        //copy
-        if (num++ == 0) {
-            for(i=0;i<sizeof(struct in6_addr);i++) {
-                buf1_temp[i] = ipbuf[8+i];
-            }
-            /////////////////////////////////
-            for(i=0;i<sizeof(struct in6_addr);i++) {
-                buf2_temp[i] = temp4[24+i];
-            }
-            /////////////////////////////////
-        }
-        //_ip6hdr* ip6_hdr = (_ip6hdr*)ipbuf;
-        //matching
-        if (CompareIpv6Address(ipbuf,buf1_temp)) {
-            //amend
-            for(i=0;i<sizeof(struct in6_addr);i++) {
-                ipbuf[8+i]=buf1[i];
-            }
-            for(i=0;i<sizeof(struct in6_addr);i++) {
-                ipbuf[24+i]=buf2[i];
-            }
-        
-        } else {
-            //amend
-            for(i=0;i<sizeof(struct in6_addr);i++) {
-                ipbuf[8+i]=buf2[i];
-            }
-            for(i=0;i<sizeof(struct in6_addr);i++) {
-                ipbuf[24+i]=buf1[i];
-            }
-        
-        }
-
-        if (write(fdout,ipbuf,40) < 0) {
-            perror("write error !");
-            exit(0);
-        }
-        int datalen =  pPktHdr->len - 14 - 40;
-        char databuf[1518];
-        if (read(fdin,databuf,datalen) < 0) {
-            perror("read pcaphdr error !");
-            exit(0);
-        }
-        if (write(fdout,databuf,datalen) < 0) {
-            perror("write error !");
-            exit(0);
-        }
-    }
-
-    close(fdin);
-    close(fdout);
-    exit(0);
-}
-*/

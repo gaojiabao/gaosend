@@ -9,7 +9,7 @@
 
 void BuildPacket();
 void SplitPacket(); 
-void ModifyPacket(); 
+//void ModifyPacket(); 
 void DuplicatePacket();
 void MergePacket(int, char**); 
 void SwitchPcapFormat();  
@@ -25,15 +25,15 @@ struct option LongOptions[] = {
     {.name = "dip",       .has_arg = optional_argument, .val = 'd'}, 
     {.name = "sport",     .has_arg = optional_argument, .val = 'P'}, 
     {.name = "dport",     .has_arg = optional_argument, .val = 'Q'}, 
-    {.name = "vlan1",     .has_arg = optional_argument, .val = 'V'}, 
-    {.name = "vlan2",     .has_arg = optional_argument, .val = 'W'}, 
+    {.name = "vlan",     .has_arg = optional_argument, .val = 'V'}, 
+    {.name = "qinq",     .has_arg = optional_argument, .val = 'W'}, 
     {.name = "protocol",  .has_arg = optional_argument, .val = 'p'}, 
     {.name = "len",       .has_arg = optional_argument, .val = 'l'}, 
     {.name = "url",       .has_arg = optional_argument, .val = 'u'}, 
     {.name = "interval",  .has_arg = optional_argument, .val = 'i'}, 
     {.name = "count",     .has_arg = optional_argument, .val = 'c'}, 
-    {.name = "readfile",  .has_arg = optional_argument, .val = 'r'}, 
-    {.name = "savefile",  .has_arg = optional_argument, .val = 'w'}, 
+    {.name = "read",      .has_arg = optional_argument, .val = 'r'}, 
+    {.name = "save",      .has_arg = optional_argument, .val = 'w'}, 
     {.name = "interface", .has_arg = required_argument, .val = 'I'}, 
     {.name = "string",    .has_arg = optional_argument, .val = 'S'}, 
     {.name = "rulelen",   .has_arg = optional_argument, .val = 'y'}, 
@@ -41,7 +41,6 @@ struct option LongOptions[] = {
     {.name = "rule",      .has_arg = required_argument, .val = 'Z'}, 
     {.name = "flow",      .has_arg = no_argument,       .val = 'F'}, 
     {.name = "debug",     .has_arg = no_argument,       .val = 'g'}, 
-    {.name = "chgip6",    .has_arg = no_argument,       .val = 'x'}, 
     {.name = "build",     .has_arg = no_argument,       .val = 'B'}, 
     {.name = "replay",    .has_arg = no_argument,       .val = 'R'}, 
     {.name = "duplicate", .has_arg = no_argument,       .val = 'D'}, 
@@ -69,8 +68,8 @@ void UsageOfProgram()
         "\t--dip        -d   Destation ip   [ fixed | random | increase ]\n"
         "\t--dport      -Q   Destation port [ fixed | random | increase ]\n"
         "\t--protocol   -p   Protocol [ ip | arp | udp | tcp | icmp | random | HTTP-GET | HTTP-POST | DNS ]\n"
-        "\t--vlan1      -V   Vlan1 value [ fixed | random | increase ]\n"
-        "\t--vlan2      -W   Vlan2 value [ fixed | random | increase ]\n"
+        "\t--vlan      -V   Vlan1 value [ fixed | random | increase ]\n"
+        "\t--qinq      -W   Vlan2 value [ fixed | random | increase ]\n"
         "\t--offset     -O   String offset in data part\n"
         "\t--url        -u   URL in Http GET or Http POST\n"
         "\t--length     -l   Packet length  [ fixed | increace | random ]\n"
@@ -86,8 +85,8 @@ void UsageOfProgram()
         "\t--modify     -M   Modify packet, use with -r and other needed parameters\n"
         "\t--format     -f   Switch packet format to *.pcap, use with -r and -w\n"
         "OTHER ARGS\n"
-        "\t--readfile   -r   Read packet from the  pcap file < filename >\n"
-        "\t--savefile   -w   Save packet into a pcap file < filename >\n"
+        "\t--read       -r   Read packet from the  pcap file < filename >\n"
+        "\t--save       -w   Save packet into a pcap file < filename >\n"
         "\t--flowcheck  -F   Turn on flow check switch, only use with -A\n"
         "\t--ruletype   -Z   Rule type [ aclnmask | aclex | mac_table ]\n"
         "\t--interval   -i   Interval time\n"
@@ -139,7 +138,7 @@ void ParametersInit()
 void TerminalParametersAnalyse(int argc, char *argv[])
 {
     char    cCmdInput;
-    char*   pParaOption = "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:I:S:y:O:Z:fFgxDCmAMvhRX";
+    char*   pParaOption = "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:I:S:y:O:Z:fBFgDCmAMvhRX";
 
     int     iCounter = 0;
     char    cCmdBuf[100];
@@ -164,18 +163,18 @@ void TerminalParametersAnalyse(int argc, char *argv[])
             case 'd': StorageInput("dip", optarg, 'c'); break;
             case 'P': StorageInput("sport", optarg, 'i'); break;
             case 'Q': StorageInput("dport", optarg, 'i'); break;
-            case 'V': StorageInput("vlan1", optarg, 'i'); 
+            case 'V': StorageInput("vlan", optarg, 'i'); 
                       StorageInput("vlannum", "1", 'i'); break;
-            case 'W': StorageInput("vlan2", optarg, 'i'); 
+            case 'W': StorageInput("qinq", optarg, 'i'); 
                       StorageInput("vlannum", "2", 'i'); break;
             case 'p': StorageInput("protocol", optarg, 'c'); break;
             case 'l': StorageInput("pktlen", optarg, 'i'); break;
             case 'u': StorageInput("url", optarg, 'c'); break;
             case 'i': StorageInput("interval", optarg, 'i'); break;
             case 'c': StorageInput("count", optarg, 'i'); break;
-            case 'r': StorageInput("readfile", optarg, 'c'); 
+            case 'r': StorageInput("read", optarg, 'c'); 
                       StorageInput("filelist", ParseReadList(cCmdBuf), 'c'); break; 
-            case 'w': StorageInput("savefile", optarg, 'c'); 
+            case 'w': StorageInput("save", optarg, 'c'); 
                       StorageInput("exec", "1", 'i'); break;
             case 'I': StorageInput("interface", optarg, 'c'); break;
             case 'S': StorageInput("string", optarg, 'c'); break;
@@ -184,8 +183,7 @@ void TerminalParametersAnalyse(int argc, char *argv[])
             case 'Z': StorageInput("rule", optarg, 'c'); break;
             case 'F': StorageInput("flow", "1", 'i'); break;
             case 'g': StorageInput("debug", "1", 'i'); break;  
-            case 'B': StorageInput("entrance", "100", 'i'); break; 
-            case 'x': StorageInput("entrance", "101", 'i'); break; 
+            case 'B': StorageInput("entrance", "101", 'i'); break; 
             case 'D': StorageInput("entrance", "102", 'i'); break; 
             case 'C': StorageInput("entrance", "103", 'i'); break; 
             case 'm': StorageInput("entrance", "104", 'i'); break; 
@@ -218,19 +216,12 @@ int main(int argc, char* argv[])
     // Functional program entry
     switch(GetiValue("entrance"))
     {
-        case 100: BuildPacket(); break;
-        //case 101: chgip6(optarg);break;
+        case 101: BuildPacket(); break;
         case 102: DuplicatePacket();break; 
         case 103: SplitPacket(); break; 
         case 104: MergePacket(argc, argv); break; 
-        case 105: DeepPacketInspection(); break; 
-        case 106: /*
-                  for(; i<60000; i++) {
-                      ModifyPacket(); 
-                  }
-                  */
-                  ModifyPacket(); 
-                  break; 
+        case 105: 
+        case 106: DeepPacketInspection(); break; 
         case 107: VersionOfProgram (); break; 
         case 108: UsageOfProgram (); break; 
         case 109: SwitchPcapFormat(); break; 

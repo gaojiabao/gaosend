@@ -147,6 +147,10 @@ int GetiValue(char* title)
 {
     pNode pCur = FindNode(title);
 
+    if (pCur == NULL) {
+        return 0;
+    }
+
     return pCur->iValue;
 }
 
@@ -170,6 +174,25 @@ static int CalcStorageSize()
     }
     return iCounter;
 }
+
+/*
+char** NeedToModify()
+{
+    static char* Queue[SIZE_16B*5];
+    pNode pCur = pHead->next;
+
+    int iCounter = 0;
+    while (pCur != NULL) {
+        if (pCur->flag > 1) {
+            Queue[iCounter++] = pCur->title;       
+            printf("<<<<<<<<<<<<<<<<<<<%d, %s, %d\n", iCounter, pCur->title, pCur->flag);
+        }
+        pCur = pCur->next;
+    }
+
+    return Queue;
+}
+*/
 
 /* delete every node and destory storage*/
 void DestoryStorage()
@@ -215,43 +238,43 @@ void RefreshParameter()
     for (; iCounter<iLength; iCounter++) {
         pParaName = pCur->title;
         iParaMode = pCur->flag;
-        if (iParaMode == FG_RANDOM) { // random 
+        if (iParaMode == FG_RAND) { // random 
             if (strcmp(pParaName, "smac") == 0) {
-                UpdatecValue(pParaName, GetRandomMacAddress(0));
+                UpdatecValue(pParaName, GetRandMacAddr(0));
             } else if (strcmp(pParaName, "dmac") == 0) {
-                UpdatecValue(pParaName, GetRandomMacAddress(1));
+                UpdatecValue(pParaName, GetRandMacAddr(1));
             } else if (strcmp(pParaName, "sip") == 0) {
-                UpdatecValue(pParaName, GetRandomIpAddress(0));
+                UpdatecValue(pParaName, GetRandIp4Addr(0));
             } else if (strcmp(pParaName, "dip") == 0) {
-                UpdatecValue(pParaName, GetRandomIpAddress(1));
+                UpdatecValue(pParaName, GetRandIp4Addr(1));
             } else if (strcmp(pParaName, "sport") == 0) {
                 UpdateiValue(pParaName, GetRandomPort(0));
             } else if (strcmp(pParaName, "dport") == 0) {
                 UpdateiValue(pParaName, GetRandomPort(1));
-            } else if (strcmp(pParaName, "vlan1") == 0) {
-                UpdateiValue(pParaName, GetRandomVlan());
-            } else if (strcmp(pParaName, "vlan2") == 0) {
-                UpdateiValue(pParaName, GetRandomVlan());
+            } else if (strcmp(pParaName, "vlan") == 0) {
+                UpdateiValue(pParaName, GetRandVlan());
+            } else if (strcmp(pParaName, "qinq") == 0) {
+                UpdateiValue(pParaName, GetRandVlan());
             } else if (strcmp(pParaName, "pktlen") == 0) {
                 UpdateiValue(pParaName, GetRandomPacketLength());
             }
         } else if (iParaMode == FG_INCR) { // increase
             if (strcmp(pParaName, "smac") == 0) {
-                UpdatecValue(pParaName, GetIncreaseMacAddress(0));
+                UpdatecValue(pParaName, GetIncrMacAddr(0));
             } else if (strcmp(pParaName, "dmac") == 0) {
-                UpdatecValue(pParaName, GetIncreaseMacAddress(1));
+                UpdatecValue(pParaName, GetIncrMacAddr(1));
             } else if (strcmp(pParaName, "sip") == 0) {
-                UpdatecValue(pParaName, GetIncreaseIpAddress(0));
+                UpdatecValue(pParaName, GetIncrIp4Addr(0));
             } else if (strcmp(pParaName, "dip") == 0) {
-                UpdatecValue(pParaName, GetIncreaseIpAddress(1));
+                UpdatecValue(pParaName, GetIncrIp4Addr(1));
             } else if (strcmp(pParaName, "sport") == 0) {
                 UpdateiValue(pParaName, GetIncreasePort(0));
             } else if (strcmp(pParaName, "dport") == 0) {
                 UpdateiValue(pParaName, GetIncreasePort(1));
-            } else if (strcmp(pParaName, "vlan1") == 0) {
-                UpdateiValue(pParaName, GetIncreaseVlan(0));
-            } else if (strcmp(pParaName, "vlan2") == 0) {
-                UpdateiValue(pParaName, GetIncreaseVlan(1));
+            } else if (strcmp(pParaName, "vlan") == 0) {
+                UpdateiValue(pParaName, GetIncrVlan(0));
+            } else if (strcmp(pParaName, "qinq") == 0) {
+                UpdateiValue(pParaName, GetIncrVlan(1));
             } else if (strcmp(pParaName, "pktlen") == 0) {
                 UpdateiValue(pParaName, GetIncreasePacketLength());
             }
@@ -329,13 +352,13 @@ void StorageInput(char* title, char* value, char mode)
     // deal with variable parameter
     int iParaMode;
     if (strcmp(value, "random") == 0) {
-        iParaMode = FG_RANDOM;
+        iParaMode = FG_RAND;
     } else if (strcmp(value, "increase") == 0) {
         iParaMode = FG_INCR;
     } else if (strcmp(value, "decrease") == 0) {
         iParaMode = FG_DECR;
     } else if (value != NULL) {
-        iParaMode = FG_FIXDATA;
+        iParaMode = FG_FIXD;
     } else {
         iParaMode = FG_NOINPUT;
     }

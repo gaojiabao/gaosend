@@ -95,16 +95,16 @@ uint16_t BuildPseduoPacket(void* header, uint8_t protocol, int len)
 /* ethernet layer two protocol struct */
 void BuildMacHeader(char *smac, char *dmac, uint16_t pro)
 {
-    mac_type_change(dmac, (char*)&pMacHdr->dmac);
-    mac_type_change(smac, (char*)&pMacHdr->smac);
-    pMacHdr->pro2 = pro;
+    FillInMacAddr(dmac, (char*)&pMacHdr->dmac);
+    FillInMacAddr(smac, (char*)&pMacHdr->smac);
+    pMacHdr->pro = pro;
 }
 
 /* ethernet vlan protocol struct */
-void BuildVlanField(_vlanhdr* vlan_hdr, uint16_t vlan_id, uint16_t type)
+void BuildVlanField(_vlanhdr* vlan_hdr, uint16_t id, uint16_t pro)
 {
-    vlan_hdr->vlan_id = vlan_id;
-    vlan_hdr->type = type;
+    vlan_hdr->id = id;
+    vlan_hdr->pro = pro;
 }
 
 void BuildArpHeader(char *smac, char *dmac, uint32_t sip, uint32_t dip)
@@ -114,9 +114,9 @@ void BuildArpHeader(char *smac, char *dmac, uint32_t sip, uint32_t dip)
     pArpHdr->len = 0x06;
     pArpHdr->plen = 0x04;
     pArpHdr->option = htons(2);
-    mac_type_change(smac, (char*)&pArpHdr->smac);
+    FillInMacAddr(smac, (char*)&pArpHdr->smac);
     pArpHdr->sip = sip;
-    mac_type_change(dmac, (char*)&pArpHdr->dmac);
+    FillInMacAddr(dmac, (char*)&pArpHdr->dmac);
     pArpHdr->dip = dip;
 }
 
@@ -141,7 +141,7 @@ void BuildIpv4Header(uint32_t sip, uint32_t dip, uint8_t pro)
 /* icmp protocol struct */
 void BuildIcmpv4Header()
 {
-    pIcmpHdr->type = 0;
+    pIcmpHdr->type= 0;
     pIcmpHdr->code = 0;
     pIcmpHdr->checksum = GetCheckSum((uint16_t *)pIcmpHdr, 30);
     pIcmpHdr->identifier = htons(getpid());
@@ -209,7 +209,7 @@ void PacketStrcutureInitialization()
 
 int WriteModeInitialization()
 {
-    int iSaveFd = OpenSaveFile(GetcValue("savefile"));;
+    int iSaveFd = OpenSaveFile(GetcValue("save"));;
 
     pPcapHdr = (_pcaphdr*)packet;
     BuildPcapHeader();
@@ -229,7 +229,7 @@ int WriteModeInitialization()
 
 void BuildLayer2Header()
 {
-    int   vlan1, vlan2;
+    int   vlan, qinq;
     int   vlNum = GetiValue("vlannum");
     char* smac = GetcValue("smac");
     char* dmac = GetcValue("dmac");
@@ -238,16 +238,16 @@ void BuildLayer2Header()
     switch(vlNum) {
         case 0: BuildMacHeader (smac, dmac, htons(pro));
                 break;
-        case 1: vlan1 = GetiValue("vlan1");
+        case 1: vlan = GetiValue("vlan");
                 BuildMacHeader(smac, dmac, htons(VLAN));
-                BuildVlanField(pVlanHdr1, htons(vlan1), htons(pro));
+                BuildVlanField(pVlanHdr1, htons(vlan), htons(pro));
                 RecordStatisticsInfo(EMPRO_VLAN);
                 break;
-        case 2: vlan1 = GetiValue("vlan1");
-                vlan2 = GetiValue("vlan2");
+        case 2: vlan = GetiValue("vlan");
+                qinq = GetiValue("qinq");
                 BuildMacHeader(smac, dmac, htons(VLAN));
-                BuildVlanField(pVlanHdr1, htons(vlan1), htons(VLAN));
-                BuildVlanField(pVlanHdr2, htons(vlan2), htons(pro));
+                BuildVlanField(pVlanHdr1, htons(vlan), htons(VLAN));
+                BuildVlanField(pVlanHdr2, htons(qinq), htons(pro));
                 RecordStatisticsInfo(EMPRO_QinQ);
 
                 break;
@@ -377,14 +377,14 @@ void BuildDataContexts(int paylen)
         LOGRECORD(ERROR, "offset grate than payload length");
     } 
 
-    if (strFlag == FG_RANDOM) {
+    if (strFlag == FG_RAND) {
         /*
         if (rule_str_len != 0 && rule_str_len < paylen) {
             paylen = rule_str_len;
         }
         */
         memcpy(data, GetRandomString(paylen), paylen);
-    } else if (strFlag == FG_FIXDATA) {
+    } else if (strFlag == FG_FIXD) {
         char* pString = GetcValue("string");
         int sLength = strlen(pString);
         if (pString[0] == '0' && pString[1] == 'x') {

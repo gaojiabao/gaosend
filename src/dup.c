@@ -39,8 +39,8 @@ void DuplicatePacket()
 {
     LOGRECORD(DEBUG, "Packet duplicat start");
 
-    int iReadFd = OpenReadFile(GetcValue("readfile"));
-    int iSaveFd = OpenSaveFile(GetcValue("savefile"));
+    int iReadFd = OpenReadFile(GetcValue("read"));
+    int iSaveFd = OpenSaveFile(GetcValue("save"));
 
     PcapHeadProcessing(iReadFd, iSaveFd);
 
@@ -71,15 +71,12 @@ void DuplicatePacket()
 /* Extract data and save */
 void ExtractMessage(char* pDataBuf, int iDataLen)
 {
-    int iSaveFd = OpenSaveFile(GetcValue("savefile"));
-
-    if (iSaveFd < 0) {
-        LOGRECORD(DEBUG, "No input save-file name");
-    } else if (write(iSaveFd, pDataBuf, iDataLen) < 0) {
+    int iSaveFd = OpenSaveFile(GetcValue("save"));
+    if (write(iSaveFd, pDataBuf, iDataLen) < 0) {
         LOGRECORD(ERROR, "Data extraction failed");
-    } else {
-        close(iSaveFd);
-    }
+    } 
+
+    close(iSaveFd);
 }
 
 /* Parse file list */
@@ -117,7 +114,7 @@ void MergePacket(int argc, char* argv[])
 
         iReadFd = OpenReadFile(file);
         if (iParsePcapSwitch == 1) {
-            iSaveFd = OpenSaveFile(GetcValue("savefile"));
+            iSaveFd = OpenSaveFile(GetcValue("save"));
             PcapHeadProcessing(iReadFd, iSaveFd);
             iParsePcapSwitch = 0;
         }
@@ -164,7 +161,7 @@ void SplitPacket()
 
     LOGRECORD(DEBUG, "Packet split start");
 
-    char* pReadFileName = GetcValue("readfile");
+    char* pReadFileName = GetcValue("read");
     int   iReadFd = OpenReadFile(pReadFileName);
 
     if (read(iReadFd, cPcapHdrBuf, PCAPHDRLEN) < 0) {

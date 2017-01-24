@@ -46,12 +46,12 @@ typedef struct pseudohdr{
 typedef struct machdr {
     U8     dmac[6];
     U8     smac[6];
-    U16    pro2;
+    U16    pro;
 }_machdr;
 
 typedef struct vlanhdr {
-    U16    vlan_id;
-    U16    type;
+    U16    id;
+    U16    pro;
 }_vlanhdr;
 
 typedef struct arphdr {
@@ -125,6 +125,21 @@ typedef struct dns{
     U16    aurrs;
     U16    adrrs;
 }_dnshdr;
+
+typedef struct pkt{
+    char*        pPacket;
+    _pcaphdr*    pPcapHdr;
+    _pkthdr*     pPktHdr;
+    _machdr*     pMacHdr;
+    _arphdr*     pArpHdr;
+    _vlanhdr*    pVlanHdr;
+    _vlanhdr*    pQinQHdr;
+    _ip4hdr*     pIp4Hdr;
+    _ip6hdr*     pIp6Hdr;
+    _udphdr*     pUdpHdr;
+    _tcphdr*     pTcpHdr;
+    _icmphdr*    pIcmpHdr;
+}stPktStrc;
 
 #endif
 

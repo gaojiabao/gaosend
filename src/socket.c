@@ -16,11 +16,11 @@
 
 
 /* Global variable*/
-static    int            iSockFd;
+static int iSockFd;
 
 /* Network struct */
-struct    ifreq             ifr;
-struct    sockaddr_ll    sockAddr;
+struct ifreq  ifr;
+struct sockaddr_ll sockAddr;
 
 /* Create socket connection */
 void SendModeInitialization(char* interface)
@@ -77,7 +77,7 @@ void SendProcess()
     pPcapHdr = (_pcaphdr*) cPacketBuf;
     pPktHdr  = (_pkthdr*) cPacketBuf;
     
-    int  iReadFd = OpenReadFile(GetcValue("readfile")); 
+    int  iReadFd = OpenReadFile(GetcValue("read")); 
     memset(cPacketBuf, 0 , sizeof(cPacketBuf));
 
     if (read(iReadFd, cPacketBuf, PCAPHDRLEN) < 0) {

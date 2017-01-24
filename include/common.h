@@ -20,18 +20,18 @@ char        ChangeHexToString(int);
 char*       GetUrlString();
 int         GetRandomNumber();
 char*       GetRandomString(int);
-int         mac_type_change (char *, char *);
+int         FillInMacAddr(char *, char *);
 
-char*       GetIncreaseMacAddress(int);
-char*       GetIncreaseIpAddress(int);
+char*       GetIncrMacAddr(int);
+char*       GetIncrIp4Addr(int);
 int         GetIncreasePort(int);
 int         GetIncreasePacketLength();
-int         GetIncreaseVlan(int);
+int         GetIncrVlan(int);
 
-char*       GetRandomMacAddress(int);
-char*       GetRandomIpAddress(int);
+char*       GetRandMacAddr(int);
+char*       GetRandIp4Addr(int);
 int         GetRandomPort();
-int         GetRandomVlan();
+int         GetRandVlan();
 int         GetRandomPacketLength();
 uint8_t     GetRandomLayer4Pro();
 

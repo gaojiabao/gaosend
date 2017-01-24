@@ -15,8 +15,8 @@ typedef struct Node{
 enum Node_flag{
     FG_UNCHANGE,
     FG_NOINPUT,
-    FG_FIXDATA,
-    FG_RANDOM,
+    FG_FIXD,
+    FG_RAND,
     FG_INCR,
     FG_DECR,
 };

@@ -517,7 +517,7 @@ void BuildPacket()
 
     /* how to deal with packets */
     if (GetiValue("exec") == 0) { //send
-        SendModeInitialization(GetcValue("interface"));
+        SendModeInitialization();
     } else { //save
         iPcapFd = WriteModeInitialization();
     }

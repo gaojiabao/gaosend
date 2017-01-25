@@ -22,16 +22,23 @@ static int iSockFd;
 struct ifreq  ifr;
 struct sockaddr_ll sockAddr;
 
+void DeepPacketInspection();
+
 /* Create socket connection */
-void SendModeInitialization(char* interface)
+void SendModeInitialization()
 {
+    char* pInterface = GetcValue("interface");
+    if (pInterface == NULL) {
+        LOGRECORD(ERROR, "Interface input error");
+    }
+
     if ((iSockFd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0) {
-        LOGRECORD(ERROR, "Sock descriptor acquisition failed[%d]", iSockFd);
+        LOGRECORD(ERROR, "Socket descriptor acquisition failed[%d]", iSockFd);
     }
 
     // Set interface
     bzero(&ifr, sizeof(ifr));
-    strcpy(ifr.ifr_name, interface);
+    strcpy(ifr.ifr_name, pInterface);
     ioctl(iSockFd, SIOCGIFINDEX, &ifr);
 
     // Set socket protocol
@@ -41,20 +48,23 @@ void SendModeInitialization(char* interface)
     sockAddr.sll_ifindex=ifr.ifr_ifindex;
     
     // Bind socket interface
-    if (bind(iSockFd, (struct sockaddr *)&sockAddr, \
-        sizeof(sockAddr)) < 0) {
+    if (bind(iSockFd, (struct sockaddr *)&sockAddr, sizeof(sockAddr)) < 0) {
         LOGRECORD(ERROR, "Socket bind failed");
     }
 }
 
 /* Send data to interface */
-void SendPacketProcess(char* packet,int len)
+void SendPacketProcess(char* pPacket,int iLength)
 {
-    if (GetiValue("debug") == 1) {
-        DisplayPacketData(packet, len);
+    if (pPacket == NULL || iLength < 0) {
+        LOGRECORD(ERROR, "Packet data is NULL");
     }
 
-    if ((sendto(iSockFd, (const void*)packet, len, 0, \
+    if (GetiValue("debug") == 1) {
+        DisplayPacketData(pPacket, iLength);
+    }
+
+    if ((sendto(iSockFd, (const void*)pPacket, iLength, 0, \
         (struct sockaddr*)&sockAddr, sizeof(sockAddr)))<0) {
         LOGRECORD(ERROR, "Packet send failed");
     }
@@ -67,53 +77,25 @@ void CloseSendConnect()
     LOGRECORD(DEBUG, "The packet has been sent");
 }
 
-/* Send packet directly */
-void SendProcess()
-{
-    char cPacketBuf[SIZE_1K*2];
-    static _pcaphdr* pPcapHdr = NULL;
-    static _pkthdr*  pPktHdr = NULL;
-
-    pPcapHdr = (_pcaphdr*) cPacketBuf;
-    pPktHdr  = (_pkthdr*) cPacketBuf;
-    
-    int  iReadFd = OpenReadFile(GetcValue("read")); 
-    memset(cPacketBuf, 0 , sizeof(cPacketBuf));
-
-    if (read(iReadFd, cPacketBuf, PCAPHDRLEN) < 0) {
-        LOGRECORD(ERROR, "Pcap header read failed");
-    }
-    if (htonl(pPcapHdr->magic) != 0xd4c3b2a1) {
-        LOGRECORD(ERROR, "File format is not recognized");
-    }
-
-    while(read(iReadFd, cPacketBuf, PKTHDRLEN) > 1 ) {
-        if (read(iReadFd, cPacketBuf+PKTHDRLEN, pPktHdr->len) < 0) {
-            LOGRECORD(ERROR, "Packet read failed");
-        }
-        SendPacketProcess(cPacketBuf+PKTHDRLEN, pPktHdr->len);
-    }
-
-    close(iReadFd);
-}
-
 /* Send packet entrance*/
 void ReplayPacket()
 {
     unsigned int iCounter = GetiValue("count");
     unsigned int iSum = iCounter;
-    SendModeInitialization(GetcValue("interface"));
+    SendModeInitialization();
 
-    if (iCounter <= 0) {
+    if (iCounter == 0) { // Always send
         while (1 == 1) {
-            SendProcess();
+            DeepPacketInspection();
         }
-    } else {
+    } else if (iCounter > 0) {
         while (iCounter--) {
-            SendProcess();
+            DeepPacketInspection();
             ProgramProgress((iSum - iCounter), iSum);
         }
         LOGRECORD(INFO, NULL);
+    } else {
+        LOGRECORD(DEBUG, "Count input invalid");
     }
 
     CloseSendConnect();

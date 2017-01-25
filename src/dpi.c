@@ -156,6 +156,8 @@ void PacketProcessing()
 /* Data content resolution portal */
 void PacketPraseEntrance()
 {
+    LOGRECORD(DEBUG, "Deep packet inspection start...");
+
     PacketStrcInit();
     L2HdrInspection();
 
@@ -167,7 +169,11 @@ void PacketPraseEntrance()
         } else { // Send packet
             SendPacketProcess(stPkt.pPacket, stPkt.pPktHdr->len);
         }
+    } else if (GetiValue("entrance") == 110) {
+        SendPacketProcess(stPkt.pPacket, stPkt.pPktHdr->len);
     }
+
+    LOGRECORD(DEBUG, "Deep packet inspection finished...");
 }
 
 /* Pcap file resolution portal */
@@ -193,13 +199,11 @@ void PcapFilePraseEntrance()
 /* Deep packet inspection portal */
 void DeepPacketInspection()
 {
-    LOGRECORD(DEBUG, "Deep packet inspection start...");
-
     static char cPacketBuf[SIZE_1K*2];
     stPkt.pPacket = cPacketBuf;
 
-    if (GetiValue("exec") == 1) {
-        SendModeInitialization(GetcValue("interface"));
+    if (GetiValue("exec") == 0) {
+        SendModeInitialization();
     }
 
     // Turn on flow assoition
@@ -217,10 +221,8 @@ void DeepPacketInspection()
         DisplayAllStreamMD5();
     }
 
-    if (GetiValue("exec") == 1) {
+    if (GetiValue("exec") == 0) {
         CloseSendConnect();
     }
-
-    LOGRECORD(DEBUG, "Deep packet inspection finished...");
 }
 

@@ -16,34 +16,32 @@
 #define SIZE_1K        1024
 
 uint16_t    GetCheckSum(uint16_t *, int);
-char        ChangeHexToString(int);
-char*       GetUrlString();
-int         GetRandomNumber();
-char*       GetRandomString(int);
+char        GetHexChar(int);
+char*       GetRandURL();
+int         GetRandNum();
+char*       GetRandStr(int);
 int         FillInMacAddr(char *, char *);
 
 char*       GetIncrMacAddr(int);
 char*       GetIncrIp4Addr(int);
-int         GetIncreasePort(int);
-int         GetIncreasePacketLength();
+int         GetIncrPort(int);
+int         GetIncrPktLen();
 int         GetIncrVlan(int);
 
 char*       GetRandMacAddr(int);
-char*       GetRandIp4Addr(int);
-int         GetRandomPort();
+char*       GetRandIp4Addr();
+int         GetRandPort();
 int         GetRandVlan();
-int         GetRandomPacketLength();
-uint8_t     GetRandomLayer4Pro();
+int         GetRandPktLen();
+uint8_t     GetRandL4HexPro();
 
-char*       ChangeLayer4HexToString(uint16_t);
-uint16_t    GetL3Hex(char*);
-uint8_t     GetL4Hex(char*);
+char*       GetStrPro(uint16_t);
+uint16_t    GetL3HexPro(char*);
+uint8_t     GetL4HexPro(char*);
 void        ProgramProgress(int, int);
-char*       subs(char*, int, int);
 void        DisplayPacketData(char*, int);
-int         ProtocolConversion(char* );
 
-int         CheckIpLegal(char* );
+int         CheckIpAddrLegal(char* );
 void        BufferCopy(char*, int, char*, int);
 
 int         OpenReadFile(char* );

@@ -62,7 +62,7 @@
 #define ACLEXFILE      "aclex.cfg"
 #define MACTABLEFILE   "mac_table.cfg"
 #define L2PRO          "ethernet"
-#define VERSION        "v4.8.6"
+#define VERSION        "v4.8.7"
 
 #endif
 

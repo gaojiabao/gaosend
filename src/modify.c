@@ -84,8 +84,8 @@ void ModifyPortNumber(char* title, U8 iPro) //sport:0,dport:1
 
     switch(GetFlag(title)) {
         case FG_FIXD : *pPortPos[iPos] = htons(GetiValue(title)); break;
-        case FG_RAND : *pPortPos[iPos] = htons(GetRandomPort()); break;
-        case FG_INCR : *pPortPos[iPos] = htons(GetIncreasePort(iSoD)); break;
+        case FG_RAND : *pPortPos[iPos] = htons(GetRandPort()); break;
+        case FG_INCR : *pPortPos[iPos] = htons(GetIncrPort(iSoD)); break;
     }
 }
 
@@ -183,7 +183,7 @@ void ModifyIpAddress(char* title) //sip:0,dip:1
     int iSoD = JudgeSourceOrDestination(title);
     switch(GetFlag(title)) {
         case FG_FIXD : *pIpPos[iSoD] = inet_addr(GetcValue(title)); break;
-        case FG_RAND : *pIpPos[iSoD] = inet_addr(GetRandIp4Addr(iSoD)); break;
+        case FG_RAND : *pIpPos[iSoD] = inet_addr(GetRandIp4Addr()); break;
         case FG_INCR : *pIpPos[iSoD] = inet_addr(GetIncrIp4Addr(iSoD)); break;
     }
 }

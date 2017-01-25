@@ -244,19 +244,19 @@ void RefreshParameter()
             } else if (strcmp(pParaName, "dmac") == 0) {
                 UpdatecValue(pParaName, GetRandMacAddr(1));
             } else if (strcmp(pParaName, "sip") == 0) {
-                UpdatecValue(pParaName, GetRandIp4Addr(0));
+                UpdatecValue(pParaName, GetRandIp4Addr());
             } else if (strcmp(pParaName, "dip") == 0) {
-                UpdatecValue(pParaName, GetRandIp4Addr(1));
+                UpdatecValue(pParaName, GetRandIp4Addr());
             } else if (strcmp(pParaName, "sport") == 0) {
-                UpdateiValue(pParaName, GetRandomPort(0));
+                UpdateiValue(pParaName, GetRandPort(0));
             } else if (strcmp(pParaName, "dport") == 0) {
-                UpdateiValue(pParaName, GetRandomPort(1));
+                UpdateiValue(pParaName, GetRandPort(1));
             } else if (strcmp(pParaName, "vlan") == 0) {
                 UpdateiValue(pParaName, GetRandVlan());
             } else if (strcmp(pParaName, "qinq") == 0) {
                 UpdateiValue(pParaName, GetRandVlan());
             } else if (strcmp(pParaName, "pktlen") == 0) {
-                UpdateiValue(pParaName, GetRandomPacketLength());
+                UpdateiValue(pParaName, GetRandPktLen());
             }
         } else if (iParaMode == FG_INCR) { // increase
             if (strcmp(pParaName, "smac") == 0) {
@@ -268,15 +268,15 @@ void RefreshParameter()
             } else if (strcmp(pParaName, "dip") == 0) {
                 UpdatecValue(pParaName, GetIncrIp4Addr(1));
             } else if (strcmp(pParaName, "sport") == 0) {
-                UpdateiValue(pParaName, GetIncreasePort(0));
+                UpdateiValue(pParaName, GetIncrPort(0));
             } else if (strcmp(pParaName, "dport") == 0) {
-                UpdateiValue(pParaName, GetIncreasePort(1));
+                UpdateiValue(pParaName, GetIncrPort(1));
             } else if (strcmp(pParaName, "vlan") == 0) {
                 UpdateiValue(pParaName, GetIncrVlan(0));
             } else if (strcmp(pParaName, "qinq") == 0) {
                 UpdateiValue(pParaName, GetIncrVlan(1));
             } else if (strcmp(pParaName, "pktlen") == 0) {
-                UpdateiValue(pParaName, GetIncreasePacketLength());
+                UpdateiValue(pParaName, GetIncrPktLen());
             }
         } else if (iParaMode == FG_DECR) { // decrease
             LOGRECORD(INFO, "This function isn't develop");

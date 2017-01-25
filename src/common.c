@@ -13,82 +13,8 @@
 #include    "storage.h"
 
 
-int iIpArray[][4] = { 
-    {1, 0, 0, 0}, 
-    {1, 0, 0, 0} 
-};
-
-char cIpAddress[][20] = {"",""};
-char cMacAddress[][20] = {
-    "00:00:00:00:00:00",
-    "00:00:00:00:00:00"
-};
-
-char    ram_buf[2000] = {0};
-char    url[30];
-char    mopt[100];
-char    substr[1500];
-
-/* Calculate udp, tcp or icmp checksum */
-uint16_t GetCheckSum(uint16_t* buf, int len)
-{
-    unsigned long sum;
-    for (sum=0; len>0; len--)
-        sum += *buf++;
-    sum = (sum >> 16) + (sum & 0xffff);
-    sum += (sum >> 16);
-
-    return (uint16_t)(~sum);
-}
-
-/* Get hexadecimal charator */
-char ChangeHexToString(int iChoice)
-{
-    switch(iChoice) {
-        case 0:  return '0';
-        case 1:  return '1';
-        case 2:  return '2';
-        case 3:  return '3';
-        case 4:  return '4';
-        case 5:  return '5';
-        case 6:  return '6';
-        case 7:  return '7';
-        case 8:  return '8';
-        case 9:  return '9';
-        case 10: return 'A';
-        case 11: return 'B';
-        case 12: return 'C';
-        case 13: return 'D';
-        case 14: return 'E';
-        case 15: return 'F';
-    }
-
-    return -1;
-}
-
-/* URL generator */
-char* GetUrlString()
-{
-    memset(url,0,sizeof(url));
-    strcat(url,"www.");
-    strcat(url,GetRandomString(5));
-    strcat(url,".com/");
-    strcat(url,GetRandomString(6));
-
-    return url;
-}
-
-/* Get sub string */
-char* subs(char *s, int n, int m)
-{
-    memset(substr, 0, sizeof(substr));
-    memcpy(substr, &s[n], m);
-
-    return substr;
-}
-
 /* Get a random number with microsecond */
-int GetRandomNumber()
+int GetRandNum()
 {
     struct timeval tp;
     gettimeofday(&tp, NULL);
@@ -98,75 +24,161 @@ int GetRandomNumber()
 }
 
 /* Get random string */
-char* GetRandomString(int iLength)
+char* GetRandStr(int iLength)
 {
     int iNum;
-    int iRandomNum = 0;
+    int iRandNum = 0;
+    static char cRandStrBuf[SIZE_1K*2] = {0};
 
     for (iNum = 0; iNum < iLength; iNum++) {
-        iRandomNum = GetRandomNumber() % 200;
-        if (((iRandomNum <= 122) && (iRandomNum >= 97)) ||
-                ((iRandomNum <= 90) && (iRandomNum >= 65)) ||
-                ((iRandomNum <= 57) && (iRandomNum >= 48))) {
-            sprintf((char *)ram_buf + iNum, "%c", iRandomNum);
+        iRandNum = GetRandNum() % 200;
+        if (((iRandNum <= 122) && (iRandNum >= 97)) ||
+            ((iRandNum <= 90)  && (iRandNum >= 65)) ||
+            ((iRandNum <= 57)  && (iRandNum >= 48))) {
+            sprintf(cRandStrBuf+iNum, "%c", iRandNum);
         } else {
             iNum--;
         }
     }
 
-    return ram_buf;
+    return cRandStrBuf;
+}
+
+/* Calculate udp, tcp or icmp checksum */
+uint16_t GetCheckSum(uint16_t* pDataBuf, int iLength)
+{
+    unsigned long iSum;
+    for (iSum=0; iLength>0; iLength--) {
+        iSum += *pDataBuf++;
+    }
+    iSum = (iSum >> 16) + (iSum & 0xffff);
+    iSum += (iSum >> 16);
+
+    return (uint16_t)(~iSum);
+}
+
+/* Get hexadecimal charator */
+char GetHexChar(int iNum)
+{
+    if (iNum < 0 || iNum > 15) {
+        LOGRECORD(ERROR, "Character conversion failed");
+    }
+
+    char cLetter = 0;
+    switch(iNum) {
+        case 0:  cLetter = '0';
+        case 1:  cLetter = '1';
+        case 2:  cLetter = '2';
+        case 3:  cLetter = '3';
+        case 4:  cLetter = '4';
+        case 5:  cLetter = '5';
+        case 6:  cLetter = '6';
+        case 7:  cLetter = '7';
+        case 8:  cLetter = '8';
+        case 9:  cLetter = '9';
+        case 10: cLetter = 'A';
+        case 11: cLetter = 'B';
+        case 12: cLetter = 'C';
+        case 13: cLetter = 'D';
+        case 14: cLetter = 'E';
+        case 15: cLetter = 'F';
+    }
+
+    return cLetter;
+}
+
+/* URL generator */
+char* GetRandURL()
+{
+    int iTotleLen = 18;
+    static char cURLBuf[SIZE_1K];
+    memset(cURLBuf, 0, sizeof(cURLBuf));
+
+    if (iTotleLen < 18 && iTotleLen > sizeof(cURLBuf)) {
+        LOGRECORD(ERROR, "Random URL length out of range");
+    }
+
+    char* pComName[] = {"juson", "topsec", "venustech", "360"};
+    int iComNameLen = sizeof(pComName) / sizeof(char*);
+
+    char* pFirstDomain  = ".com/";
+    char* pSecondDomain = pComName[GetRandNum() % iComNameLen];
+    char* pThirdDomain  = "www.";
+
+    int iURILen = iTotleLen - strlen(pFirstDomain) 
+                    - strlen(pSecondDomain) - strlen(pSecondDomain);
+    sprintf(cURLBuf, "%s.%s.%s/%s", 
+        pThirdDomain, pSecondDomain, pFirstDomain , GetRandStr(iURILen));
+
+    return cURLBuf;
 }
 
 /* Get random MAC address */
-char* GetRandMacAddr(int iSmacOrDmac)
+char* GetRandMacAddr(int iSoD)
 {
-    int iMacLenth;
-    iMacLenth = strlen(cMacAddress[iSmacOrDmac]);
+    static char cMacAddr[][20] = {
+        "00:00:00:00:00:00",
+        "00:00:00:00:00:00"
+    };
+
+    if (iSoD < 0 || iSoD > 1) {
+        LOGRECORD(ERROR, "Unrecognized identifier");
+    }
+
+    int iMacLenth = strlen(cMacAddr[iSoD]);
     while (iMacLenth != 2) {
         iMacLenth--;
-        if (cMacAddress[iSmacOrDmac][iMacLenth] == ':') {
+        if (cMacAddr[iSoD][iMacLenth] == ':') {
             continue;
         }
-        cMacAddress[iSmacOrDmac][iMacLenth] \
-            = ChangeHexToString(GetRandomNumber()%15);
+        cMacAddr[iSoD][iMacLenth] = GetHexChar(GetRandNum()%15);
     }
-    return cMacAddress[iSmacOrDmac];
+
+    return cMacAddr[iSoD];
 }
 
 /* Get increment MAC address */
-char* GetIncrMacAddr(int iSmacOrDmac)
+char* GetIncrMacAddr(int iSoD)
 {
-    int iMacLenth;
-    iMacLenth = strlen(cMacAddress[iSmacOrDmac]) - 1;
+    static char cMacAddr[][20] = {
+        "00:00:00:00:00:00",
+        "00:00:00:00:00:00"
+    };
+
+    if (iSoD < 0 || iSoD > 1) {
+        LOGRECORD(ERROR, "Unrecognized identifier");
+    }
+
+    int iMacLenth = strlen(cMacAddr[iSoD]) - 1;
     while (iMacLenth != -1) {
-        if (cMacAddress[iSmacOrDmac][iMacLenth] == '9') {
-            cMacAddress[iSmacOrDmac][iMacLenth] = 'a' -1;
+        if (cMacAddr[iSoD][iMacLenth] == '9') {
+            cMacAddr[iSoD][iMacLenth] = 'a' -1;
         }
-        if (cMacAddress[iSmacOrDmac][iMacLenth] == 'f' 
-                || cMacAddress[iSmacOrDmac][iMacLenth] == ':') {
-            if (cMacAddress[iSmacOrDmac][iMacLenth] == 'f') {
-                cMacAddress[iSmacOrDmac][iMacLenth] = '0';
+        if (cMacAddr[iSoD][iMacLenth] == 'f' 
+                || cMacAddr[iSoD][iMacLenth] == ':') {
+            if (cMacAddr[iSoD][iMacLenth] == 'f') {
+                cMacAddr[iSoD][iMacLenth] = '0';
             }
             iMacLenth--;
         } else {
-            cMacAddress[iSmacOrDmac][iMacLenth]++;
+            cMacAddr[iSoD][iMacLenth]++;
             break;
         }
     }
-    return cMacAddress[iSmacOrDmac];
+    return cMacAddr[iSoD];
 }
 
 /* Writes a string MAC address to the packet */
 int FillInMacAddr(char *pMacStr, char *pMacBuf)
 {
     if ((pMacBuf == NULL) || (pMacStr == NULL)) {
-        return -1;
+        LOGRECORD(ERROR, "Failed to fill MAC address");
     }
 
-    int i = 0;
+    int iNum = 0;
     char *pMacTmp = NULL;
-    for (; i < 6; i++) {
-        pMacBuf[i] = pMacStr ? strtoul (pMacStr, &pMacTmp, 16) : 0;
+    for (; iNum < 6; iNum++) {
+        pMacBuf[iNum] = pMacStr ? strtoul (pMacStr, &pMacTmp, 16) : 0;
         if (pMacStr) {
             pMacStr = (*pMacTmp) ? pMacTmp + 1 : pMacTmp;
         }
@@ -176,25 +188,32 @@ int FillInMacAddr(char *pMacStr, char *pMacBuf)
 }
 
 /* Check the legality of the IP address */
-int CheckIpLegal(char* pIpStr)
+int CheckIpAddrLegal(char* pIpStr)
 {
-    int iCheckRes;
-    int iNum[4];
-    char cDot[3];
-    char *pIpToken = NULL;
+    int  iCheckRes;
+    int  iIpNum[4];
+    char cIpDot[3];
     char cTmpArray[50];
+    char *pIpToken = NULL;
+
+    if (pIpStr == NULL) {
+        LOGRECORD(ERROR, "IPv4 address is NULL");
+    }
 
     // The legitimacy of the detection with ":" separated IP address 
     if (strchr(pIpStr, ':') != NULL) { // eg: -s 1.1.1.1:2.2.2.2
         memset(cTmpArray, 0, sizeof(cTmpArray));
         memcpy(cTmpArray, pIpStr, strlen(pIpStr));
         if ((pIpToken = strtok(cTmpArray, ":")) != NULL) { // First IP
-            iCheckRes = CheckIpLegal(pIpToken);
+            iCheckRes = CheckIpAddrLegal(pIpToken);
             if (iCheckRes == SUCCESS) { // Second IP
                 pIpToken = strtok(NULL, ":"); 
-                iCheckRes = CheckIpLegal(pIpToken);
-                if (iCheckRes == SUCCESS) return 2;
-                else return FALSE;
+                iCheckRes = CheckIpAddrLegal(pIpToken);
+                if (iCheckRes == SUCCESS) {
+                    return 2;
+                } else {
+                    return FALSE;
+                }
             } else {
                 return FALSE;
             }
@@ -203,15 +222,19 @@ int CheckIpLegal(char* pIpStr)
     
     // IP address detection 
     if (sscanf(pIpStr, "%d%c%d%c%d%c%d", 
-            &iNum[0], &cDot[0], &iNum[1], &cDot[1],
-            &iNum[2], &cDot[2], &iNum[3]) == 7) {
-        int i;
-        for (i = 0; i < 3; ++i)
-            if (cDot[i] != '.')
+            &iIpNum[0], &cIpDot[0], &iIpNum[1], &cIpDot[1],
+            &iIpNum[2], &cIpDot[2], &iIpNum[3]) == 7) {
+        int iNum;
+        for (iNum = 0; iNum < 3; ++iNum) {
+            if (cIpDot[iNum] != '.') {
                 return ERROR;
-        for (i = 0; i < 4; ++i)
-            if (iNum[i] > 255 || iNum[i] < 0)
+            }
+        }
+        for (iNum = 0; iNum < 4; ++iNum) {
+            if (iIpNum[iNum] > 255 || iIpNum[iNum] < 0) {
                 return ERROR;
+            }
+        }
         return SUCCESS;
     }
 
@@ -219,156 +242,166 @@ int CheckIpLegal(char* pIpStr)
 }
 
 /* Get random IP address */
-char* GetRandIp4Addr(int iSOrDIp)
+char* GetRandIp4Addr()
 {
-    sprintf(cIpAddress[iSOrDIp], "%d.%d.%d.%d", 
-            GetRandomNumber() % 255 + 1,
-            GetRandomNumber() % 256,
-            GetRandomNumber() % 256,
-            GetRandomNumber() % 255 + 1
-           );
-    return cIpAddress[iSOrDIp];
+    static char cIpAddr[SIZE_16B*2];
+
+    sprintf(cIpAddr, "%d.%d.%d.%d", 192, GetRandNum() % 256, 
+            GetRandNum() % 256, GetRandNum() % 255 + 1);
+
+    return cIpAddr;
 }
 
 /* Get increased IP address */
-char* GetIncrIp4Addr(int iSOrDIp)
+char* GetIncrIp4Addr(int iSoD)
 {
-    if (++iIpArray[iSOrDIp][3] > 255) { 
-        iIpArray[iSOrDIp][3] = 1;
-        iIpArray[iSOrDIp][2]++;
-    } else if (iIpArray[iSOrDIp][2] > 255) { 
-        iIpArray[iSOrDIp][2] = 0;
-        iIpArray[iSOrDIp][1]++;
-    } else if (iIpArray[iSOrDIp][1] > 255) { 
-        iIpArray[iSOrDIp][1] = 0;
-        iIpArray[iSOrDIp][0]++;
+    if (iSoD < 0 || iSoD > 1) {
+        LOGRECORD(ERROR, "Unrecognized identifier");
     }
 
-    sprintf(cIpAddress[iSOrDIp], "%d.%d.%d.%d",
-            iIpArray[iSOrDIp][0],
-            iIpArray[iSOrDIp][1],
-            iIpArray[iSOrDIp][2],
-            iIpArray[iSOrDIp][3]
-           );
-
-    return cIpAddress[iSOrDIp];
-}
-
-/* Get increased port */
-int GetIncreasePort(int iSoD)
-{
-    static int siPortArray[] = {0, 0};
-    if (siPortArray[iSoD]++ > 65535) {
-        siPortArray[iSoD] = 0;
+    // SIP:192.168.1.1 DIP:10.10.1.1
+    static unsigned int iIpAddr[] = {3232235777, 168430081};
+    unsigned int iIpSwitch = htonl(iIpAddr[iSoD]++);
+    static char cIpAddrBuf[SIZE_16B*2];
+    if (((unsigned char *)&iIpSwitch)[3] != 0) {
+        sprintf(cIpAddrBuf, "%u.%u.%u.%u", 
+            ((unsigned char *)&iIpSwitch)[0],
+            ((unsigned char *)&iIpSwitch)[1],
+            ((unsigned char *)&iIpSwitch)[2],
+            ((unsigned char *)&iIpSwitch)[3]);
     }
-    return siPortArray[iSoD];
+
+    return cIpAddrBuf;
 }
 
-/* Get random port */
-int GetRandomPort()
+/* Get random port number */
+int GetRandPort()
 {
-    return (1 + GetRandomNumber() % (65535 - 1));
+    // Return registered port number
+    return (1025 + GetRandNum() % (65535 - 1025));
+}
+
+/* Get increase port number */
+int GetIncrPort(int iSoD)
+{
+    if (iSoD < 0 || iSoD > 1) {
+        LOGRECORD(ERROR, "Unrecognized identifier");
+    }
+
+    static int iPortArray[] = {0, 0};
+    if (iPortArray[iSoD]++ > 65535) {
+        iPortArray[iSoD] = 0;
+    }
+
+    return iPortArray[iSoD];
 }
 
 /* Get random packet length */
-int GetRandomPacketLength()
+int GetRandPktLen()
 {
-    return (64 + GetRandomNumber() % (1518 - 64));
+    // Minimum packet length is 64 bytes
+    return (64 + GetRandNum() % (1518 - 64));
 }
 
 /* Get increase packet length */
-int GetIncreasePacketLength()
+int GetIncrPktLen()
 {
-    static int iLength=64;
-    if (iLength > 1518) {
-        iLength = 64;
-    }
-
-    return iLength++;
+    // Minimum packet length is 64 bytes
+    static int iLength = 64;
+    return ((iLength >= 1518) ? 64 : iLength++); 
 }
 
 /* Get random VLAN ID */
 int GetRandVlan()
 {
-    return (2 + GetRandomNumber() % (4096 - 2));
+    // 0 and 4095 retain VLAN, 1 is Management VLAN
+    return (2 + GetRandNum() % (4095 - 2));
 }
 
 /* Get increased VLAN ID */
-int GetIncrVlan(int flag)
+int GetIncrVlan(int iVoQ)
 {
-    int res = -1;
-    static int vlan = 0;
-    static int qinq = 0;
-    if (!flag) {
-        if (vlan++ > 4094) {
-            vlan = 1;
-        }
-        res = vlan;
-    } else {
-        if (qinq++ > 4094) {
-            qinq = 1;
-        }
-        res = qinq;
+    if (iVoQ < 0 || iVoQ > 1) {
+        LOGRECORD(ERROR, "Unrecognized identifier");
     }
 
-    return res;
+    static int iVlanId[] = {0, 0};
+    return ((iVlanId[iVoQ] > 4094) ? 1 : iVlanId[iVoQ]++);
 }
 
 /* Get random protocol */
-uint8_t GetRandomLayer4Pro()
+uint8_t GetRandL4HexPro()
 {
-    int iRandomNum = random() % 3;
-    if (iRandomNum == 0) {
-        return UDP;
-    } else if (iRandomNum == 1) {
-        return TCP;
-    } else {
-        return ICMPv4;
+    uint8_t iResPro;
+    
+    // UDP:45% TCP:45% ICMPv4:10%
+    switch(random() % 100 / 45) {
+        case 0 : iResPro = UDP;
+        case 1 : iResPro = TCP;
+        case 2 : iResPro = ICMPv4;
     }
+
+    return iResPro;
 }
 
 /* Get random protocol with string format */
-char* ChangeLayer4HexToString(uint16_t pro)
+char* GetStrPro(uint16_t iHexPro)
 {
-    switch(pro) {
-        case ARP:    return "ARP";  
-        case VLAN:   return "VLAN";  
-        case ICMPv4: return "ICMPv4";  
-        case IPv4:   return "IPv4";  
-        case UDP:    return "UDP";  
-        case TCP:    return "TCP";  
-        default:     return "Unknown"; 
+    char* pStrPro = NULL;
+
+    switch(iHexPro) {
+        case ARP    : pStrPro = "ARP";  
+        case VLAN   : pStrPro = "VLAN";  
+        case ICMPv4 : pStrPro = "ICMPv4";  
+        case IPv4   : pStrPro = "IPv4";  
+        case UDP    : pStrPro = "UDP";  
+        case TCP    : pStrPro = "TCP";  
+        default     : LOGRECORD(ERROR, "Protocol not identified");
     }
+
+    return pStrPro;
 }
 
 /* Get layer three protocol number*/
-uint16_t GetL3Hex(char* pro)
+uint16_t GetL3HexPro(char* pStrPro)
 {
-    uint16_t tmp = 0;
-    if (strcmp(pro, "ARP") == 0) {
-        tmp = ARP;
-    } else if (strcmp(pro, "VLAN") == 0) { 
-        tmp = VLAN;
-    } else if (strcmp(pro, "IPv4") == 0) { 
-        tmp = IPv4;
+    if (pStrPro == NULL) {
+        LOGRECORD(ERROR, "Layer 3 protocol string is NULL");
     }
 
-    return tmp;
+    uint16_t iResPro = 0;
+
+    if (strcmp(pStrPro, "ARP") == 0) {
+        iResPro = ARP;
+    } else if (strcmp(pStrPro, "VLAN") == 0) { 
+        iResPro = VLAN;
+    } else if (strcmp(pStrPro, "IPv4") == 0) { 
+        iResPro = IPv4;
+    } else {
+        LOGRECORD(ERROR, "Protocol input error");
+    }
+
+    return iResPro;
 }
 
 /* Get layer four protocol number*/
-uint8_t GetL4Hex(char* pro)
+uint8_t GetL4HexPro(char* pStrPro)
 {
-    uint8_t tmp = 0;
-    if (strcmp(pro, "ICMPv4") == 0) {
-        tmp = ICMPv4;
-    } else if (strcmp(pro, "TCP") == 0) {
-        tmp = TCP;
-    } else if (strcmp(pro, "UDP") == 0) {
-        tmp = UDP;
+    if (pStrPro == NULL) {
+        LOGRECORD(ERROR, "Layer 3 protocol string is NULL");
     }
 
-    return tmp;
+    uint8_t iResPro = 0;
+
+    if (strcmp(pStrPro, "ICMPv4") == 0) {
+        iResPro = ICMPv4;
+    } else if (strcmp(pStrPro, "TCP") == 0) {
+        iResPro = TCP;
+    } else if (strcmp(pStrPro, "UDP") == 0) {
+        iResPro = UDP;
+    }
+
+    return iResPro;
 }
 
 /* Output program progress */
@@ -381,23 +414,24 @@ void ProgramProgress(int iVaribleNum, int iStanderNum)
     static int iLastPercent = -1; // Remeber last percent, can't equal
     static unsigned int iCounter = 1;
 
-    int i, j, k;
+    int iNumI, iNumJ, iNumK;
     if (iProgressPercent != iLastPercent) {
         if (iCounter != 1) {
-            // back to init state
-            for (i=0; i<iProgressBarLength+iProgressPercentLength; i++) {
+            // Back to init state
+            for (iNumI=0; iNumI<iProgressBarLength+iProgressPercentLength; iNumI++) {
                 putchar('\b');
             }
         }
 
         // Progress display
-        for (j=0; j<iProgressPercent; j++) {
+        for (iNumJ=0; iNumJ<iProgressPercent; iNumJ++) {
             putchar('>');
         }
-        for (k=iProgressBarLength-1; k>=iProgressPercent; k--) {
+        for (iNumK=iProgressBarLength-1; iNumK>=iProgressPercent; iNumK--) {
             putchar('=');
         }
-        printf("%d%%", iProgressPercent * (100 / iProgressBarLength)); // true percentage
+        // True percentage
+        printf("%d%%", iProgressPercent * (100 / iProgressBarLength)); 
 
         iLastPercent = iProgressPercent;
         fflush(stdout);
@@ -411,53 +445,38 @@ void ProgramProgress(int iVaribleNum, int iStanderNum)
 }
 
 /* Display packet */
-void DisplayPacketData(char* pcPacket, int iPacketLength)
+void DisplayPacketData(char* pPacket, int iPacketLength)
 {
-    int iNum;
-    for (iNum=0; iNum<iPacketLength; iNum+=2) {
-        printf("%02hhx%02hhx ", pcPacket[iNum], pcPacket[iNum+1]);
+    if (pPacket == NULL || iPacketLength <= 0) {
+        LOGRECORD(ERROR, "Packet display failed");
+    }
+
+    int iNum = 0;
+    for (; iNum<iPacketLength; iNum+=2) {
+        LOGRECORD(INFO, "%02hhx%02hhx ", pPacket[iNum], pPacket[iNum+1]);
         if (iNum%16 == 14) {
-            printf("\n");
+            LOGRECORD(INFO, "\n");
         }
     }
-    printf("\n");
+    LOGRECORD(INFO, "\n");
 }
 
 /* Copy function */
-void BufferCopy(char* dst, int pos, char* src, int len)
+void BufferCopy(char* pDstBuf, int iPos, char* pSrcStr, int iLength)
 {
-    int i;
-    for (i=0; i<len; i++)
-        dst[pos+i] = src[i];
+    int iNum = 0;
+    for (; iNum<iLength; iNum++)
+        pDstBuf[iPos+iNum] = pSrcStr[iNum];
 }
 
 /* Compare IPv6 address */
-int CompareIpv6Address(unsigned char* src,unsigned char* dst)
+int CompareIpv6Address(unsigned char* pSrcIp6Addr, unsigned char* pDstIp6Addr)
 {
-    int len = sizeof(struct in6_addr), i;
-    for (i=0; i<len; i++) {
-        if (src[8+i] != dst[i])
+    int iNum = 0;
+    int iLength = sizeof(struct in6_addr);
+    for (; iNum<iLength; iNum++) {
+        if (pSrcIp6Addr[8+iNum] != pDstIp6Addr[iNum])
             return -1 ;
-    }
-
-    return 0;
-}
-
-/* Get hexadecimal protocol number */
-int ProtocolConversion(char* cpProtocol)
-{
-    if (strcmp(cpProtocol, "ip") == 0) {
-        return IPv4;
-    } else if (strcmp(cpProtocol, "arp") == 0) {
-        return ARP;
-    } else if (strcmp(cpProtocol, "vlan") == 0) {
-        return VLAN; 
-    } else if (strcmp(cpProtocol, "icmp") == 0) {
-        return ICMPv4; 
-    } else if (strcmp(cpProtocol, "tcp") == 0) {
-        return TCP; 
-    } else if (strcmp(cpProtocol, "udp") == 0) {
-        return UDP; 
     }
 
     return 0;
@@ -466,19 +485,21 @@ int ProtocolConversion(char* cpProtocol)
 /* Packet format conversion to *.pcap */
 void SwitchPcapFormat()
 {
-    char* pReadFile = GetcValue("pReadFile");
-    char* pSaveFile = GetcValue("pSaveFile");
+    char* pReadFile = GetcValue("read");
+    char* pSaveFile = GetcValue("save");
 
-    char cCmdBuf[32] = "tcpdump -r ";
-    strcat(cCmdBuf, pReadFile);
-    strcat(cCmdBuf, " -w ");
-    strcat(cCmdBuf, pSaveFile);
+    if (pReadFile == NULL || pSaveFile == NULL) {
+        LOGRECORD(ERROR, "Incomplete command");
+    }
+
+    char cCmdBuf[SIZE_16B*2] = "tcpdump -r ";
+    sprintf(cCmdBuf, "%s%s%s", pReadFile, " -w ", pSaveFile);
     if (system(cCmdBuf) > 0) {
-        LOGRECORD(ERROR, "Command \"tcpdump\" execution failed!");
+        LOGRECORD(ERROR, "Command <tcpdump> not install");
     }
 }
 
-/* Gets the descriptor of the file being written */
+/* Get the descriptor of the file being written */
 int OpenSaveFile(char* pFileName)
 {
     int iSaveFd = 0;
@@ -493,7 +514,7 @@ int OpenSaveFile(char* pFileName)
     return iSaveFd;
 }
 
-/* Gets the descriptor of the file being read */
+/* Get the descriptor of the file being read */
 int OpenReadFile(char* pFileName)
 {
     int iReadFd = 0;
@@ -501,7 +522,7 @@ int OpenReadFile(char* pFileName)
         LOGRECORD(ERROR, "Filename is NULL");
     }
     if ((iReadFd = open(pFileName, O_RDONLY)) < 0 ) {
-        LOGRECORD(ERROR, "Pcap file does not exist");
+        LOGRECORD(ERROR, "Open read-file failed:%d", iReadFd);
     }
 
     return iReadFd;

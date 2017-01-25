@@ -233,7 +233,7 @@ void BuildLayer2Header()
     int   vlNum = GetiValue("vlannum");
     char* smac = GetcValue("smac");
     char* dmac = GetcValue("dmac");
-    uint16_t pro = GetL3Hex(GetcValue("l3pro"));
+    uint16_t pro = GetL3HexPro(GetcValue("l3pro"));
 
     switch(vlNum) {
         case 0: BuildMacHeader (smac, dmac, htons(pro));
@@ -258,10 +258,10 @@ void BuildLayer2Header()
 
 void BuildLayer3Header()
 {
-    if (GetL3Hex(GetcValue("l3pro")) == IPv4) {
+    if (GetL3HexPro(GetcValue("l3pro")) == IPv4) {
         BuildIpv4Header(inet_addr(GetcValue("sip")), 
-            inet_addr(GetcValue("dip")), GetL4Hex(GetcValue("l4pro")));
-    } else if (GetL3Hex(GetcValue("l3pro")) == ARP) {
+            inet_addr(GetcValue("dip")), GetL4HexPro(GetcValue("l4pro")));
+    } else if (GetL3HexPro(GetcValue("l3pro")) == ARP) {
         BuildArpHeader(GetcValue("smac"), GetcValue("dmac"), 
             inet_addr(GetcValue("sip")), inet_addr(GetcValue("dip")));
         RecordStatisticsInfo(EMPRO_ARP);
@@ -291,7 +291,7 @@ void BuildDnsDataContext()
 {
     char cDnsData[150];
     if (url_tag == NULL) {
-        char* url_res = GetUrlString();
+        char* url_res = GetRandURL();
         host= strtok(url_res, "/");
     }
     memset(cDnsData, 0, 50);
@@ -332,7 +332,7 @@ void BuildHttpDataContext(int paylen)
     char* host = "";
 
     if (url == NULL) {
-        char* fullUrl = GetUrlString();
+        char* fullUrl = GetRandURL();
         host = strtok(fullUrl, "/");
         uri = fullUrl + strlen(host) + 1;
     } else {
@@ -362,10 +362,20 @@ void BuildHttpDataContext(int paylen)
     strcat(Http, "Accept-Encoding: gzip, deflate/r/n");  
     strcat(Http, "Accept-Language: zh-cn\r\n");  
     strcat(Http, "Cookie:");  
-    strcat(Http, GetRandomString(paylen - strlen(Http) - 4));
+    strcat(Http, GetRandStr(paylen - strlen(Http) - 4));
     strcat(Http, "\r\n\r\n");  
     memcpy(data, Http, strlen(Http));
     strcat(Http, uri);  
+}
+
+/* Get sub string */
+char* subs(char *s, int n, int m)
+{
+    static char substr[1500];
+    memset(substr, 0, sizeof(substr));
+    memcpy(substr, &s[n], m);
+
+    return substr;
 }
 
 void BuildDataContexts(int paylen)
@@ -383,7 +393,7 @@ void BuildDataContexts(int paylen)
             paylen = rule_str_len;
         }
         */
-        memcpy(data, GetRandomString(paylen), paylen);
+        memcpy(data, GetRandStr(paylen), paylen);
     } else if (strFlag == FG_FIXD) {
         char* pString = GetcValue("string");
         int sLength = strlen(pString);
@@ -407,7 +417,7 @@ void BuildLayer7Header()
     int paylen = 0;
     int vlNum = GetiValue("vlannum");
     int pktlen = GetiValue("pktlen");
-    uint8_t l4pro = GetL4Hex(GetcValue("l4pro"));
+    uint8_t l4pro = GetL4HexPro(GetcValue("l4pro"));
     int l7flag = 1;
     
     char *pro = GetcValue("l7pro");
@@ -465,7 +475,7 @@ void RulesGenerationEntrance(int fd, int iRuleNum)
         if (dprintf(fd, "add ruleset test aclnmask %d "
                 "action=drop, sip=%s, dip=%s, sport=%d, dport=%d, protocol=%s\n", 
                 iRuleNum, GetcValue("sip"), GetcValue("dip"), GetiValue("sport"), GetiValue("dport"),
-                ChangeLayer4HexToString(l4_pro)) < 0) {
+                GetStrPro(l4_pro)) < 0) {
             LOGRECORD(ERROR, "write aclmask rules error");
         }
     } else if (strcmp(rule_tag, "aclex") == 0) {

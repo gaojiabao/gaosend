@@ -28,7 +28,7 @@ void PacketStrcInit()
     stPkt.pIp6Hdr  = NULL;
     stPkt.pUdpHdr  = NULL;
     stPkt.pTcpHdr  = NULL;
-    stPkt.pIcmpHdr = NULL;
+    stPkt.pIcmp4Hdr = NULL;
 }
 
 /* Pcap file header parsing */
@@ -84,11 +84,11 @@ void L4HdrInspection(U8 pro)
         stPkt.pUdpHdr = (_udphdr *) pL4Hdr;
         RecordStatisticsInfo(EMPRO_UDP);
         StatisticUpperUdp(htons(stPkt.pUdpHdr->sport), htons(stPkt.pUdpHdr->dport));  
-    } else if (pro == ICMPv4) {
-        stPkt.pIcmpHdr = (_icmphdr *) pL4Hdr;
-        RecordStatisticsInfo(EMPRO_ICMPv4);
-    } else if (pro == ICMPv6) {
-        stPkt.pIcmpHdr = (_icmphdr *) pL4Hdr;
+    } else if (pro == ICMP4) {
+        stPkt.pIcmp4Hdr = (_icmp4hdr *) pL4Hdr;
+        RecordStatisticsInfo(EMPRO_ICMP4);
+    } else if (pro == ICMP6) {
+        stPkt.pIcmp4Hdr = (_icmp4hdr *) pL4Hdr;
     } else {
         RecordStatisticsInfo(EMPRO_L4OTHER);
     }
@@ -107,12 +107,12 @@ U8 L3HdrInspection(U16 pro)
         RecordStatisticsInfo(EMPRO_IPv4);
         L4HdrInspection(iPro);
     } else if (pro == VLAN) {
-        iCursor += VLANLEN;
-        if (iCursor == MACHDRLEN+VLANLEN) { // VLAN layer 1
+        iCursor += VLANTAGLEN;
+        if (iCursor == MACHDRLEN+VLANTAGLEN) { // VLAN layer 1
             stPkt.pVlanHdr = (_vlanhdr *) pL3Hdr;
             iPro = L3HdrInspection(htons(stPkt.pVlanHdr->pro));
             RecordStatisticsInfo(EMPRO_VLAN);
-        } else if (iCursor == MACHDRLEN+VLANLEN*2){ // VLAN layer 2
+        } else if (iCursor == MACHDRLEN+VLANTAGLEN*2){ // VLAN layer 2
             stPkt.pQinQHdr = (_vlanhdr *) pL3Hdr;
             iPro = L3HdrInspection(htons(stPkt.pQinQHdr->pro));
             RecordStatisticsInfo(EMPRO_QinQ);

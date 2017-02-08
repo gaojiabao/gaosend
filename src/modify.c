@@ -117,20 +117,20 @@ void InsertVlanInfo(int iHasVlanLayer)
 
     int iVlanId = iHasVlanLayer ? GetiValue("qinq") : GetiValue("vlan");
     int iPktLen = stPkt.pPktHdr->len;
-    int iCursor = MACHDRLEN + iHasVlanLayer * VLANLEN;
+    int iCursor = MACHDRLEN + iHasVlanLayer * VLANTAGLEN;
 
     // Move packet
     int iNum = 0;
     int iLength = iPktLen - iCursor;
     for (; iNum<iLength; iNum++) {
-        stPkt.pPacket[iPktLen+VLANLEN-1-iNum] \
+        stPkt.pPacket[iPktLen+VLANTAGLEN-1-iNum] \
             = stPkt.pPacket[iPktLen-1-iNum]; 
     }
 
     // Insert VLAN ID
     pVlanInfo[iHasVlanLayer] = (_vlanhdr*) (stPkt.pPacket + iCursor);
     pVlanInfo[iHasVlanLayer]->id = htons(iVlanId);
-    stPkt.pPktHdr->caplen = stPkt.pPktHdr->len += VLANLEN;
+    stPkt.pPktHdr->caplen = stPkt.pPktHdr->len += VLANTAGLEN;
 
     if (iHasVlanLayer == 0) {
         stPkt.pVlanHdr = pVlanInfo[iHasVlanLayer];
@@ -151,7 +151,7 @@ void DeleteVlanInfo(int iHasVlanLayer, int iDirect)
             iCursor = MACHDRLEN;
             stPkt.pMacHdr->pro = stPkt.pVlanHdr->pro;
         } else if (iDirect == 1) { // Delete a VLAN ID from the rear
-            iCursor = MACHDRLEN + (iHasVlanLayer - 1) * VLANLEN;
+            iCursor = MACHDRLEN + (iHasVlanLayer - 1) * VLANTAGLEN;
             if (iHasVlanLayer == 1) {
                 stPkt.pMacHdr->pro = stPkt.pVlanHdr->pro;
             } else if (iHasVlanLayer == 2) {
@@ -164,10 +164,10 @@ void DeleteVlanInfo(int iHasVlanLayer, int iDirect)
         int iLength = stPkt.pPktHdr->len - iCursor;
         for (; iNum<iLength; iNum++) {
             stPkt.pPacket[iCursor+iNum-1] = \
-                stPkt.pPacket[iCursor+VLANLEN+iNum-1];
+                stPkt.pPacket[iCursor+VLANTAGLEN+iNum-1];
         }
 
-        stPkt.pPktHdr->caplen = stPkt.pPktHdr->len -= VLANLEN;
+        stPkt.pPktHdr->caplen = stPkt.pPktHdr->len -= VLANTAGLEN;
     } // End of if
 }
 
@@ -312,7 +312,7 @@ void ModifyLayer4()
     switch (iPro) {
         case UDP : ModifyUdpHdr(); break;
         case TCP : ModifyTcpHdr(); break;
-        case ICMPv4 : break;
+        case ICMP4 : break;
     }
 }
 

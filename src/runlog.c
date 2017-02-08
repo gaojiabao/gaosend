@@ -8,60 +8,19 @@
 #include    <libgen.h>
 #include    <sys/time.h>
 #include    "runlog.h"
-#include    "common.h"
 #include    "default.h"
 
+#define     SIZE_128B   128
+#define     SIZE_1K     1024
 
-static char cTimeBuf[SIZE_128B*2];
-
-static void RecordRunningLog(char* pcLog)
-{
-    int iLogFd = 0;
-
-    if ((iLogFd = open("/etc/.sendlog", \
-        O_WRONLY | O_CREAT | O_APPEND, PERM)) < 0 ) {
-        LOGRECORD(ERROR, "Open log failed");
-    }
-
-    /* Record running log */
-    if (write(iLogFd, pcLog, strlen(pcLog)) < 0) {
-        LOGRECORD(ERROR, "Record log failed");
-    }
-
-    close(iLogFd);
-}
-
-static void ErrorProcessingEntrance(char* pcLog, char* pcInfo)
-{
-    RecordRunningLog(pcLog);
-    printf("Error:%s\n", pcInfo);
-
-    PROGRAMEND();
-}
-
-static void WarningProcessingEntrance(char* pcLog, char* pcInfo)
-{
-    RecordRunningLog(pcLog);
-    printf("WARNING:%s\n", pcInfo);
-}
-
-static void DebugProcessingEntrance(char* pcLog)
-{
-    RecordRunningLog(pcLog);
-}
-
-static void InfoProcessingEntrance(char* pcLog, char* pcInfo)
-{
-    RecordRunningLog(pcLog);
-    printf("%s\n", pcInfo);
-}
-
-static void GetCurrentTime()
+/* Get the current time */
+static char* GetCurrentTime()
 {
     char    cTimeTmp[SIZE_128B];
     time_t  tRawTime;
-    struct  tm* stTimeInfo;
     struct  timeval tp;
+    struct  tm* stTimeInfo;
+    static char cTimeBuf[SIZE_128B];
 
     gettimeofday(&tp, NULL);
 
@@ -72,33 +31,78 @@ static void GetCurrentTime()
 
     sprintf(cTimeTmp, ".%ld", tp.tv_usec);
     strcat(cTimeBuf, cTimeTmp);
+
+    return cTimeBuf;
 }
 
-void LogProcessingEntrance(char* filename, int line, int level, char* fmt,...)
+/* Record program running log */
+static void RecordRunningLog(char* pLog)
 {
-    char       cLogBuf[SIZE_1K*4];
-    char       cTmpBuf[SIZE_1K*4];
+    int iLogFd = 0;
+
+    if ((iLogFd = open("/etc/.sendlog", \
+        O_WRONLY | O_CREAT | O_APPEND, PERM)) < 0 ) {
+        LOGRECORD(ERROR, "Open log failed");
+    }
+
+    /* Record running log */
+    if (write(iLogFd, pLog, strlen(pLog)) < 0) {
+        LOGRECORD(ERROR, "Record log failed");
+    }
+
+    close(iLogFd);
+}
+
+/* Program info handling */
+static void InfoProcessing(char* pLog, char* pInfo)
+{
+    RecordRunningLog(pLog);
+    printf("%s\n", pInfo);
+}
+
+/* Program debug handling */
+static void DebugProcessing(char* pLog)
+{
+    RecordRunningLog(pLog);
+}
+
+/* Program warning handling */
+static void WarningProcessing(char* pLog, char* pInfo)
+{
+    RecordRunningLog(pLog);
+    printf("WARNING:%s\n", pInfo);
+}
+
+/* Program error handling */
+static void ErrorProcessing(char* pLog, char* pInfo)
+{
+    RecordRunningLog(pLog);
+    printf("Error:%s\n", pInfo);
+
+    PROGRAMEND();
+}
+
+/* Log handler entry */
+void LogProcessingEntrance(char* pFileName, 
+    int iLineNum, int iLevel, char* pFmt, ...)
+{
+    char       cLogMessage[SIZE_1K*4];
+    char       cInfoMessage[SIZE_1K*4];
     va_list    vaArgPtr;
 
-    va_start(vaArgPtr, fmt);
-    vsprintf(cTmpBuf, fmt, vaArgPtr);
+    va_start(vaArgPtr, pFmt);
+    vsprintf(cInfoMessage, pFmt, vaArgPtr);
     va_end(vaArgPtr);
 
-    GetCurrentTime();
-    
-    sprintf(cLogBuf, "[%11s][%4d][%-24s][====>][%d][%s]\n", 
-                (char*)(basename(filename)), line, cTimeBuf, level, cTmpBuf);
+    sprintf(cLogMessage, "[%11s][%4d][%-24s][====>][%d][%s]\n", 
+        (char*)(basename(pFileName)), iLineNum, 
+        GetCurrentTime(), iLevel, cInfoMessage);
 
-    switch(level)
-    {
-        case ERROR   : ErrorProcessingEntrance(cLogBuf, cTmpBuf); 
-                       break;
-        case WARNING : WarningProcessingEntrance(cLogBuf, cTmpBuf); 
-                       break;
-        case DEBUG   : DebugProcessingEntrance(cLogBuf); 
-                       break;
-        case INFO    : InfoProcessingEntrance(cLogBuf, cTmpBuf);
-                       break;
+    switch(iLevel) {
+        case ERROR   : ErrorProcessing(cLogMessage, cInfoMessage); break;
+        case WARNING : WarningProcessing(cLogMessage, cInfoMessage); break;
+        case DEBUG   : DebugProcessing(cLogMessage); break;
+        case INFO    : InfoProcessing(cLogMessage, cInfoMessage); break;
         default      : break;
     }
 }

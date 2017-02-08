@@ -1,459 +1,408 @@
 /*
- *  author   : Mr. Gao
+ *  Author   : Mr. Gao
  *
- *  function : This file will deal with command args which get from terminal, 
- *             then make a specifed packet and send it.
+ *  Function : To construct a data message and save or send 
+ *
  */
 
 #include    <unistd.h>
 #include    <string.h>
 #include    <sys/time.h>
-#include    "packet.h"
-#include    "default.h"
 #include    "common.h"
-#include    "structure.h"
 #include    "statistic.h"
-#include    "runlog.h"
 #include    "socket.h"
+#include    "runlog.h"
 #include    "storage.h"
 
-
-/* packet */
-char    packet[PACKETLEN];
-char    chksum[PACKETLEN];
-
-/* packet structure */
-_machdr*    pMacHdr    = NULL;
-_vlanhdr*   pVlanHdr1  = NULL;
-_vlanhdr*   pVlanHdr2  = NULL;
-_arphdr*    pArpHdr    = NULL;
-_ip4hdr*    pIp4Hdr    = NULL;
-_ip6hdr*    pIp6Hdr    = NULL;
-_icmphdr*   pIcmpHdr   = NULL;
-_udphdr*    pUdpHdr    = NULL;
-_tcphdr*    pTcpHdr    = NULL;
-_dnshdr*    pDnsHdr    = NULL;
-_pcaphdr*   pPcapHdr   = NULL;
-_pkthdr*    pPktHdr    = NULL;
-_pseudohdr* pPseudoHdr = NULL;
-char*       virtual    = NULL;
-char*       data       = NULL;
-
-/* really varible */
-int         str_len    = STRLEN;
-char*       host;
-char*       uri;
-uint8_t     l4_pro     = UDP;
-
-/* input varible tag */
-char*       url_tag    = NULL;
-char*       rule_tag   = "other";
-int         rule_str_len = 0;
+/* Packet structure */
+static stPktStrc stPkt;
+static stPktInfo stInfo;
 
 
-/* to make wireshark recognise *.pcap file */
+/* Constructing pcap header used to identify file type */
 void BuildPcapHeader()
 {
-    pPcapHdr->magic = htonl(0xd4c3b2a1);
-    pPcapHdr->major = 2;
-    pPcapHdr->minor = 4;
-    pPcapHdr->thiszone = 0;
-    pPcapHdr->sigflags = 0;
-    pPcapHdr->snaplen = 1518;
-    pPcapHdr->linktype = 1;
+    static char cPcapHdrBuf[PCAPHDRLEN];
+    stPkt.pPcapHdr = (_pcaphdr *)cPcapHdrBuf;
+
+    stPkt.pPcapHdr->magic = htonl(0xd4c3b2a1);
+    stPkt.pPcapHdr->major = 2;
+    stPkt.pPcapHdr->minor = 4;
+    stPkt.pPcapHdr->thiszone = 0;
+    stPkt.pPcapHdr->sigflags = 0;
+    stPkt.pPcapHdr->snaplen = 1518;
+    stPkt.pPcapHdr->linktype = 1;
 }
 
-/* to make wireshark recognise every packet in *.pcap file */
-void BuildPacketHeader(int pktlen)
+/* Constructing packet header used to identify packet information */
+void BuildPacketHeader()
 {
+    static char cPktHdrBuf[PKTHDRLEN];
+    stPkt.pPktHdr = (_pkthdr *)cPktHdrBuf;
+
     struct timeval tp;
     gettimeofday(&tp, NULL);
-    pPktHdr->htimestamp = tp.tv_sec;
-    pPktHdr->ltimestamp = tp.tv_usec;
-    pPktHdr->caplen = pktlen;
-    pPktHdr->len = pktlen;
+    stPkt.pPktHdr->htimestamp = tp.tv_sec;
+    stPkt.pPktHdr->ltimestamp = tp.tv_usec;
+    stPkt.pPktHdr->caplen = stInfo.iPktLen;
+    stPkt.pPktHdr->len = stInfo.iPktLen;
 }
 
-/* pseudo head struct for calculate checksum*/
-void BuildPseudoHeader(uint32_t sip, uint32_t dip,uint8_t protocol, int len)
+/* Constructing a pseudo header for calculating checksum */
+U16* BuildPseduoPacket(void* pData, U8 iL4Pro, int iL4Len)
 {
-    pPseudoHdr->srcip = sip;
-    pPseudoHdr->dstip = dip;
+    // Build pseudo header
+    static char cPseudoPacket[PACKETLEN];
+    _pseudohdr* pPseudoHdr = (_pseudohdr *)cPseudoPacket;
+    pPseudoHdr->srcip = stPkt.pIp4Hdr->srcip;
+    pPseudoHdr->dstip = stPkt.pIp4Hdr->dstip;
     pPseudoHdr->flag = 0;
-    pPseudoHdr->protocol = protocol;
-    pPseudoHdr->len = htons(len);
+    pPseudoHdr->protocol = iL4Pro;
+    pPseudoHdr->len = htons(iL4Len);
+
+    // Build pseudo packet data
+    char *pPseudoData = cPseudoPacket + PSEUDOHDRLEN;
+    memcpy(pPseudoData, pData, iL4Len);
+    
+    return (U16 *)cPseudoPacket;
 }
 
-/* to make virtual packet for calculate checksum */
-uint16_t BuildPseduoPacket(void* header, uint8_t protocol, int len)
+/* Write mode initialization for saving data */
+int WriteModeInitialization()
 {
-    BuildPseudoHeader(inet_addr(GetcValue("sip")), inet_addr(GetcValue("dip")), protocol, len);
-    memcpy(virtual, header, len);
-    return GetCheckSum((uint16_t*)chksum, (len + 12));
+    int iSaveFd = OpenSaveFile(GetcValue("save"));;
+
+    BuildPcapHeader();
+    
+    if (iSaveFd < 0) {
+        LOGRECORD(ERROR, "File doesn't exist");
+    }
+    if (write(iSaveFd, stPkt.pPcapHdr, PCAPHDRLEN) < 0 ) {
+        LOGRECORD(ERROR, "Failed to write pcap-file");
+    }
+    if (GetiValue("debug")) {
+        DisplayPacketData((char *)stPkt.pPcapHdr, PCAPHDRLEN);
+    }
+
+    return iSaveFd;
 }
 
-/* ethernet layer two protocol struct */
-void BuildMacHeader(char *smac, char *dmac, uint16_t pro)
+/* Constructing ethernet data header */
+void BuildMacHeader()
 {
-    FillInMacAddr(dmac, (char*)&pMacHdr->dmac);
-    FillInMacAddr(smac, (char*)&pMacHdr->smac);
-    pMacHdr->pro = pro;
+    stPkt.pMacHdr = (_machdr *)(stPkt.pPacket + stInfo.iCursor);
+
+    FillInMacAddr(GetcValue("dmac"), (char*)&stPkt.pMacHdr->dmac);
+    FillInMacAddr(GetcValue("smac"), (char*)&stPkt.pMacHdr->smac);
+    stPkt.pMacHdr->pro = htons(GetL3HexPro(GetcValue("l3pro")));
+
+    stInfo.iCursor += MACHDRLEN;
 }
 
-/* ethernet vlan protocol struct */
-void BuildVlanField(_vlanhdr* vlan_hdr, uint16_t id, uint16_t pro)
+/* Constructing vlan tag  */
+void BuildVlanTag(int iVlanNum)
 {
-    vlan_hdr->id = id;
-    vlan_hdr->pro = pro;
+    _vlanhdr* pVlanInfo[] = {
+        stPkt.pVlanHdr,
+        stPkt.pQinQHdr
+    }; 
+
+    int iVlanLayer = (stInfo.iCursor == MACHDRLEN ? 0 : 1);
+    pVlanInfo[iVlanLayer] = (_vlanhdr *)(stPkt.pPacket + stInfo.iCursor);
+
+    pVlanInfo[iVlanNum]->id = ((iVlanNum - iVlanLayer) == 1 ?  
+        htons(VLAN) : htons(GetL3HexPro(GetcValue("l3pro"))));
+    pVlanInfo[iVlanNum]->pro = (iVlanNum == 1 ? 
+        GetiValue("vlan") : GetiValue("qinq"));
+
+    stInfo.iCursor += VLANTAGLEN;
 }
 
-void BuildArpHeader(char *smac, char *dmac, uint32_t sip, uint32_t dip)
+/* Building IP protocol header */
+void BuildIp4Header()
 {
-    pArpHdr->hrd = 0x01;
-    pArpHdr->pro = htons(0x0800);
-    pArpHdr->len = 0x06;
-    pArpHdr->plen = 0x04;
-    pArpHdr->option = htons(2);
-    FillInMacAddr(smac, (char*)&pArpHdr->smac);
-    pArpHdr->sip = sip;
-    FillInMacAddr(dmac, (char*)&pArpHdr->dmac);
-    pArpHdr->dip = dip;
+    stPkt.pIp4Hdr = (_ip4hdr *)(stPkt.pPacket + stInfo.iCursor);
+
+    stPkt.pIp4Hdr->ver_len = (4 << 4 | IP4HDRLEN / 4);
+    stPkt.pIp4Hdr->tos = 0;
+    stPkt.pIp4Hdr->total_len = htons(stInfo.iPktLen - stInfo.iCursor);
+    stPkt.pIp4Hdr->ident = 1;
+    stPkt.pIp4Hdr->flag_offset = 0;
+    stPkt.pIp4Hdr->ttl = 128;
+    stPkt.pIp4Hdr->protocol = GetL4HexPro(GetcValue("l4pro"));
+    stPkt.pIp4Hdr->checksum = GetCheckSum((U16 *)stPkt.pIp4Hdr, IP4HDRLEN);
+    stPkt.pIp4Hdr->srcip = inet_addr(GetcValue("sip"));
+    stPkt.pIp4Hdr->dstip = inet_addr(GetcValue("dip"));
+
+    stInfo.iCursor += IP4HDRLEN;
 }
 
-/* ip protocol struct */
-void BuildIpv4Header(uint32_t sip, uint32_t dip, uint8_t pro)
+/* Building ARP protocol header */
+void BuildArpHeader(int iOperationType)
 {
-    int vlNum = GetiValue("vlannum");
-    int pkt_len = GetiValue("pktlen");
-    pIp4Hdr->ver_len = (4 << 4 | IP4HDRLEN / 4);
-    pIp4Hdr->tos = 0;
-    pIp4Hdr->total_len = htons (pkt_len - MACHDRLEN - vlNum * VLANLEN);
-    pIp4Hdr->ident = 1;
-    pIp4Hdr->flag_offset = 0;
-    pIp4Hdr->ttl = 128;
-    pIp4Hdr->protocol = pro;
-    pIp4Hdr->checksum = 0;
-    pIp4Hdr->srcip = sip;
-    pIp4Hdr->dstip = dip;
-    pIp4Hdr->checksum = GetCheckSum((uint16_t *) pIp4Hdr, IP4HDRLEN);
+    stPkt.pArpHdr = (_arphdr *)(stPkt.pPacket + stInfo.iCursor);
+    stPkt.pArpHdr->hrd = 0x01; // Ethernet
+    stPkt.pArpHdr->pro = htons(IPv4);
+    stPkt.pArpHdr->len = 0x06;
+    stPkt.pArpHdr->plen = 0x04;
+    stPkt.pArpHdr->option = htons(iOperationType); // 1:ARP req 2:ARP res 3:RARP req 4:RARP res
+    FillInMacAddr(GetcValue("smac"), (char*)&stPkt.pArpHdr->smac);
+    stPkt.pArpHdr->sip = inet_addr(GetcValue("sip"));
+    FillInMacAddr(GetcValue("dmac"), (char*)&stPkt.pArpHdr->dmac);
+    stPkt.pArpHdr->dip = inet_addr(GetcValue("dip"));
+
+    stInfo.iCursor += ARPHDRLEN;
 }
 
-/* icmp protocol struct */
-void BuildIcmpv4Header()
+/* Building TCP protocol header */
+void BuildTcpHeader()
 {
-    pIcmpHdr->type= 0;
-    pIcmpHdr->code = 0;
-    pIcmpHdr->checksum = GetCheckSum((uint16_t *)pIcmpHdr, 30);
-    pIcmpHdr->identifier = htons(getpid());
-    pIcmpHdr->seq = 256;
+    stPkt.pTcpHdr = (_tcphdr *)(stPkt.pPacket + stInfo.iCursor);
+
+    int iTcpLen = stInfo.iPktLen - stInfo.iCursor;
+    stPkt.pTcpHdr->sport = htons(GetiValue("sport"));
+    stPkt.pTcpHdr->dport = htons(GetiValue("dport")); 
+    stPkt.pTcpHdr->seq = 1; 
+    stPkt.pTcpHdr->ack = 0;
+    stPkt.pTcpHdr->hdrlen = 0x5f;
+    stPkt.pTcpHdr->flag = 128; /*cwr|ecn|urg|ack|psh|rst|syn|fin*/
+    stPkt.pTcpHdr->win = htons(65535);
+    stPkt.pTcpHdr->checksum = 0;
+    stPkt.pTcpHdr->urg = 0;
+    stPkt.pTcpHdr->checksum = GetCheckSum( \
+        BuildPseduoPacket(stPkt.pTcpHdr, TCP, iTcpLen),
+        iTcpLen+PSEUDOHDRLEN);
+
+    stInfo.iCursor += TCPHDRLEN;
 }
 
-/* udp protocol struct */
-void BuildUdpHeader(int sport, int dport, int pkt_len)
+/* Building UDP protocol header */
+void BuildUdpHeader()
 {
-    int udp_length;
-    pUdpHdr->sport = htons (sport);
-    pUdpHdr->dport = htons (dport);
-    udp_length = pkt_len - MACHDRLEN - IP4HDRLEN - GetiValue("vlannum") * VLANLEN;
-    pUdpHdr->len = htons (udp_length);
-    pUdpHdr->checksum = 0;
-    BuildPseudoHeader(inet_addr(GetcValue("sip")), inet_addr(GetcValue("dip")),UDP, udp_length);
-    pUdpHdr->checksum = BuildPseduoPacket(pUdpHdr, UDP, udp_length);
+    stPkt.pUdpHdr = (_udphdr *)(stPkt.pPacket + stInfo.iCursor);
+
+    stPkt.pUdpHdr->sport = htons(GetiValue("sport"));
+    stPkt.pUdpHdr->dport = htons(GetiValue("dport"));
+    int iUdpLen = stInfo.iPktLen - stInfo.iCursor;
+    stPkt.pUdpHdr->len = htons(iUdpLen);
+    stPkt.pUdpHdr->checksum = 0;
+    stPkt.pUdpHdr->checksum = GetCheckSum( \
+        BuildPseduoPacket(stPkt.pUdpHdr, UDP, iUdpLen),
+        iUdpLen+PSEUDOHDRLEN);
+
+    stInfo.iCursor += UDPHDRLEN;
 }
 
-/* dns protocol struct */
-void BuildDnsHeader()
+/* Building ICMP protocol header */
+void BuildIcmp4Header(int iOperationType)
 {
+    stPkt.pIcmp4Hdr = (_icmp4hdr *)(stPkt.pPacket + stInfo.iCursor);
+
+    // Echo request(type:8 code:0), Echo reply(type:0 code:0)
+    stPkt.pIcmp4Hdr->type= htons(iOperationType);
+    stPkt.pIcmp4Hdr->code = 0;
+    //stPkt.pIcmp4Hdr->checksum = GetCheckSum((uint16_t *)stPkt.pIcmp4Hdr, 30);
+    stPkt.pIcmp4Hdr->checksum = GetCheckSum((uint16_t *)stPkt.pIcmp4Hdr, ICMP4HDRLEN);
+    stPkt.pIcmp4Hdr->identifier = htons(getpid());
+    stPkt.pIcmp4Hdr->seq = 256;
+
+    stInfo.iCursor += ICMP4HDRLEN;
+}
+
+/* Constructing DNS data context */
+void BuildDnsContext()
+{
+    char* pDnsData = (char *)(stPkt.pPacket + stInfo.iCursor);
+    char* pUrlStr = GetRandURL();
+    int iUrlLen = strlen(pUrlStr);
+    // Amand packet length
+    stInfo.iPktLen = 59 + iUrlLen;
+    stPkt.pPktHdr->len = stPkt.pPktHdr->caplen = stInfo.iPktLen;
+
+    memcpy(pDnsData, pUrlStr, iUrlLen); 
+    pDnsData += iUrlLen;
+    *(pDnsData+0) = 0x00; // End flag
+    *(pDnsData+1) = 0x00;
+    *(pDnsData+2) = 0x01;
+    *(pDnsData+3) = 0x00;
+    *(pDnsData+4) = 0x01;
+}
+
+/* Constructing DNS information */
+void BuildDnsMessage()
+{
+    _dnshdr* pDnsHdr = (_dnshdr *)(stPkt.pPacket + stInfo.iCursor);
+
     pDnsHdr->tid   = htons(0x1234);
     pDnsHdr->flag  = htons(0x0001);
     pDnsHdr->que   = htons(0x0001);
     pDnsHdr->anrrs = htons(0x0000);
     pDnsHdr->aurrs = htons(0x0000);
     pDnsHdr->adrrs = htons(0x0000);
+
+    stInfo.iCursor += DNSHDRLEN;
+    BuildDnsContext();
 }
 
-/* tcp protocol struct */
-void BuildTcpHeader(int sport, int dport, int pktlen)
+/* Building HTTP messages */
+void BuildHttpMessage()
 {
-    int vlNum = GetiValue("vlannum");
-    int tcplen = pktlen - MACHDRLEN - IP4HDRLEN - vlNum * VLANLEN;
-    pTcpHdr->sport = htons(sport);
-    pTcpHdr->dport = htons(dport); 
-    pTcpHdr->seq = 1; 
-    pTcpHdr->ack = 0;
-    pTcpHdr->hdrlen = 0x5f;
-    pTcpHdr->flag = 128; /*cwr|ecn|urg|ack|psh|rst|syn|fin*/
-    pTcpHdr->win = htons(65535);
-    pTcpHdr->checksum = BuildPseduoPacket(pTcpHdr, TCP, tcplen);
-    pTcpHdr->urg = 0;
-}
+    char* pHttpData = (char *)(stPkt.pPacket + stInfo.iCursor);
+    int   iPayLen = stInfo.iPktLen - stInfo.iCursor;
+    char* pL7Pro = GetcValue("l7pro");
+    char* pUrlStr = GetcValue("pUrlStr");
+    char* pUriStr = NULL;
+    char* pHostStr = "";
 
-/* init packet struct */
-void PacketStrcutureInitialization()
-{
-    int vlNum = GetiValue("vlannum");
-    pPktHdr     = (_pkthdr*) packet;
-    pMacHdr     = (_machdr *) (packet + MACOFFSET);
-    pVlanHdr1   = (_vlanhdr *)(packet + VLAN1OFFSET);
-    pVlanHdr2   = (_vlanhdr *)(packet + VLAN2OFFSET);
-    pArpHdr     = (_arphdr *) (packet + ARPOFFSET(vlNum));
-    pIp4Hdr     = (_ip4hdr *) (packet + IP4OFFSET(vlNum));
-    pPseudoHdr  = (_pseudohdr*) chksum;
-    virtual     = (char*)(chksum + PSEUDOHDRLEN);
-    pIcmpHdr    = (_icmphdr *)(packet + ICMP4OFFSET(vlNum));
-    pUdpHdr     = (_udphdr *) (packet + UDPOFFSET(vlNum));
-    pTcpHdr     = (_tcphdr *) (packet + TCPOFFSET(vlNum));
-
-    LOGRECORD(DEBUG, "Packet strcuture initialization finished");
-}
-
-int WriteModeInitialization()
-{
-    int iSaveFd = OpenSaveFile(GetcValue("save"));;
-
-    pPcapHdr = (_pcaphdr*)packet;
-    BuildPcapHeader();
-    
-    if (iSaveFd < 0) {
-        LOGRECORD(ERROR, "pcap file open error or exist");
-    }
-    if (write(iSaveFd, packet, PCAPHDRLEN) < 0 ) {
-        LOGRECORD(ERROR, "save pcap file error");
-    }
-    if (GetiValue("debug")) {
-        DisplayPacketData(packet, PCAPHDRLEN);
+    if (pUrlStr == NULL) {
+        char* pUrlStr = GetRandURL();
+        pHostStr = strtok(pUrlStr, "/");
+        pUriStr = pUrlStr + strlen(pHostStr) + 1;
+    } else {
+        pHostStr = strtok(pUrlStr, "/");
+        pUriStr = strtok(NULL, "/");
     }
 
-    return iSaveFd;
+    char cDataBuf[BUFSIZ];
+    char* pBufCursor = cDataBuf;
+
+    char* pMethod = NULL;
+    if (strcmp(pL7Pro, "HTTP-GET") == 0) {
+        pMethod = "GET /";
+    } else if (strcmp(pL7Pro, "HTTP-POST") == 0) {
+        pMethod = "POST /";
+    }
+
+    sprintf(pBufCursor, "%s%s%s%s%s%s%s%s%s%s%s%s%s", 
+        pMethod,
+        pUriStr, 
+        " HTTP/1.1\r\n", 
+        "Host: ", pHostStr, 
+        "\r\nConnection: Keep-Alive\r\n",
+        "Accept: */*\r\n", 
+        "User-Agent: Mozilla/4.0 (compatible; MSIE 8.0;"
+            "Windows NT 5.1; Trident/4.0;"
+            ".NET CLR 2.0.50727; .NET CLR 3.0.04506.648; " 
+            ".NET CLR 3.5.21022; InfoPath.2)\r\n",
+        "Accept-Encoding: gzip, deflate/r/n",
+        "Accept-Language: zh-cn\r\n",
+        "Cookie:", GetRandStr(iPayLen - strlen(cDataBuf) - 4),
+        "\r\n\r\n"
+    );
+
+    memcpy(pHttpData, cDataBuf, strlen(cDataBuf));
 }
 
+/* Construction layer 7 data content */
+void BuildDataContexts()
+{
+    int iStrOffset = GetiValue("offset");
+    int iStrType = GetFlag("string");
+    int iPayLen = stInfo.iPktLen - stInfo.iCursor;
+    if (iPayLen < 0) {
+        LOGRECORD(ERROR, "Payload length error");
+    }
+
+    // Dead work
+    int iStrLen = 0;
+    char* pData = (char *)(stPkt.pPacket + stInfo.iCursor);
+    if (iStrOffset >= iPayLen) {
+        pData += iPayLen;
+        stInfo.iCursor += iPayLen;
+        LOGRECORD(WARNING, "Offset grate than payload length");
+    } else {
+        pData += iStrOffset;
+        iStrLen = iPayLen - iStrOffset;
+        stInfo.iCursor += iStrOffset;
+    }
+
+    // Generate data
+    if (iStrType == FG_RAND) {
+        memcpy(pData, GetRandStr(iPayLen), iPayLen);
+        stInfo.iCursor += iStrLen;
+    } else if (iStrType == FG_FIXD) {
+        char* pFixedStr = GetcValue("string");
+        int iFixedStrLen = strlen(pFixedStr);
+        // Handling strings beginning with '0x'
+        if (pFixedStr[0] == '0' && pFixedStr[1] == 'x') {
+            // Amand string length
+            iFixedStrLen = (iFixedStrLen - 2) / 2; 
+            unsigned long iHexNum = strtol(pFixedStr, NULL, 16);
+
+            int iNumI = iFixedStrLen-1;
+            int iNumJ = 0;
+            for (; iNumI>=0 && iNumJ<iStrLen; iNumI--, iNumJ++) {
+                sprintf(&pData[iNumJ], "%c", (char)(iHexNum>>(iNumI*8)&0xff));
+            }
+        } else { // Handling normal input strings 
+            iFixedStrLen = (iFixedStrLen > iStrLen ? iStrLen : iFixedStrLen);
+            memcpy(pData, pFixedStr, iFixedStrLen);
+        }
+        stInfo.iCursor += iStrLen;
+    } else if (iStrType == FG_NOINPUT) { // Handling no input situation
+        stInfo.iCursor += iPayLen;
+        DisplayPacketData(stPkt.pPacket, stInfo.iPktLen);
+    } else {
+        LOGRECORD(ERROR, "String type not supported");
+    }
+
+    // Check packet length
+    if (stInfo.iCursor != stInfo.iPktLen) {
+        LOGRECORD(ERROR, "Packet Message build error");
+    }
+}
+
+/* Two layer protocol processing */
 void BuildLayer2Header()
 {
-    int   vlan, qinq;
-    int   vlNum = GetiValue("vlannum");
-    char* smac = GetcValue("smac");
-    char* dmac = GetcValue("dmac");
-    uint16_t pro = GetL3HexPro(GetcValue("l3pro"));
+    BuildMacHeader();
 
-    switch(vlNum) {
-        case 0: BuildMacHeader (smac, dmac, htons(pro));
-                break;
-        case 1: vlan = GetiValue("vlan");
-                BuildMacHeader(smac, dmac, htons(VLAN));
-                BuildVlanField(pVlanHdr1, htons(vlan), htons(pro));
-                RecordStatisticsInfo(EMPRO_VLAN);
-                break;
-        case 2: vlan = GetiValue("vlan");
-                qinq = GetiValue("qinq");
-                BuildMacHeader(smac, dmac, htons(VLAN));
-                BuildVlanField(pVlanHdr1, htons(vlan), htons(VLAN));
-                BuildVlanField(pVlanHdr2, htons(qinq), htons(pro));
-                RecordStatisticsInfo(EMPRO_QinQ);
-
-                break;
-        default:LOGRECORD(ERROR, "VLAN number is wrong");
-                break;
+    int iVlanNum = GetiValue("vlannum");
+    while (iVlanNum) {
+        BuildVlanTag(iVlanNum);
+        iVlanNum--;
     }
 }
 
+/* Three layer protocol processing */
 void BuildLayer3Header()
 {
-    if (GetL3HexPro(GetcValue("l3pro")) == IPv4) {
-        BuildIpv4Header(inet_addr(GetcValue("sip")), 
-            inet_addr(GetcValue("dip")), GetL4HexPro(GetcValue("l4pro")));
-    } else if (GetL3HexPro(GetcValue("l3pro")) == ARP) {
-        BuildArpHeader(GetcValue("smac"), GetcValue("dmac"), 
-            inet_addr(GetcValue("sip")), inet_addr(GetcValue("dip")));
-        RecordStatisticsInfo(EMPRO_ARP);
-    } else {
-        LOGRECORD(ERROR, "Protocol analysis is wrong");
+    switch(GetL3HexPro(GetcValue("l3pro"))) {
+        case IPv4 : BuildIp4Header(); break;
+        case ARP  : BuildArpHeader(2); break; // 2:ARP response
+        default   : LOGRECORD(ERROR, "Layer three protocol is not found");
     }
 }
 
+/* Four layer protocol processing*/
 void BuildLayer4Header()
 {
-    char *p = GetcValue("l4pro");
-    if (strcmp(p, "UDP") == 0) {
-        BuildUdpHeader(GetiValue("sport"), GetiValue("dport"), GetiValue("pktlen"));
-        RecordStatisticsInfo(EMPRO_UDP);
-    } else if (strcmp(p, "TCP") == 0) {
-        BuildTcpHeader(GetiValue("sport"), GetiValue("dport"), GetiValue("pktlen"));
-        RecordStatisticsInfo(EMPRO_TCP);
-    } else if (strcmp(p, "ICMPv4") == 0) {
-        BuildIcmpv4Header();
-        RecordStatisticsInfo(EMPRO_ICMPv4);
-    } else {
-        LOGRECORD(ERROR, "Layer 4 protocol is not found");
+    switch(GetL4HexPro(GetcValue("l4pro"))) {
+        case TCP   : BuildTcpHeader(); break;
+        case UDP   : BuildUdpHeader(); break;
+        case ICMP4 : BuildIcmp4Header(8); break;
+        default    : LOGRECORD(ERROR, "Layer four protocol is not found");
     }
 }
 
-void BuildDnsDataContext()
-{
-    char cDnsData[150];
-    if (url_tag == NULL) {
-        char* url_res = GetRandURL();
-        host= strtok(url_res, "/");
-    }
-    memset(cDnsData, 0, 50);
-    cDnsData[0]='.';
-    strcat(cDnsData, host);
-    strcat(cDnsData, ".");
-    unsigned int i=0, pos=0, dnslen=0, dnum=0, slen=0;
-    for(i=0;i<strlen(cDnsData);i++) {
-        if (cDnsData[i+1]) {
-            if (cDnsData[i] == '.') {
-                if (++dnum > 1) {
-                    cDnsData[pos] = (slen-1)&0xff;
-                    slen = 0;
-                    pos = i;
-                } else {
-                    pos = i;
-                }
-            }
-            slen++;
-        } else {
-            cDnsData[pos] = (slen-1)&0xff;
-            cDnsData[i] = 0x00;
-        }
-    }
-    dnslen = strlen(cDnsData);
-    cDnsData[++dnslen] = 0x00;
-    cDnsData[++dnslen] = 0x01;
-    cDnsData[++dnslen] = 0x00;
-    cDnsData[++dnslen] = 0x01;
-    memcpy(data, cDnsData, ++dnslen);
-}
-
-void BuildHttpDataContext(int paylen)
-{
-    char* pro = GetcValue("l7pro");
-    char* url = GetcValue("url");
-    char* uri = NULL;
-    char* host = "";
-
-    if (url == NULL) {
-        char* fullUrl = GetRandURL();
-        host = strtok(fullUrl, "/");
-        uri = fullUrl + strlen(host) + 1;
-    } else {
-        host = strtok(url, "/");
-        uri = strtok(NULL, "/");
-    }
-
-    char Http[BUFSIZ];
-    memset(Http, 0, BUFSIZ);
-
-    if (strcmp(pro, "HTTP-GET") == 0) {
-        strcat(Http, "GET /");  
-    } else if (strcmp(pro, "HTTP-POST") == 0) {
-        strcat(Http, "POST /");  
-    }
-
-    strcat(Http, uri);  
-    strcat(Http, " HTTP/1.1\r\n");  
-    strcat(Http, "Host: ");  
-    strcat(Http, host);  
-    strcat(Http, "\r\nConnection: Keep-Alive\r\n");  
-    strcat(Http, "Accept: */*\r\n");  
-    strcat(Http, "User-Agent: Mozilla/4.0 (compatible; MSIE 8.0;"
-                 "Windows NT 5.1; Trident/4.0;"
-                 ".NET CLR 2.0.50727; .NET CLR 3.0.04506.648;"
-                 " .NET CLR 3.5.21022; InfoPath.2)\r\n");  
-    strcat(Http, "Accept-Encoding: gzip, deflate/r/n");  
-    strcat(Http, "Accept-Language: zh-cn\r\n");  
-    strcat(Http, "Cookie:");  
-    strcat(Http, GetRandStr(paylen - strlen(Http) - 4));
-    strcat(Http, "\r\n\r\n");  
-    memcpy(data, Http, strlen(Http));
-    strcat(Http, uri);  
-}
-
-/* Get sub string */
-char* subs(char *s, int n, int m)
-{
-    static char substr[1500];
-    memset(substr, 0, sizeof(substr));
-    memcpy(substr, &s[n], m);
-
-    return substr;
-}
-
-void BuildDataContexts(int paylen)
-{
-    int offset = GetiValue("offset");
-    int strFlag = GetFlag("string");
-
-    if (paylen < offset) {
-        LOGRECORD(ERROR, "offset grate than payload length");
-    } 
-
-    if (strFlag == FG_RAND) {
-        /*
-        if (rule_str_len != 0 && rule_str_len < paylen) {
-            paylen = rule_str_len;
-        }
-        */
-        memcpy(data, GetRandStr(paylen), paylen);
-    } else if (strFlag == FG_FIXD) {
-        char* pString = GetcValue("string");
-        int sLength = strlen(pString);
-        if (pString[0] == '0' && pString[1] == 'x') {
-            char* stop;
-            int sPosition=2;
-            int dPosition = 0;
-            while(sPosition < sLength) {
-                data[offset+dPosition] = strtol(subs(pString, sPosition, 2), &stop, 16);
-                sPosition += 2;
-                dPosition += 1;
-            }
-        } else {
-            memcpy(data+offset, pString, sLength);
-        }
-    }
-}
-
+/* Seventh layer protocol processing*/
 void BuildLayer7Header()
 {
-    int paylen = 0;
-    int vlNum = GetiValue("vlannum");
-    int pktlen = GetiValue("pktlen");
-    uint8_t l4pro = GetL4HexPro(GetcValue("l4pro"));
-    int l7flag = 1;
-    
-    char *pro = GetcValue("l7pro");
-    if (pro == NULL) {
-        l7flag = 0;
-    }
+    char *pL7Pro = GetcValue("l7pro");
 
-    // *data initialization
-    if (l4pro == UDP) {
-        data = packet + UDPDATAOFFSET(vlNum);
-        if (l7flag == 1 && strcmp(pro, "DNS") == 0) {
-            pDnsHdr = (_dnshdr *) (packet+DNSOFFSET(vlNum));
-            data = packet + DNSDATAOFFSET(vlNum);
-            BuildDnsHeader();
-            BuildDnsDataContext();
-        } else {
-            paylen = UDPPAYLEN(pktlen, vlNum);
-            BuildDataContexts(paylen);
-        }
-    } else if (l4pro == TCP) {
-        data = packet + TCPDATAOFFSET(vlNum);
-        paylen = TCPPAYLEN(pktlen, vlNum);
-        if (l7flag == 1  \
-            && (strcmp(pro, "HTTP-GET")==0 \
-            || strcmp(pro, "HTTP-POST")==0)) {
-            BuildHttpDataContext(paylen);
-        } else {
-            BuildDataContexts(paylen);
-        }
-    } else if (l4pro == ICMPv4) {
-        data = packet + ICMP4DATAOFFSET(vlNum);
-        paylen = ICMP4PAYLEN(pktlen, vlNum);
-        BuildDataContexts(paylen);
+    if (pL7Pro == NULL) {
+        BuildDataContexts();
+    } else if (strcmp(pL7Pro, "DNS") == 0) {
+        BuildDnsMessage();
+    } else if (strcmp(pL7Pro, "HTTP-GET") == 0 
+            || strcmp(pL7Pro, "HTTP-POST") == 0) {
+        BuildHttpMessage();
+    } else {
+        LOGRECORD(ERROR, "Unrecognized seventh layer protocol");
     }
 }
 
+/*
 int RuleModeInitialization()
 {
     int iSaveFd = 0;
@@ -470,7 +419,7 @@ int RuleModeInitialization()
 
 void RulesGenerationEntrance(int fd, int iRuleNum)
 {
-    /* to print reletive ACL rules into file*/
+    // to print reletive ACL rules into file
     if (strcmp(rule_tag, "aclnmask") == 0) {
         if (dprintf(fd, "add ruleset test aclnmask %d "
                 "action=drop, sip=%s, dip=%s, sport=%d, dport=%d, protocol=%s\n", 
@@ -498,6 +447,7 @@ void CloseRuleMode(int fd)
     close(fd);
     LOGRECORD(DEBUG, "Write rules finished");
 }
+*/
 
 void CloseWriteMode(int fd)
 {
@@ -505,88 +455,68 @@ void CloseWriteMode(int fd)
     LOGRECORD(DEBUG, "Write packets finished");
 }
 
+void BuildInitialization()
+{
+    static char cPacketBuf[PACKETLEN];
+    stPkt.pPacket = cPacketBuf;
+    stInfo.iPktLen = GetiValue("pktlen");
+    stInfo.iCursor = 0;
+}
+
+/* Building data packets */
 void BuildPacket()
 {
-    int pktlen = PKTLEN;
-    int iPcapFd = 0;
-    int iLoopNum = 0;
-    int counter = GetiValue("count");
-    int interval = GetiValue("interval");
-
     LOGRECORD(DEBUG, "Build Packet start...");
+    BuildInitialization();
 
-    /* how to deal with packets */
-    if (GetiValue("exec") == 0) { //send
-        SendModeInitialization();
-    } else { //save
-        iPcapFd = WriteModeInitialization();
-    }
-
-    int fd = RuleModeInitialization();
-    PacketStrcutureInitialization();
-
-    /* build packet */
-    while(!counter || iLoopNum<counter)
+    int iPcapFd = -1;
+    int iLoop = 0;
+    int iCount = GetiValue("count");
+    int iIntervalTime= GetiValue("interval");
+    int iDebugSwitch = GetiValue("debug");
+    while (!iCount || iLoop<iCount)
     {
-        RefreshParameter();
-        pktlen = GetiValue("pktlen");
-        memset(packet, 0, sizeof(packet));
-
-        if (GetiValue("exec") == 1) {
-            BuildPacketHeader(GetiValue("pktlen"));
-        }
-
+        BuildPacketHeader();
         BuildLayer2Header();
         BuildLayer3Header();
-        if (GetcValue("l4pro") != NULL) {
-            BuildLayer4Header();
-            BuildLayer7Header();
-        }
+        BuildLayer4Header();
+        BuildLayer7Header();
 
-        if (GetiValue("exec") == 0) {
-            /* send packet to interface interface */
-            SendPacketProcess(packet+PKTHDRLEN, pktlen);
-        } else {
-            /* write packet into a *.pcap file */
-            if (write(iPcapFd, packet, pktlen+PKTHDRLEN) < 0) {
-                LOGRECORD(ERROR, "write packet to pacp file error");
+        // how to deal with packets 
+        if (GetiValue("exec") == 0) { //send
+            SendModeInitialization();
+            SendPacketProcess(stPkt.pPacket, stInfo.iPktLen);
+        } else { //save
+            if (iPcapFd <= 0) {
+                iPcapFd = WriteModeInitialization();
+            } else {
+                if (write(iPcapFd, stPkt.pPktHdr, PKTHDRLEN) < 0) {
+                    LOGRECORD(ERROR, "write packet to pacp file error");
+                }
+                if (write(iPcapFd, stPkt.pPacket, stInfo.iPktLen) < 0) {
+                    LOGRECORD(ERROR, "write packet to pacp file error");
+                }
             }
         }
-        /* display every packet for debug */
-        if (GetiValue("debug")) {
+        if (iDebugSwitch) {
             ShowParameter();
-            DisplayPacketData(packet, pktlen+PKTHDRLEN);
+            DisplayPacketData(stPkt.pPacket, stInfo.iPktLen);
         }
+        // time interval 
+        usleep(iIntervalTime);
 
-        if (strcmp(rule_tag,"other") != 0) {
-            RulesGenerationEntrance(fd, iLoopNum);
-        }
-
-        /* time interval */
-        usleep(interval);
-
-        /* display program process */
-        ProgramProgress(++iLoopNum, counter);
-    }//end of while
+        // display program process 
+        ProgramProgress(++iLoop, iCount);
+    } // End of while
     printf("\n");
 
-    LOGRECORD(DEBUG, "Build packets finished,num:%d", iLoopNum);
-
-    if (GetiValue("debug")) {
+    if (iDebugSwitch) {
         DisplayStatisticsResults();
     }
 
-    if (GetiValue("exec") == 0) {
-        LOGRECORD(INFO, "%d packets have been sent !", iLoopNum);
-        CloseSendConnect();
-    } else {
-        CloseWriteMode(iPcapFd);
-    }
+    CloseWriteMode(iPcapFd);
+    CloseSendConnect();
 
-    if (strcmp(rule_tag,"other") != 0) {
-       CloseRuleMode(fd);
-    }
-
-    LOGRECORD(DEBUG, "Build Packet finished...");
-}//end of 
+    LOGRECORD(DEBUG, "Build packet finished");
+} // End of Build 
 

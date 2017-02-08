@@ -90,13 +90,13 @@ typedef struct ip6hdr {
     U8     dip[sizeof(struct in6_addr)];
 }__attribute__((packed)) _ip6hdr;
 
-typedef struct icmphdr {
+typedef struct icmp4hdr {
     U8     type;
     U8     code;
     U16    checksum;
     U16    identifier;
     U16    seq;
-}_icmphdr;
+}_icmp4hdr;
 
 typedef struct udphdr {
     U16    sport;
@@ -138,8 +138,14 @@ typedef struct pkt{
     _ip6hdr*     pIp6Hdr;
     _udphdr*     pUdpHdr;
     _tcphdr*     pTcpHdr;
-    _icmphdr*    pIcmpHdr;
+    _icmp4hdr*   pIcmp4Hdr;
 }stPktStrc;
+
+typedef struct info{
+    int iCursor;
+    int iPktLen;
+    U16 iUpperPro;
+}stPktInfo;
 
 #endif
 

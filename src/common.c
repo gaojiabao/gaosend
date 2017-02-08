@@ -101,9 +101,9 @@ char* GetRandURL()
     char* pComName[] = {"juson", "topsec", "venustech", "360"};
     int iComNameLen = sizeof(pComName) / sizeof(char*);
 
-    char* pFirstDomain  = ".com/";
+    char* pFirstDomain  = "com";
     char* pSecondDomain = pComName[GetRandNum() % iComNameLen];
-    char* pThirdDomain  = "www.";
+    char* pThirdDomain  = "www";
 
     int iURILen = iTotleLen - strlen(pFirstDomain) 
                     - strlen(pSecondDomain) - strlen(pSecondDomain);
@@ -334,11 +334,11 @@ uint8_t GetRandL4HexPro()
 {
     uint8_t iResPro;
     
-    // UDP:45% TCP:45% ICMPv4:10%
+    // UDP:45% TCP:45% ICMP4:10%
     switch(random() % 100 / 45) {
         case 0 : iResPro = UDP;
         case 1 : iResPro = TCP;
-        case 2 : iResPro = ICMPv4;
+        case 2 : iResPro = ICMP4;
     }
 
     return iResPro;
@@ -352,7 +352,7 @@ char* GetStrPro(uint16_t iHexPro)
     switch(iHexPro) {
         case ARP    : pStrPro = "ARP";  
         case VLAN   : pStrPro = "VLAN";  
-        case ICMPv4 : pStrPro = "ICMPv4";  
+        case ICMP4 : pStrPro = "ICMP4";  
         case IPv4   : pStrPro = "IPv4";  
         case UDP    : pStrPro = "UDP";  
         case TCP    : pStrPro = "TCP";  
@@ -393,8 +393,8 @@ uint8_t GetL4HexPro(char* pStrPro)
 
     uint8_t iResPro = 0;
 
-    if (strcmp(pStrPro, "ICMPv4") == 0) {
-        iResPro = ICMPv4;
+    if (strcmp(pStrPro, "ICMP4") == 0) {
+        iResPro = ICMP4;
     } else if (strcmp(pStrPro, "TCP") == 0) {
         iResPro = TCP;
     } else if (strcmp(pStrPro, "UDP") == 0) {
@@ -453,12 +453,12 @@ void DisplayPacketData(char* pPacket, int iPacketLength)
 
     int iNum = 0;
     for (; iNum<iPacketLength; iNum+=2) {
-        LOGRECORD(INFO, "%02hhx%02hhx ", pPacket[iNum], pPacket[iNum+1]);
+        printf("%02hhx%02hhx ", pPacket[iNum], pPacket[iNum+1]);
         if (iNum%16 == 14) {
-            LOGRECORD(INFO, "\n");
+            printf("\n");
         }
     }
-    LOGRECORD(INFO, "\n");
+    printf("\n");
 }
 
 /* Copy function */

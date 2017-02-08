@@ -11,8 +11,9 @@
 #define PCAPHDRLEN     24
 #define PKTHDRLEN      16
 #define MACHDRLEN      14
+#define ARPHDRLEN      16
 #define POSHDRLEN      4
-#define VLANLEN        4
+#define VLANTAGLEN     4
 #define IP4HDRLEN      20
 #define IP6HDRLEN      40
 #define ICMP4HDRLEN    8  
@@ -33,8 +34,8 @@
 #define VLAN           0x8100
 #define UDP            0x11
 #define TCP            0x06
-#define ICMPv4         0x01
-#define ICMPv6         0x3a
+#define ICMP4          0x01
+#define ICMP6          0x3a
 
 /* define file operation permition */
 #define PERM           644
@@ -62,7 +63,7 @@
 #define ACLEXFILE      "aclex.cfg"
 #define MACTABLEFILE   "mac_table.cfg"
 #define L2PRO          "ethernet"
-#define VERSION        "v4.8.8"
+#define VERSION        "v4.8.9"
 
 #endif
 

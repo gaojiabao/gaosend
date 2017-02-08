@@ -307,7 +307,7 @@ void StorageInput(char* title, char* value, char mode)
             UpdateNode("l4pro", NULL, -1, 0);
         } else if (strcmp(cProtocal, "ICMP") == 0) {
             UpdateNode("l3pro", "IPv4", -1, 0);
-            UpdateNode("l4pro", "ICMPv4", -1, 0);
+            UpdateNode("l4pro", "ICMP4", -1, 0);
         } else if (strcmp(cProtocal, "UDP") == 0) {
             UpdateNode("l3pro", "IPv4", -1, 0);
             UpdateNode("l4pro", "UDP", -1, 0);

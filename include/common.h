@@ -40,6 +40,7 @@ uint16_t    GetL3HexPro(char*);
 uint8_t     GetL4HexPro(char*);
 void        ProgramProgress(int, int);
 void        DisplayPacketData(char*, int);
+int         GetDataLen(int);
 
 int         CheckIpAddrLegal(char* );
 void        BufferCopy(char*, int, char*, int);

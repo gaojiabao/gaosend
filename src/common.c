@@ -88,7 +88,7 @@ char GetHexChar(int iNum)
 }
 
 /* URL generator */
-char* GetRandURL()
+char* GetRandURL(char* pField)
 {
     int iTotleLen = 18;
     static char cURLBuf[SIZE_1K];
@@ -107,8 +107,13 @@ char* GetRandURL()
 
     int iURILen = iTotleLen - strlen(pFirstDomain) 
                     - strlen(pSecondDomain) - strlen(pSecondDomain);
-    sprintf(cURLBuf, "%s.%s.%s/%s", 
-        pThirdDomain, pSecondDomain, pFirstDomain , GetRandStr(iURILen));
+    if (strcmp(pField, "HOST") == 0) {
+        sprintf(cURLBuf, "%s.%s.%s", 
+            pThirdDomain, pSecondDomain, pFirstDomain);
+    } else {
+        sprintf(cURLBuf, "%s.%s.%s/%s", 
+            pThirdDomain, pSecondDomain, pFirstDomain , GetRandStr(iURILen));
+    }
 
     return cURLBuf;
 }
@@ -402,6 +407,19 @@ uint8_t GetL4HexPro(char* pStrPro)
     }
 
     return iResPro;
+}
+
+int GetDataLen(int iPktLen)
+{
+    int iDataLen = 0;
+    char* pL4Pro = GetcValue("l4pro");
+    if (strcmp(pL4Pro, "UDP") == 0) {
+        iDataLen = iPktLen - MACHDRLEN - IP4HDRLEN - UDPHDRLEN;
+    } else if (strcmp(pL4Pro, "TCP") == 0) {
+        iDataLen = iPktLen - MACHDRLEN - IP4HDRLEN - TCPHDRLEN;
+    }
+
+    return iDataLen;
 }
 
 /* Output program progress */

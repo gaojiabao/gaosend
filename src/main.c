@@ -9,7 +9,6 @@
 
 void BuildPacket();
 void SplitPacket(); 
-//void ModifyPacket(); 
 void DuplicatePacket();
 void MergePacket(int, char**); 
 void SwitchPcapFormat();  
@@ -39,6 +38,9 @@ struct option LongOptions[] = {
     {.name = "rulelen",   .has_arg = optional_argument, .val = 'y'}, 
     {.name = "offset",    .has_arg = optional_argument, .val = 'O'}, 
     {.name = "rule",      .has_arg = required_argument, .val = 'Z'}, 
+    {.name = "tcp-flag",  .has_arg = required_argument, .val = 'e'}, 
+    {.name = "tcp-seq",   .has_arg = required_argument, .val = 'j'}, 
+    {.name = "tcp-ack",   .has_arg = required_argument, .val = 'k'}, 
     {.name = "flow",      .has_arg = no_argument,       .val = 'F'}, 
     {.name = "debug",     .has_arg = no_argument,       .val = 'g'}, 
     {.name = "build",     .has_arg = no_argument,       .val = 'B'}, 
@@ -68,8 +70,8 @@ void UsageOfProgram()
         "\t--dip        -d   Destation ip   [ fixed | random | increase ]\n"
         "\t--dport      -Q   Destation port [ fixed | random | increase ]\n"
         "\t--protocol   -p   Protocol [ ip | arp | udp | tcp | icmp | random | HTTP-GET | HTTP-POST | DNS ]\n"
-        "\t--vlan      -V   Vlan1 value [ fixed | random | increase ]\n"
-        "\t--qinq      -W   Vlan2 value [ fixed | random | increase ]\n"
+        "\t--vlan       -V   Vlan tag [ fixed | random | increase ]\n"
+        "\t--qinq       -W   QinQ vlan tag [ fixed | random | increase ]\n"
         "\t--offset     -O   String offset in data part\n"
         "\t--url        -u   URL in Http GET or Http POST\n"
         "\t--length     -l   Packet length  [ fixed | increace | random ]\n"
@@ -88,6 +90,9 @@ void UsageOfProgram()
         "\t--read       -r   Read packet from the  pcap file < filename >\n"
         "\t--save       -w   Save packet into a pcap file < filename >\n"
         "\t--flowcheck  -F   Turn on flow check switch, only use with -A\n"
+        "\t--tcp-flag   -e   TCP flag bit\n"
+        "\t--tcp-seq    -j   TCP sequence number\n"
+        "\t--tcp-ack    -k   TCP acknowledge number\n"
         "\t--ruletype   -Z   Rule type [ aclnmask | aclex | mac_table ]\n"
         "\t--interval   -i   Interval time\n"
         "\t--interface  -I   Interface number\n"
@@ -119,6 +124,10 @@ void ParametersInit()
     InsertNode("dip", DIP, -1, 0);
     InsertNode("sport", NULL, SPORT, 0);
     InsertNode("dport", NULL, DPORT, 0);
+    InsertNode("tcp-seq", NULL, 1, 0);
+    InsertNode("tcp-ack", NULL, 0, 0);
+    InsertNode("tcp-flag", NULL, 16, 0);
+    InsertNode("dport", NULL, DPORT, 0);
     InsertNode("vlannum", NULL, 0, 0);
     InsertNode("l3pro", "IPv4", -1, 0);
     InsertNode("l4pro", "UDP", -1, 0);
@@ -138,7 +147,9 @@ void ParametersInit()
 void TerminalParametersAnalyse(int argc, char *argv[])
 {
     char    cCmdInput;
-    char*   pParaOption = "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:I:S:y:O:Z:fBFgDCmAMvhRX";
+    // Residual parameter: noqtxz EGHJKLNTUY
+    char*   pParaOption = "fBFgDCmAMvhRX"
+                "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:I:S:y:O:Z:e:j:k:";
 
     int     iCounter = 0;
     char    cCmdBuf[100];
@@ -182,6 +193,9 @@ void TerminalParametersAnalyse(int argc, char *argv[])
             case 'O': StorageInput("offset", optarg, 'i'); break;
             case 'Z': StorageInput("rule", optarg, 'c'); break;
             case 'F': StorageInput("flow", "1", 'i'); break;
+            case 'e': StorageInput("tcp-flag", "1", 'i'); break;
+            case 'j': StorageInput("tcp-seq", "1", 'i'); break;
+            case 'k': StorageInput("tcp-ack", "1", 'i'); break;
             case 'g': StorageInput("debug", "1", 'i'); break;  
             case 'B': StorageInput("entrance", "101", 'i'); break; 
             case 'D': StorageInput("entrance", "102", 'i'); break; 

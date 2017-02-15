@@ -110,8 +110,8 @@ typedef struct tcphdr {
     U16    dport;
     U32    seq;
     U32    ack;
-    U8     hdrlen;
-    U8     flag;
+    U16    hdrlen:8,
+           flag:8;
     U16    win;
     U16    checksum;
     U16    urg;

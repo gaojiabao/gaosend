@@ -176,23 +176,23 @@ static int CalcStorageSize()
 }
 
 /*
-char** NeedToModify()
-{
-    static char* Queue[SIZE_16B*5];
-    pNode pCur = pHead->next;
+   char** NeedToModify()
+   {
+   static char* Queue[SIZE_16B*5];
+   pNode pCur = pHead->next;
 
-    int iCounter = 0;
-    while (pCur != NULL) {
-        if (pCur->flag > 1) {
-            Queue[iCounter++] = pCur->title;       
-            printf("<<<<<<<<<<<<<<<<<<<%d, %s, %d\n", iCounter, pCur->title, pCur->flag);
-        }
-        pCur = pCur->next;
-    }
+   int iCounter = 0;
+   while (pCur != NULL) {
+   if (pCur->flag > 1) {
+   Queue[iCounter++] = pCur->title;       
+   printf("<<<<<<<<<<<<<<<<<<<%d, %s, %d\n", iCounter, pCur->title, pCur->flag);
+   }
+   pCur = pCur->next;
+   }
 
-    return Queue;
-}
-*/
+   return Queue;
+   }
+   */
 
 /* delete every node and destory storage*/
 void DestoryStorage()
@@ -292,7 +292,7 @@ void StorageInput(char* title, char* value, char mode)
     // deal with all layer protocol
     if (strcmp(title, "protocol") == 0) {
         unsigned int iCounter = 0;
-        char cProtocal[8];
+        static char cProtocal[16];
         memset(cProtocal, 0, sizeof(cProtocal));
 
         // switch charactor parameter to upper
@@ -301,52 +301,29 @@ void StorageInput(char* title, char* value, char mode)
             cProtocal[iCounter] = toupper(value[iCounter]);
         }
 
-        // deal with association protocol
+        char* pL3Pro = NULL;
+        char* pL4Pro = NULL;
+        char* pL7Pro = NULL;
         if (strcmp(cProtocal, "ARP") == 0) {
-            UpdateNode("l3pro", "ARP", -1, 0);
-            UpdateNode("l4pro", NULL, -1, 0);
-        } else if (strcmp(cProtocal, "ICMP") == 0) {
-            UpdateNode("l3pro", "IPv4", -1, 0);
-            UpdateNode("l4pro", "ICMP4", -1, 0);
-        } else if (strcmp(cProtocal, "UDP") == 0) {
-            UpdateNode("l3pro", "IPv4", -1, 0);
-            UpdateNode("l4pro", "UDP", -1, 0);
-        } else if (strcmp(cProtocal, "TCP") == 0) {
-            UpdateNode("l3pro", "IPv4", -1, 0);
-            UpdateNode("l4pro", "TCP", -1, 0);
-        } else if (strcmp(cProtocal, "HTTP-GET") == 0) {
-            if (GetiValue("pktlen") < 360) {
-                UpdateNode("pktlen", NULL, 360, 0);
-            }
-            UpdateNode("dport", NULL, 80, 0);
-            UpdateNode("l3pro", "IPv4", -1, 0);
-            UpdateNode("l4pro", "TCP", -1, 0);
-            UpdateNode("l7pro", "HTTP-GET", -1, 0);
-        } else if (strcmp(cProtocal, "HTTP-POST") == 0) {
-            if (GetiValue("pktlen") < 360) {
-                UpdateNode("pktlen", NULL, 360, 0);
-            }
-            UpdateNode("dport", NULL, 80, 0);
-            UpdateNode("l3pro", "IPv4", -1, 0);
-            UpdateNode("l4pro", "TCP", -1, 0);
-            UpdateNode("l7pro", "HTTP-POST", -1, 0);
+            pL3Pro = cProtocal;
+        } else if ((strcmp(cProtocal, "ICMP") == 0) 
+            || (strcmp(cProtocal, "UDP") == 0) 
+            || (strcmp(cProtocal, "TCP") == 0)) {
+            pL3Pro = "IPv4";
+            pL4Pro = cProtocal;
+        } else if ((strcmp(cProtocal, "HTTP-GET") == 0)
+            || (strcmp(cProtocal, "HTTP-POST") == 0)) {
+            pL3Pro = "IPv4";
+            pL4Pro = "TCP";
+            pL7Pro = cProtocal;
         } else if (strcmp(cProtocal, "DNS") == 0) {
-            if (GetcValue("url") == NULL) {
-                int pktlen = MACHDRLEN+IP4HDRLEN+UDPHDRLEN+DNSHDRLEN+13+6;
-                UpdateNode("pktlen", NULL, pktlen, 0);
-            } else {
-                char* url = GetcValue("url");
-                char* host = strtok(url, "/");
-                UpdateNode("host", host, -1, 0);
-                int pktlen = MACHDRLEN+IP4HDRLEN+UDPHDRLEN \
-                    +DNSHDRLEN+strlen(url)+6;
-                UpdateNode("pktlen", NULL, pktlen, 0);
-            }
-            UpdateNode("dport", NULL, 53, 0);
-            UpdateNode("l3pro", "IPv4", -1, 0);
-            UpdateNode("l4pro", "UDP", -1, 0);
-            UpdateNode("l7pro", "DNS", -1, 0);
+            pL3Pro = "IPv4";
+            pL4Pro = "UDP";
+            pL7Pro = cProtocal;
         }
+        UpdateNode("l3pro", pL3Pro, -1, 0);
+        UpdateNode("l4pro", pL4Pro, -1, 0);
+        UpdateNode("l7pro", pL7Pro, -1, 0);
     }
 
     // deal with variable parameter

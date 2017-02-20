@@ -16,7 +16,7 @@
 
 
 /* Global variable*/
-static int iSockFd;
+static int iSockFd = -1;
 
 /* Network struct */
 struct ifreq  ifr;
@@ -56,6 +56,8 @@ void SendModeInitialization()
 /* Send data to interface */
 void SendPacketProcess(char* pPacket,int iLength)
 {
+    int iIntervalTime = GetiValue("interval");
+
     if (pPacket == NULL || iLength < 0) {
         LOGRECORD(ERROR, "Packet data is NULL");
     }
@@ -64,10 +66,15 @@ void SendPacketProcess(char* pPacket,int iLength)
         DisplayPacketData(pPacket, iLength);
     }
 
+    if (iSockFd < 0) {
+        SendModeInitialization();
+    }
     if ((sendto(iSockFd, (const void*)pPacket, iLength, 0, \
         (struct sockaddr*)&sockAddr, sizeof(sockAddr)))<0) {
         LOGRECORD(ERROR, "Packet send failed");
     }
+
+    usleep(iIntervalTime);
 }
 
 /* Close socket connection */
@@ -82,7 +89,6 @@ void ReplayPacket()
 {
     unsigned int iCounter = GetiValue("count");
     unsigned int iSum = iCounter;
-    SendModeInitialization();
 
     if (iCounter == 0) { // Always send
         while (1 == 1) {

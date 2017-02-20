@@ -41,6 +41,7 @@ struct option LongOptions[] = {
     {.name = "tcp-flag",  .has_arg = required_argument, .val = 'e'}, 
     {.name = "tcp-seq",   .has_arg = required_argument, .val = 'j'}, 
     {.name = "tcp-ack",   .has_arg = required_argument, .val = 'k'}, 
+    {.name = "tcp-hdrlen",.has_arg = required_argument, .val = 'q'}, 
     {.name = "flow",      .has_arg = no_argument,       .val = 'F'}, 
     {.name = "debug",     .has_arg = no_argument,       .val = 'g'}, 
     {.name = "build",     .has_arg = no_argument,       .val = 'B'}, 
@@ -127,6 +128,7 @@ void ParametersInit()
     InsertNode("tcp-seq", NULL, 1, 0);
     InsertNode("tcp-ack", NULL, 0, 0);
     InsertNode("tcp-flag", NULL, 16, 0);
+    InsertNode("tcp-hdrlen", NULL, 20, 0);
     InsertNode("dport", NULL, DPORT, 0);
     InsertNode("vlannum", NULL, 0, 0);
     InsertNode("l3pro", "IPv4", -1, 0);
@@ -147,12 +149,12 @@ void ParametersInit()
 void TerminalParametersAnalyse(int argc, char *argv[])
 {
     char    cCmdInput;
-    // Residual parameter: noqtxz EGHJKLNTUY
+    // Residual parameter: notxz EGHJKLNTUY
     char*   pParaOption = "fBFgDCmAMvhRX"
-                "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:I:S:y:O:Z:e:j:k:";
+                "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:I:S:y:O:Z:e:j:k:q:";
 
     int     iCounter = 0;
-    char    cCmdBuf[100];
+    char    cCmdBuf[1024];
 
     // Save command line input
     memset(cCmdBuf, 0 , sizeof(cCmdBuf));
@@ -193,9 +195,10 @@ void TerminalParametersAnalyse(int argc, char *argv[])
             case 'O': StorageInput("offset", optarg, 'i'); break;
             case 'Z': StorageInput("rule", optarg, 'c'); break;
             case 'F': StorageInput("flow", "1", 'i'); break;
-            case 'e': StorageInput("tcp-flag", "1", 'i'); break;
-            case 'j': StorageInput("tcp-seq", "1", 'i'); break;
-            case 'k': StorageInput("tcp-ack", "1", 'i'); break;
+            case 'e': StorageInput("tcp-flag", optarg, 'i'); break;
+            case 'j': StorageInput("tcp-seq", optarg, 'i'); break;
+            case 'k': StorageInput("tcp-ack", optarg, 'i'); break;
+            case 'q': StorageInput("tcp-hdrlen", optarg, 'i'); break;
             case 'g': StorageInput("debug", "1", 'i'); break;  
             case 'B': StorageInput("entrance", "101", 'i'); break; 
             case 'D': StorageInput("entrance", "102", 'i'); break; 

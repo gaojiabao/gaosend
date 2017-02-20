@@ -8,7 +8,7 @@
 
 static pNode pHead;
 
-/* create storage to store input parameters */
+/* Create parameter storage container */
 void CreateStorage(void)
 {
     pHead = calloc(1, sizeof(st_node));
@@ -20,37 +20,7 @@ void CreateStorage(void)
     pHead->next = NULL;
 }
 
-/* remove node from storage */
-pNode RemoveNode(char* title)
-{
-    assert(pHead != NULL);
-    pNode pPre = pHead;
-    pNode pCur = pHead->next;
-    pNode pNext;
-
-    while (pCur != NULL) {
-        if (strcmp(pCur->title, title) == 0) {
-            break;
-        } else {
-            pPre = pCur;
-            pCur = pCur->next;
-        }
-    }
-
-    assert(pCur != NULL);
-    pNext = pPre->next->next;
-    if (pNext != NULL) {
-        pPre->next = pNext;
-        free(pCur);
-    } else {
-        pPre->next = NULL;
-        free(pCur);
-    }
-
-    return pCur;
-}
-
-/* add input parameter to storage */
+/* Add storage node and store data */
 pNode InsertNode(char* title, char* cValue, int iValue, int flag)
 {
     assert(pHead != NULL);
@@ -73,7 +43,7 @@ pNode InsertNode(char* title, char* cValue, int iValue, int flag)
     return pNew;
 }
 
-/* search element position */
+/* Query parameter storage node */
 static pNode FindNode(char* title)
 {
     pNode pRes = NULL;
@@ -91,7 +61,7 @@ static pNode FindNode(char* title)
     return pRes;
 }
 
-/* UpdateNode element value */
+/* Update storage node data */
 static void UpdateNode(char* title, char* cValue, int iValue, int flag)
 {
     pNode pCur = FindNode(title);
@@ -105,7 +75,7 @@ static void UpdateNode(char* title, char* cValue, int iValue, int flag)
     pCur->flag = flag;
 }
 
-/* update charactor value */
+/* Updating the data content of a string type */
 static void UpdatecValue(char* title, char* cValue)
 {
     pNode pCur = FindNode(title);
@@ -118,7 +88,7 @@ static void UpdatecValue(char* title, char* cValue)
     }
 }
 
-/* update digital value */
+/* Updating the data content of an integral type */
 static void UpdateiValue(char* title, int iValue)
 {
     pNode pCur = FindNode(title);
@@ -131,7 +101,7 @@ static void UpdateiValue(char* title, int iValue)
     }
 }
 
-/* get charactor value */
+/* Gets the data content of the string type */
 char* GetcValue(char* title)
 {
     pNode pCur = FindNode(title);
@@ -142,7 +112,7 @@ char* GetcValue(char* title)
         return pCur->cValue;
 }
 
-/* get digital value */
+/* Gets the data content of an integral type */
 int GetiValue(char* title)
 {
     pNode pCur = FindNode(title);
@@ -154,6 +124,7 @@ int GetiValue(char* title)
     return pCur->iValue;
 }
 
+/* Gets the contents of the storage flag bit data */
 int GetFlag(char* title)
 {
     pNode pCur = FindNode(title);
@@ -162,7 +133,7 @@ int GetFlag(char* title)
     return pCur->flag;
 }
 
-/* calculate storage size */ 
+/* Calculate storage container size */ 
 static int CalcStorageSize()
 {
     int iCounter = 0;
@@ -175,26 +146,7 @@ static int CalcStorageSize()
     return iCounter;
 }
 
-/*
-   char** NeedToModify()
-   {
-   static char* Queue[SIZE_16B*5];
-   pNode pCur = pHead->next;
-
-   int iCounter = 0;
-   while (pCur != NULL) {
-   if (pCur->flag > 1) {
-   Queue[iCounter++] = pCur->title;       
-   printf("<<<<<<<<<<<<<<<<<<<%d, %s, %d\n", iCounter, pCur->title, pCur->flag);
-   }
-   pCur = pCur->next;
-   }
-
-   return Queue;
-   }
-   */
-
-/* delete every node and destory storage*/
+/* Destroy storage container */
 void DestoryStorage()
 {
     pNode pCur = pHead;
@@ -209,7 +161,7 @@ void DestoryStorage()
     free(pHead);
 }
 
-/* show input parameters*/
+/* Display input parameters */
 void ShowParameter()
 {
     int iCounter = 0;
@@ -224,7 +176,7 @@ void ShowParameter()
     }
 }
 
-/* update some parameter */
+/* Refresh the value of the parameter based on the input parameters */
 void RefreshParameter()
 {
     char* pParaName = NULL;
@@ -286,16 +238,16 @@ void RefreshParameter()
     }
 }
 
-/* entrance for input parameters */
+/* Parameter storage processor */
 void StorageInput(char* title, char* value, char mode)
 {
-    // deal with all layer protocol
+    // Protocol analysis in parameters
     if (strcmp(title, "protocol") == 0) {
         unsigned int iCounter = 0;
         static char cProtocal[16];
         memset(cProtocal, 0, sizeof(cProtocal));
 
-        // switch charactor parameter to upper
+        // Converting arguments to uppercase characters
         int iStrLength = strlen(value);
         for (; iCounter<iStrLength; iCounter++) {
             cProtocal[iCounter] = toupper(value[iCounter]);
@@ -326,7 +278,7 @@ void StorageInput(char* title, char* value, char mode)
         UpdateNode("l7pro", pL7Pro, -1, 0);
     }
 
-    // deal with variable parameter
+    // Marking parameters are variable 
     int iParaMode;
     if (strcmp(value, "random") == 0) {
         iParaMode = FG_RAND;
@@ -340,7 +292,7 @@ void StorageInput(char* title, char* value, char mode)
         iParaMode = FG_NOINPUT;
     }
 
-    // deal with charactor or number parameter
+    // Data stored according to identification 
     if (mode == 'c') {
         UpdateNode(title, value, -1, iParaMode);
     } else if (mode == 'i') {

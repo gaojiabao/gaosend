@@ -11,26 +11,47 @@ static stPktStrc stPkt;
 
 
 /* Replace input based on regular expressions */
-/*
-void RegularExpress(uint32_t a, uint32_t b)
+void RegularExpress()
 {
-    static uint32_t ip1;
-    static uint32_t ip2;
-    static int i = 0;
-    if (i == 0) {
-        ip1 = pIp4Hdr->srcip;
-        ip2 = pIp4Hdr->dstip;
-        i++;
+/*
+    U32* pIpPos[] = {
+        (U32 *)&stPkt.pIp4Hdr->sip, 
+        (U32 *)&stPkt.pIp4Hdr->dip
+    };
+
+    U32 iRepIP[][2] = {
+        {inet_addr("10.74.41.82"), inet_addr("7.7.7.7")},
+        {inet_addr("172.24.0.13"), inet_addr("8.8.8.8")}
+    };
+                    
+    
+    for (; iNumI<2; iNumI++) {
+        for (iNumJ=0; iNumJ<2; iNumJ++) {
+            if (*pIpPos[iNumI] == iRepIP[iNumJ][0]) {
+                *pIpPos[iNumI] = iRepIP[iNumJ][1];
+            }
+        }
     }
-    if (pIp4Hdr->srcip == ip1 && pIp4Hdr->dstip == ip2) {
-        pIp4Hdr->srcip = a;
-        pIp4Hdr->dstip = b;
-    } else {
-        pIp4Hdr->srcip = b;
-        pIp4Hdr->dstip = a;
+    */
+
+    int iNumI = 0;
+    int iNumJ = 0;
+    U16* pPortPos[] = {
+        (U16 *)&stPkt.pTcpHdr->sport, 
+        (U16 *)&stPkt.pTcpHdr->dport
+    }; 
+    U16 iRepPort[][2] = {
+        {59720, 1234},
+        {80, 9000}
+    };
+    for (iNumI=0; iNumI<2; iNumI++) {
+        for (iNumJ=0; iNumJ<2; iNumJ++) {
+            if (htons(*pPortPos[iNumI]) == iRepPort[iNumJ][0]) {
+                *pPortPos[iNumI] = htons(iRepPort[iNumJ][1]);
+            }
+        }
     }
 }
-*/
 
 /* Determine whether the parameters need to be modified */
 int IsNeedModify(char* title)
@@ -175,8 +196,8 @@ void DeleteVlanInfo(int iHasVlanLayer, int iDirect)
 void ModifyIpAddress(char* title) //sip:0,dip:1
 {
     U32* pIpPos[] = {
-        (U32 *)&stPkt.pIp4Hdr->srcip, 
-        (U32 *)&stPkt.pIp4Hdr->dstip
+        (U32 *)&stPkt.pIp4Hdr->sip, 
+        (U32 *)&stPkt.pIp4Hdr->dip
     }; 
 
     // iSoD: sip or dip
@@ -276,11 +297,11 @@ void ModifyIPv6Hdr()
     unsigned char buf1[sizeof(struct in6_addr)];
     unsigned char buf2[sizeof(struct in6_addr)];
     if (sip_tag) {
-        pIp4Hdr->srcip = inet_pton(AF_INET6, sip, buf1);
+        pIp4Hdr->sip = inet_pton(AF_INET6, sip, buf1);
         BufferCopy(packetbuf, 32, buf1, sizeof(struct in6_addr));
     }
     if (dip_tag) {
-        pIp4Hdr->dstip = inet_pton(AF_INET6, dip, buf2);
+        pIp4Hdr->dip = inet_pton(AF_INET6, dip, buf2);
         BufferCopy(packetbuf, 48, buf2, sizeof(struct in6_addr));
     }
 */
@@ -351,5 +372,6 @@ void ModifyPacket(stPktStrc stOriginPktStrc)
     ModifyLayer2();
     ModifyLayer3();
     ModifyLayer4();
+    RegularExpress();
 }
 

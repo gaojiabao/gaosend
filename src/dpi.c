@@ -71,7 +71,7 @@ void L4HdrInspection(U8 pro)
         // TCP flow check
         if(GetiValue("flow") == ON) {
             char iFiveTupleSum[32];
-            sprintf(iFiveTupleSum, "%d", stPkt.pIp4Hdr->srcip + stPkt.pIp4Hdr->dstip
+            sprintf(iFiveTupleSum, "%d", stPkt.pIp4Hdr->sip + stPkt.pIp4Hdr->dip
                 + stPkt.pTcpHdr->sport + stPkt.pTcpHdr->dport + stPkt.pIp4Hdr->protocol);
             StoreStreamInfo(MD5Digest(iFiveTupleSum));
         }
@@ -201,10 +201,6 @@ void DeepPacketInspection()
 {
     static char cPacketBuf[SIZE_1K*2];
     stPkt.pPacket = cPacketBuf;
-
-    if (GetiValue("exec") == 0) {
-        SendModeInitialization();
-    }
 
     // Turn on flow assoition
     if(GetiValue("flow") == ON) {

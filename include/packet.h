@@ -36,8 +36,8 @@ typedef struct pkthdr
 }_pkthdr;
 
 typedef struct pseudohdr{
-    U32    srcip;
-    U32    dstip;
+    U32    sip;
+    U32    dip;
     U8     flag;
     U8     protocol;
     U16    len;
@@ -75,8 +75,8 @@ typedef struct ip4hdr {
     U8     ttl;
     U8     protocol;
     U16    checksum;
-    U32    srcip;    
-    U32    dstip;
+    U32    sip;    
+    U32    dip;
 }_ip4hdr;
 
 typedef struct ip6hdr {

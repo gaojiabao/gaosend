@@ -45,7 +45,7 @@ char* GetRandStr(int iLength)
 }
 
 /* Calculate udp, tcp or icmp checksum */
-uint16_t GetCheckSum(uint16_t* pDataBuf, int iLength)
+U16 GetCheckSum(U16* pDataBuf, int iLength)
 {
     unsigned long iSum;
     for (iSum=0; iLength>0; iLength--) {
@@ -54,7 +54,7 @@ uint16_t GetCheckSum(uint16_t* pDataBuf, int iLength)
     iSum = (iSum >> 16) + (iSum & 0xffff);
     iSum += (iSum >> 16);
 
-    return (uint16_t)(~iSum);
+    return (U16)(~iSum);
 }
 
 /* Get hexadecimal charator */
@@ -88,9 +88,8 @@ char GetHexChar(int iNum)
 }
 
 /* URL generator */
-char* GetRandURL(char* pField)
+char* GetRandURL(char* pField, int iTotleLen)
 {
-    int iTotleLen = 18;
     static char cURLBuf[SIZE_1K];
     memset(cURLBuf, 0, sizeof(cURLBuf));
 
@@ -335,9 +334,9 @@ int GetIncrVlan(int iVoQ)
 }
 
 /* Get random protocol */
-uint8_t GetRandL4HexPro()
+U8 GetRandL4HexPro()
 {
-    uint8_t iResPro;
+    U8 iResPro;
     
     // UDP:45% TCP:45% ICMP4:10%
     switch(random() % 100 / 45) {
@@ -350,7 +349,7 @@ uint8_t GetRandL4HexPro()
 }
 
 /* Get random protocol with string format */
-char* GetStrPro(uint16_t iHexPro)
+char* GetStrPro(U16 iHexPro)
 {
     char* pStrPro = NULL;
 
@@ -368,13 +367,13 @@ char* GetStrPro(uint16_t iHexPro)
 }
 
 /* Get layer three protocol number*/
-uint16_t GetL3HexPro(char* pStrPro)
+U16 GetL3HexPro(char* pStrPro)
 {
     if (pStrPro == NULL) {
         LOGRECORD(ERROR, "Layer 3 protocol string is NULL");
     }
 
-    uint16_t iResPro = 0;
+    U16 iResPro = 0;
 
     if (strcmp(pStrPro, "ARP") == 0) {
         iResPro = ARP;
@@ -390,13 +389,13 @@ uint16_t GetL3HexPro(char* pStrPro)
 }
 
 /* Get layer four protocol number*/
-uint8_t GetL4HexPro(char* pStrPro)
+U8 GetL4HexPro(char* pStrPro)
 {
     if (pStrPro == NULL) {
         LOGRECORD(ERROR, "Layer 3 protocol string is NULL");
     }
 
-    uint8_t iResPro = 0;
+    U8 iResPro = 0;
 
     if (strcmp(pStrPro, "ICMP4") == 0) {
         iResPro = ICMP4;

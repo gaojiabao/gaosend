@@ -15,7 +15,7 @@
 #define SIZE_128B      128
 #define SIZE_1K        1024
 
-uint16_t    GetCheckSum(uint16_t *, int);
+U16         GetCheckSum(U16*, int);
 char        GetHexChar(int);
 char*       GetRandURL();
 int         GetRandNum();
@@ -33,11 +33,11 @@ char*       GetRandIp4Addr();
 int         GetRandPort();
 int         GetRandVlan();
 int         GetRandPktLen();
-uint8_t     GetRandL4HexPro();
+U8          GetRandL4HexPro();
 
-char*       GetStrPro(uint16_t);
-uint16_t    GetL3HexPro(char*);
-uint8_t     GetL4HexPro(char*);
+char*       GetStrPro(U16);
+U16         GetL3HexPro(char*);
+U8          GetL4HexPro(char*);
 void        ProgramProgress(int, int);
 void        DisplayPacketData(char*, int);
 int         GetDataLen(int);

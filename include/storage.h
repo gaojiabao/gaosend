@@ -3,7 +3,7 @@
 
 #include    "default.h"
 
-// parameter storage structure
+/* Parameter storage structure */
 typedef struct Node{
     char* title;
     char* cValue;
@@ -22,7 +22,6 @@ enum Node_flag{
 };
 
 void  CreateStorage(void);
-pNode RemoveNode(char*);
 pNode InsertNode(char* , char*, int, int);
 char* GetcValue(char* );
 int   GetiValue(char* );
@@ -44,3 +43,4 @@ void DisplayAllStreamMD5();
 pStreamInfo InsertStreamInfo(unsigned char*);
 
 #endif
+

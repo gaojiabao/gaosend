@@ -1,13 +1,13 @@
 /*
- *  author   : Mr Gao
+ *  Author   : Mr Gao
  *
- *  function : To define some default varibles and program default configure.
+ *  Function : To define some default varibles and program default configure.
  */
 
 #ifndef __DEFAULT_H__
 #define __DEFAULT_H__
 
-/* default length of specifed data type structure */
+// Define protocol length
 #define PCAPHDRLEN     24
 #define PKTHDRLEN      16
 #define MACHDRLEN      14
@@ -24,10 +24,10 @@
 #define PKTMINLEN      64 
 #define PKTMAXLEN      1518
 
-/* define md5 len */
+// Define MD5 character length
 #define MD5LEN         16
 
-/* define protocol type number */
+// Define protocol number
 #define ARP            0x0806
 #define IPv4           0x0800
 #define IPv6           0x86dd
@@ -37,10 +37,10 @@
 #define ICMP4          0x01
 #define ICMP6          0x3a
 
-/* define file operation permition */
+// Define default file permissions
 #define PERM           644
 
-/* define default coufigure */
+// Define default coufigure
 #define PACKETLEN      2000
 #define SIP            "10.10.169.4"
 #define DIP            "10.10.169.5"
@@ -63,7 +63,7 @@
 #define ACLEXFILE      "aclex.cfg"
 #define MACTABLEFILE   "mac_table.cfg"
 #define L2PRO          "ethernet"
-#define VERSION        "v4.9.1"
+#define VERSION        "v4.9.2"
 
 #endif
 

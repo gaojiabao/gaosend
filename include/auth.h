@@ -6,3 +6,4 @@ void SuperManUser();
 unsigned char* MD5Digest(char* );
 
 #endif
+

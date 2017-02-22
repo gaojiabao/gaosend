@@ -6,3 +6,4 @@ void SendPacketProcess(char* , int);
 void CloseSendConnect();
 
 #endif
+

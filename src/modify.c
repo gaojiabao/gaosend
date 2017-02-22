@@ -13,44 +13,59 @@ static stPktStrc stPkt;
 /* Replace input based on regular expressions */
 void RegularExpress()
 {
-/*
-    U32* pIpPos[] = {
-        (U32 *)&stPkt.pIp4Hdr->sip, 
-        (U32 *)&stPkt.pIp4Hdr->dip
-    };
+    char  cExpBuf[SIZE_1K];
+    char* pExpStr = GetcValue("expression");
+    memcpy(cExpBuf, pExpStr, strlen(pExpStr));
 
-    U32 iRepIP[][2] = {
-        {inet_addr("10.74.41.82"), inet_addr("7.7.7.7")},
-        {inet_addr("172.24.0.13"), inet_addr("8.8.8.8")}
-    };
-                    
-    
-    for (; iNumI<2; iNumI++) {
-        for (iNumJ=0; iNumJ<2; iNumJ++) {
-            if (*pIpPos[iNumI] == iRepIP[iNumJ][0]) {
-                *pIpPos[iNumI] = iRepIP[iNumJ][1];
-            }
-        }
+    char* pPosStr = NULL;
+    char* pRepStr[2];
+    if (cExpBuf != NULL) {
+        pPosStr = strtok(cExpBuf, ",");
+        pRepStr[0] = strtok(NULL, ",");
+        pRepStr[1] = strtok(NULL, ",");
     }
-    */
 
-    int iNumI = 0;
-    int iNumJ = 0;
-    U16* pPortPos[] = {
-        (U16 *)&stPkt.pTcpHdr->sport, 
-        (U16 *)&stPkt.pTcpHdr->dport
-    }; 
-    U16 iRepPort[][2] = {
-        {59720, 1234},
-        {80, 9000}
-    };
-    for (iNumI=0; iNumI<2; iNumI++) {
-        for (iNumJ=0; iNumJ<2; iNumJ++) {
-            if (htons(*pPortPos[iNumI]) == iRepPort[iNumJ][0]) {
-                *pPortPos[iNumI] = htons(iRepPort[iNumJ][1]);
+    if (pPosStr && pRepStr[0] && pRepStr[1]) {
+        int iNumI = 0;
+        int iNumJ = 0;
+        if (strcmp(pPosStr, "IP") == 0) {
+            U32* pIpPos[] = {
+                (U32 *)&stPkt.pIp4Hdr->sip, 
+                (U32 *)&stPkt.pIp4Hdr->dip
+            };
+
+            for (iNumI=0; iNumI<2; iNumI++) {
+                for (iNumJ=0; iNumJ<2; iNumJ++) {
+                    if (*pIpPos[iNumI] == inet_addr(pRepStr[0])) {
+                        *pIpPos[iNumI] =  inet_addr(pRepStr[1]);
+                    }
+                }
+            } // End of for
+        } else if (strcmp(pPosStr, "PORT") == 0) {
+            U16* pPortPos[][2] = {
+                {(U16 *)&stPkt.pUdpHdr->sport, (U16 *)&stPkt.pUdpHdr->dport},
+                {(U16 *)&stPkt.pTcpHdr->sport, (U16 *)&stPkt.pTcpHdr->dport}
+            }; 
+
+            int iPro = -1;
+            U8  iL4Pro = stPkt.pIp4Hdr->protocol;
+            if (iL4Pro == UDP) {
+                iPro = 0;
+            } else if (iL4Pro == TCP) {
+                iPro = 1;
             }
-        }
-    }
+
+            if (iPro != -1) {
+                for (iNumI=0; iNumI<2; iNumI++) {
+                    for (iNumJ=0; iNumJ<2; iNumJ++) {
+                        if (*pPortPos[iPro][iNumI] == htons(atoi(pRepStr[0]))) {
+                            *pPortPos[iPro][iNumI] =  htons(atoi(pRepStr[1]));
+                        }
+                    }
+                } // End of for
+            }
+        } // End of if PORT
+    } // End of if
 }
 
 /* Determine whether the parameters need to be modified */

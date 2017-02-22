@@ -1,7 +1,7 @@
 /*
- *  author   : Mr. Gao
+ *  Author   : Mr. Gao
  *
- *  function : To statement functions.
+ *  Function : To statement functions.
  */ 
 
 #ifndef __FUNCTION_H__

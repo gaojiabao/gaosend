@@ -42,6 +42,7 @@ struct option LongOptions[] = {
     {.name = "tcp-seq",   .has_arg = required_argument, .val = 'j'}, 
     {.name = "tcp-ack",   .has_arg = required_argument, .val = 'k'}, 
     {.name = "tcp-hdrlen",.has_arg = required_argument, .val = 'q'}, 
+    {.name = "expression",.has_arg = required_argument, .val = 'E'}, 
     {.name = "flow",      .has_arg = no_argument,       .val = 'F'}, 
     {.name = "debug",     .has_arg = no_argument,       .val = 'g'}, 
     {.name = "build",     .has_arg = no_argument,       .val = 'B'}, 
@@ -149,9 +150,9 @@ void ParametersInit()
 void TerminalParametersAnalyse(int argc, char *argv[])
 {
     char    cCmdInput;
-    // Residual parameter: notxz EGHJKLNTUY
+    // Residual parameter: notxz GHJKLNTUY
     char*   pParaOption = "fBFgDCmAMvhRX"
-                "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:I:S:y:O:Z:e:j:k:q:";
+                "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:I:S:y:O:Z:e:j:k:q:E:";
 
     int     iCounter = 0;
     char    cCmdBuf[1024];
@@ -194,6 +195,7 @@ void TerminalParametersAnalyse(int argc, char *argv[])
             case 'y': StorageInput("rulelen", optarg, 'c'); break;
             case 'O': StorageInput("offset", optarg, 'i'); break;
             case 'Z': StorageInput("rule", optarg, 'c'); break;
+            case 'E': StorageInput("expression", optarg, 'c'); break;
             case 'F': StorageInput("flow", "1", 'i'); break;
             case 'e': StorageInput("tcp-flag", optarg, 'i'); break;
             case 'j': StorageInput("tcp-seq", optarg, 'i'); break;

@@ -70,7 +70,7 @@ static U16 BuildPseduoPacket(void* pData)
     return GetCheckSum((U16 *)cPseudoPacket, PSEUDOHDRLEN+iDataLen);
 }
 
-/* Data save program entry*/
+/* Data save program entry */
 static void SaveModeProgram(int iSwitch)
 {
     static int iSaveFd = -1;
@@ -126,7 +126,7 @@ static void BuildMacHeader()
     stPkt.pMacHdr->pro = htons(GetL3HexPro(GetcValue("l3pro")));
 }
 
-/* Constructing vlan tag  */
+/* Constructing vlan tag */
 static void BuildVlanTag(int iVlanNum)
 {
     _vlanhdr* pVlanInfo[] = {

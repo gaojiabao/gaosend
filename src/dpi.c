@@ -9,6 +9,8 @@
 #define     ON   1 // Switch ON
 #define     OFF  0 // Switch OFF
 
+#define     PKTBUFLEN   SIZE_1K*2
+
 static int  iCursor = 0;
 /* Packet structure */
 static stPktStrc stPkt;
@@ -184,13 +186,17 @@ void PcapFilePraseEntrance()
     PcapHdrInspection(iReadFd);
 
     int iPktLen = 0;
+    int iPktNum = 1;
     while ((iPktLen = PktHdrInspection(iReadFd)) > 0) {
+        if (iPktLen > PKTBUFLEN) {
+            LOGRECORD(ERROR, "Overlength packet[%d:%d]", iPktNum, iPktLen);
+        }
         if (read(iReadFd, stPkt.pPacket, iPktLen) < 0) {
             LOGRECORD(ERROR, "Pcap header read failed");
         }
-        
         PacketPraseEntrance();
         iCursor = 0;
+        iPktNum++;
     } // end of while
 
     close(iReadFd);
@@ -199,7 +205,7 @@ void PcapFilePraseEntrance()
 /* Deep packet inspection portal */
 void DeepPacketInspection()
 {
-    static char cPacketBuf[SIZE_1K*2];
+    static char cPacketBuf[PKTBUFLEN];
     stPkt.pPacket = cPacketBuf;
 
     // Turn on flow assoition

@@ -1,20 +1,11 @@
 #include    <stdlib.h>
 #include    <getopt.h>
-#include    "auth.h"
-#include    "storage.h"
-#include    "runlog.h"
-#include    "default.h"
 #include    <string.h>
+#include    "func.h"
+#include    "runlog.h"
+#include    "storage.h"
+#include    "default.h"
 
-
-void BuildPacket();
-void SplitPacket(); 
-void DuplicatePacket();
-void MergePacket(int, char**); 
-void SwitchPcapFormat();  
-void ReplayPacket();
-void DeepPacketInspection();
-char* ParseReadList(char* pCmd);
 
 /* Command line parameter control table */
 struct option LongOptions[] = {

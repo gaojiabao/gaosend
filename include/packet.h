@@ -139,6 +139,7 @@ typedef struct pkt{
     _udphdr*     pUdpHdr;
     _tcphdr*     pTcpHdr;
     _icmp4hdr*   pIcmp4Hdr;
+    char*        pData;
 }stPktStrc;
 
 typedef struct info{

@@ -1,8 +1,7 @@
 #include    <unistd.h>
-#include    "auth.h"
+#include    "func.h"
 #include    "runlog.h"
 #include    "common.h"
-#include    "socket.h"
 #include    "storage.h"
 #include    "statistic.h"
 

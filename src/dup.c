@@ -2,7 +2,6 @@
 #include    <unistd.h>
 #include    <string.h>
 #include    "runlog.h"
-#include    "packet.h"
 #include    "storage.h"
 #include    "common.h"
 

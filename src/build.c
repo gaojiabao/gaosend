@@ -9,10 +9,10 @@
 #include    <string.h>
 #include    <sys/time.h>
 #include    "common.h"
-#include    "statistic.h"
-#include    "socket.h"
+#include    "func.h"
 #include    "runlog.h"
 #include    "storage.h"
+#include    "statistic.h"
 
 
 /* Packet structure */
@@ -264,6 +264,7 @@ static void BuildDnsMessage()
     // Build DNS message header
     stInfo.iCursor -= iPayLen;
     _dnshdr* pDnsHdr = (_dnshdr *)(stPkt.pPacket + stInfo.iCursor);
+    stPkt.pData = (char *)pDnsHdr;
 
     pDnsHdr->tid   = htons(0x1234);
     pDnsHdr->flag  = htons(0x0001);
@@ -323,7 +324,7 @@ static void BuildHttpMessage()
     }
 
     stInfo.iCursor -= iPayLen;
-    char* pHttpData = (char *)(stPkt.pPacket + stInfo.iCursor);
+    stPkt.pData = (char *)(stPkt.pPacket + stInfo.iCursor);
     char* pL7Pro = GetcValue("l7pro");
 
 
@@ -356,7 +357,7 @@ static void BuildHttpMessage()
             "\r\n\r\n"
            );
 
-    memcpy(pHttpData, cDataBuf, strlen(cDataBuf));
+    memcpy(stPkt.pData, cDataBuf, strlen(cDataBuf));
 }
 
 /* Construction data content */
@@ -373,6 +374,7 @@ static void BuildDataContexts()
         // Dead work
         int iStrLen = 0;
         char* pData = (char *)(stPkt.pPacket + stInfo.iCursor);
+        stPkt.pData = pData;
         if (iStrOffset >= iPayLen) {
             iStrLen = 0;
             LOGRECORD(WARNING, "Offset grate than payload length");
@@ -474,53 +476,6 @@ static void BuildApplicationData()
     BuildLayer4Header();
 }
 
-/*
-   int RuleModeInitialization()
-   {
-   int iSaveFd = 0;
-   if (strcmp(rule_tag, "aclnmask") == 0) {
-   iSaveFd = OpenSaveFile(ACLNMASKFILE);
-   } else if (strcmp(rule_tag, "aclex") == 0) {
-   iSaveFd = OpenSaveFile(ACLEXFILE);
-   } else if (strcmp(rule_tag, "mac_table") == 0) {
-   iSaveFd = OpenSaveFile(MACTABLEFILE);
-   }
-
-   return iSaveFd;
-   }
-
-   void RulesGenerationEntrance(int fd, int iRuleNum)
-   {
-// to print reletive ACL rules into file
-if (strcmp(rule_tag, "aclnmask") == 0) {
-if (dprintf(fd, "add ruleset test aclnmask %d "
-"action=drop, sip=%s, dip=%s, sport=%d, dport=%d, protocol=%s\n", 
-iRuleNum, GetcValue("sip"), GetcValue("dip"), GetiValue("sport"), GetiValue("dport"),
-GetStrPro(l4_pro)) < 0) {
-LOGRECORD(ERROR, "write aclmask rules error");
-}
-} else if (strcmp(rule_tag, "aclex") == 0) {
-int offset = GetiValue("offset");
-if (dprintf(fd, "add ruleset test aclex %d "
-"action=drop, offset=%d, strkey=%s\n", 
-iRuleNum, offset, data+offset) < 0) {
-LOGRECORD(ERROR, "write aclex rules error");
-}
-} else if (strcmp(rule_tag, "mac_table") == 0) {
-if (dprintf(fd, "add mac_table %s "
-"action=forward, outgroup=1\n", GetcValue("smac")) < 0) {
-LOGRECORD(ERROR, "write mac table rules error");
-}
-}
-}
-
-void CloseRuleMode(int fd)
-{
-close(fd);
-LOGRECORD(DEBUG, "Write rules finished");
-}
-*/
-
 static void BuildInitialization()
 {
     static char cPacketBuf[PACKETLEN];
@@ -552,6 +507,10 @@ static void MessageGenerator()
         if (iDebugSwitch) {
             ShowParameter();
             DisplayPacketData(stPkt.pPacket, stInfo.iPktLen);
+        }
+
+        if (GetcValue("rule")) {
+            RulesGenerationEntrance(stPkt, iLoop);
         }
 
         // Display program process 

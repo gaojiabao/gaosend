@@ -66,22 +66,22 @@ char GetHexChar(int iNum)
 
     char cLetter = 0;
     switch(iNum) {
-        case 0:  cLetter = '0';
-        case 1:  cLetter = '1';
-        case 2:  cLetter = '2';
-        case 3:  cLetter = '3';
-        case 4:  cLetter = '4';
-        case 5:  cLetter = '5';
-        case 6:  cLetter = '6';
-        case 7:  cLetter = '7';
-        case 8:  cLetter = '8';
-        case 9:  cLetter = '9';
-        case 10: cLetter = 'A';
-        case 11: cLetter = 'B';
-        case 12: cLetter = 'C';
-        case 13: cLetter = 'D';
-        case 14: cLetter = 'E';
-        case 15: cLetter = 'F';
+        case 0:  cLetter = '0'; break; 
+        case 1:  cLetter = '1'; break;
+        case 2:  cLetter = '2'; break;
+        case 3:  cLetter = '3'; break;
+        case 4:  cLetter = '4'; break;
+        case 5:  cLetter = '5'; break;
+        case 6:  cLetter = '6'; break;
+        case 7:  cLetter = '7'; break;
+        case 8:  cLetter = '8'; break;
+        case 9:  cLetter = '9'; break;
+        case 10: cLetter = 'A'; break;
+        case 11: cLetter = 'B'; break;
+        case 12: cLetter = 'C'; break;
+        case 13: cLetter = 'D'; break;
+        case 14: cLetter = 'E'; break;
+        case 15: cLetter = 'F'; break;
     }
 
     return cLetter;

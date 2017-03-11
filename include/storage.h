@@ -31,16 +31,5 @@ void  ShowParameter();
 void  RefreshParameter();
 void  StorageInput(char* , char* ,char );
 
-// md5 storage structure
-typedef struct StreamInfo{
-    unsigned char value[MD5LEN];
-    struct StreamInfo* next;
-}stream_info, *pStreamInfo;
-
-void StoreStreamInfo(unsigned char*);
-void CreateStreamStorage(void);
-void DisplayAllStreamMD5();
-pStreamInfo InsertStreamInfo(unsigned char*);
-
 #endif
 

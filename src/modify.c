@@ -34,8 +34,8 @@ void RegularExpress()
                 (U32 *)&stPkt.pIp4Hdr->dip
             };
 
-            for (iNumI=0; iNumI<2; iNumI++) {
-                for (iNumJ=0; iNumJ<2; iNumJ++) {
+            for (iNumI = 0; iNumI < 2; iNumI++) {
+                for (iNumJ = 0; iNumJ < 2; iNumJ++) {
                     if (*pIpPos[iNumI] == inet_addr(pRepStr[0])) {
                         *pIpPos[iNumI] =  inet_addr(pRepStr[1]);
                     }
@@ -56,8 +56,8 @@ void RegularExpress()
             }
 
             if (iPro != -1) {
-                for (iNumI=0; iNumI<2; iNumI++) {
-                    for (iNumJ=0; iNumJ<2; iNumJ++) {
+                for (iNumI = 0; iNumI < 2; iNumI++) {
+                    for (iNumJ = 0; iNumJ < 2; iNumJ++) {
                         if (*pPortPos[iPro][iNumI] == htons(atoi(pRepStr[0]))) {
                             *pPortPos[iPro][iNumI] =  htons(atoi(pRepStr[1]));
                         }
@@ -85,16 +85,16 @@ int JudgeSourceOrDestination(char* title)
     char* pSrc[] = {"smac", "sip", "sport", "vlan"};
     char* pDst[] = {"dmac", "dip", "dport", "qinq"};
 
-    int iNum = 0;
+    int iNum;
     int iLength = sizeof(pSrc) / sizeof(char*);
-    for (; iNum<iLength; iNum++) {
+    for (iNum = 0; iNum < iLength; iNum++) {
         if (strcmp(title, pSrc[iNum]) == 0) {
             return SRC;
         } 
     }
 
     iLength = sizeof(pDst) / sizeof(char*);
-    for (iNum=0; iNum<iLength; iNum++) {
+    for (iNum = 0; iNum < iLength; iNum++) {
         if (strcmp(title, pDst[iNum]) == 0) {
             return DST;
         } 
@@ -153,20 +153,20 @@ void InsertVlanInfo(int iHasVlanLayer)
 
     int iVlanId = iHasVlanLayer ? GetiValue("qinq") : GetiValue("vlan");
     int iPktLen = stPkt.pPktHdr->len;
-    int iCursor = MACHDRLEN + iHasVlanLayer * VLANTAGLEN;
+    int iCursor = MAC_HDR_LEN + iHasVlanLayer * VLAN_TAG_LEN;
 
     // Move packet
-    int iNum = 0;
+    int iNum;
     int iLength = iPktLen - iCursor;
-    for (; iNum<iLength; iNum++) {
-        stPkt.pPacket[iPktLen+VLANTAGLEN-1-iNum] \
+    for (iNum = 0; iNum < iLength; iNum++) {
+        stPkt.pPacket[iPktLen+VLAN_TAG_LEN-1-iNum] \
             = stPkt.pPacket[iPktLen-1-iNum]; 
     }
 
     // Insert VLAN ID
     pVlanInfo[iHasVlanLayer] = (_vlanhdr*) (stPkt.pPacket + iCursor);
     pVlanInfo[iHasVlanLayer]->id = htons(iVlanId);
-    stPkt.pPktHdr->caplen = stPkt.pPktHdr->len += VLANTAGLEN;
+    stPkt.pPktHdr->caplen = stPkt.pPktHdr->len += VLAN_TAG_LEN;
 
     if (iHasVlanLayer == 0) {
         stPkt.pVlanHdr = pVlanInfo[iHasVlanLayer];
@@ -184,10 +184,10 @@ void DeleteVlanInfo(int iHasVlanLayer, int iDirect)
     int iCursor = 0;
     if (iHasVlanLayer > 0) {
         if (iDirect == 0) { // Delete a VLAN ID from the front 
-            iCursor = MACHDRLEN;
+            iCursor = MAC_HDR_LEN;
             stPkt.pMacHdr->pro = stPkt.pVlanHdr->pro;
         } else if (iDirect == 1) { // Delete a VLAN ID from the rear
-            iCursor = MACHDRLEN + (iHasVlanLayer - 1) * VLANTAGLEN;
+            iCursor = MAC_HDR_LEN + (iHasVlanLayer - 1) * VLAN_TAG_LEN;
             if (iHasVlanLayer == 1) {
                 stPkt.pMacHdr->pro = stPkt.pVlanHdr->pro;
             } else if (iHasVlanLayer == 2) {
@@ -196,14 +196,14 @@ void DeleteVlanInfo(int iHasVlanLayer, int iDirect)
         }
 
         // Move the packet
-        int iNum = 0;
+        int iNum;
         int iLength = stPkt.pPktHdr->len - iCursor;
-        for (; iNum<iLength; iNum++) {
+        for (iNum = 0; iNum < iLength; iNum++) {
             stPkt.pPacket[iCursor+iNum-1] = \
-                stPkt.pPacket[iCursor+VLANTAGLEN+iNum-1];
+                stPkt.pPacket[iCursor+VLAN_TAG_LEN+iNum-1];
         }
 
-        stPkt.pPktHdr->caplen = stPkt.pPktHdr->len -= VLANTAGLEN;
+        stPkt.pPktHdr->caplen = stPkt.pPktHdr->len -= VLAN_TAG_LEN;
     } // End of if
 }
 
@@ -230,10 +230,10 @@ void ModifyUdpHdr()
     char* pParaList[] = {"sport", "dport"};
     int iLength = sizeof(pParaList) / sizeof(char*);
     
-    int i = 0;
-    for (; i<iLength; i++) {
-        if (IsNeedModify(pParaList[i])) {
-            ModifyPortNumber(pParaList[i], UDP);
+    int iNum;
+    for (iNum = 0; iNum < iLength; iNum++) {
+        if (IsNeedModify(pParaList[iNum])) {
+            ModifyPortNumber(pParaList[iNum], UDP);
         }
     }
 }
@@ -244,8 +244,8 @@ void ModifyTcpHdr()
     char* pParaList[] = {"sport", "dport"};
     int iLength = sizeof(pParaList) / sizeof(char*);
     
-    int iNum = 0;
-    for (; iNum<iLength; iNum++) {
+    int iNum;
+    for (iNum = 0; iNum < iLength; iNum++) {
         if (IsNeedModify(pParaList[iNum])) {
             ModifyPortNumber(pParaList[iNum], TCP);
         }
@@ -258,8 +258,8 @@ void ModifyIPv4Hdr()
     char* pParaList[] = {"sip", "dip"};
     int iLength = sizeof(pParaList) / sizeof(char*);
 
-    int iNum = 0;
-    for (; iNum<iLength; iNum++) {
+    int iNum;
+    for (iNum = 0; iNum < iLength; iNum++) {
         if (IsNeedModify(pParaList[iNum])) {
             ModifyIpAddress(pParaList[iNum]);
         }
@@ -281,11 +281,11 @@ void ModifyVlanHdr()
     }
 
     // Get input VLAN layer number
-    int iNum = 0;
+    int iNum;
     int iVlanId = 0;
     int iInputVlanNum = 0;   
 
-    for (; iNum<iLength; iNum++) {
+    for (iNum = 0; iNum < iLength; iNum++) {
         iVlanId = GetiValue(pParaList[iNum]);
 
         if (iVlanId > 0) {
@@ -372,10 +372,10 @@ void ModifyLayer2()
     char* pParaList[] = {"smac", "dmac"};
     int iLength = sizeof(pParaList) / sizeof(char*);
 
-    int i = 0;
-    for (; i<iLength; i++) {
-        if (IsNeedModify(pParaList[i])) {
-            ModifyMacHdr(pParaList[i]);
+    int iNum;
+    for (iNum = 0; iNum < iLength; iNum++) {
+        if (IsNeedModify(pParaList[iNum])) {
+            ModifyMacHdr(pParaList[iNum]);
         }
     }
 }

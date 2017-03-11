@@ -8,21 +8,20 @@
 #define __DEFAULT_H__
 
 // Define protocol length
-#define PCAPHDRLEN     24
-#define PKTHDRLEN      16
-#define MACHDRLEN      14
-#define ARPHDRLEN      16
-#define POSHDRLEN      4
-#define VLANTAGLEN     4
-#define IP4HDRLEN      20
-#define IP6HDRLEN      40
-#define ICMP4HDRLEN    8  
-#define UDPHDRLEN      8
-#define TCPHDRLEN      20
-#define DNSHDRLEN      12
-#define PSEUDOHDRLEN   12
-#define PKTMINLEN      64 
-#define PKTMAXLEN      1518
+#define PCAP_HDR_LEN   24
+#define PKT_HDR_LEN    16
+#define MAC_HDR_LEN    14
+#define ARP_HDR_LEN    16
+#define VLAN_TAG_LEN   4
+#define IP4_HDR_LEN    20
+#define IP6_HDR_LEN    40
+#define ICMP4_HDR_LEN  8  
+#define UDP_HDR_LEN    8
+#define TCP_HDR_LEN    20
+#define DNS_HDR_LEN    12
+#define PSEUDO_HDR_LEN 12
+#define PKT_MIN_LEN    64 
+#define PKT_MAX_LEN    1518
 
 // Define MD5 character length
 #define MD5LEN         16
@@ -41,7 +40,6 @@
 #define PERM           644
 
 // Define default coufigure
-#define PACKETLEN      2000
 #define SIP            "10.10.169.4"
 #define DIP            "10.10.169.5"
 #define SMAC           "00:23:76:00:00:01"
@@ -63,7 +61,7 @@
 #define ACLEXFILE      "aclex.cfg"
 #define MACTABLEFILE   "mac_table.cfg"
 #define L2PRO          "ethernet"
-#define VERSION        "v4.9.2"
+#define VERSION        "v4.9.3"
 
 #endif
 

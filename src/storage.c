@@ -170,7 +170,7 @@ void ShowParameter()
     iLength = CalcStorageSize();
     pNode pCur =  pHead->next;
 
-    for (iCounter=0; iCounter<iLength; iCounter++) {
+    for (iCounter = 0; iCounter < iLength; iCounter++) {
         printf("%s:%s,%d[%d]\n", pCur->title, pCur->cValue, pCur->iValue, pCur->flag);    
         pCur = pCur->next;
     }
@@ -181,13 +181,13 @@ void RefreshParameter()
 {
     char* pParaName = NULL;
     int iParaMode;
-    int iCounter = 0;
+    int iCounter;
     int iLength = 0;
 
     iLength = CalcStorageSize();
     pNode pCur =  pHead->next;
 
-    for (; iCounter<iLength; iCounter++) {
+    for (iCounter = 0; iCounter < iLength; iCounter++) {
         pParaName = pCur->title;
         iParaMode = pCur->flag;
         if (iParaMode == FG_RAND) { // random 
@@ -243,13 +243,13 @@ void StorageInput(char* title, char* value, char mode)
 {
     // Protocol analysis in parameters
     if (strcmp(title, "protocol") == 0) {
-        unsigned int iCounter = 0;
+        unsigned int iCounter;
         static char cProtocal[16];
         memset(cProtocal, 0, sizeof(cProtocal));
 
         // Converting arguments to uppercase characters
         int iStrLength = strlen(value);
-        for (; iCounter<iStrLength; iCounter++) {
+        for (iCounter = 0; iCounter < iStrLength; iCounter++) {
             cProtocal[iCounter] = toupper(value[iCounter]);
         }
 
@@ -297,86 +297,6 @@ void StorageInput(char* title, char* value, char mode)
         UpdateNode(title, value, -1, iParaMode);
     } else if (mode == 'i') {
         UpdateNode(title, NULL, atoi(value), iParaMode);
-    }
-}
-
-static pStreamInfo pStreamHead;
-
-void CreateStreamStorage(void)
-{
-    pStreamHead = calloc(1, sizeof(stream_info));
-    assert(pStreamHead != NULL);
-    int iCounter;
-    for (iCounter=0; iCounter<MD5LEN; iCounter++) {
-        pStreamHead->value[iCounter] = 0;
-    }
-    pStreamHead->next = NULL;
-}
-
-pStreamInfo InsertStreamInfo(unsigned char* pMD5)
-{
-    assert(pStreamHead != NULL);
-    pStreamInfo pCur = pStreamHead;
-    pStreamInfo pPre = NULL;
-    pStreamInfo pNew = (pStreamInfo)malloc(sizeof(stream_info));
-
-    int iCounter;
-    for (iCounter=0; iCounter<MD5LEN; iCounter++) {
-        pNew->value[iCounter] = pMD5[iCounter];
-    }
-    pNew->next = NULL;
-
-    assert(pNew != NULL);
-    while (pCur != NULL) {
-        pPre = pCur;
-        pCur = pCur->next;
-    }
-    pPre->next = pNew;
-
-    return pNew;
-}
-
-static int JudgeEqual(unsigned char* pOriginMD5, unsigned char* pNewMD5)
-{
-    int iCounter;
-    for (iCounter=0; iCounter<MD5LEN; iCounter++) {
-        if (pOriginMD5[iCounter] != pNewMD5[iCounter]) {
-            return FALSE;
-        }
-    }
-    return SUCCESS;
-}
-
-void StoreStreamInfo(unsigned char* pMD5)
-{
-    pStreamInfo pCur = pStreamHead->next;
-
-    int iIsFindMD5 = FALSE;
-
-    while (pCur != NULL) {
-        if(JudgeEqual(pCur->value, pMD5) == 1) {
-            iIsFindMD5 = SUCCESS;
-            break;
-        } else {
-            pCur = pCur->next;
-        }
-    }
-
-    if (iIsFindMD5 == FALSE) {
-        InsertStreamInfo(pMD5);
-    }
-}
-
-void DisplayAllStreamMD5()
-{
-    pStreamInfo pCur = pStreamHead->next;
-    int iCounter;
-    while (pCur != NULL) {
-        for (iCounter=0; iCounter<MD5LEN; iCounter++) {
-            printf("%02X", pCur->value[iCounter]);
-        }
-        printf("\n");
-        pCur = pCur->next;
     }
 }
 

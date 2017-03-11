@@ -14,14 +14,14 @@ char*    pLogName = "/etc/.send";
 typedef unsigned char  *POINTER;   
 typedef unsigned short int UINT2;   
 typedef unsigned long  int UINT4;   
-  
+
 typedef struct     
 {   
     UINT4 state[4];   
     UINT4 count[2];   
     unsigned char buffer[64];   
 }   MD5_CTX;   
-  
+
 #define S11 7   
 #define S12 12   
 #define S13 17   
@@ -38,7 +38,7 @@ typedef struct
 #define S42 10   
 #define S43 15   
 #define S44 21   
-  
+
 static unsigned char PADDING[64] = {   
     0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   
@@ -49,45 +49,48 @@ static unsigned char ACTIVEPASSWD[16] = {
     0x2D, 0xDE, 0x07, 0xF5, 0x9C, 0x85, 0x6E, 0x3D, 
     0x29, 0x6B, 0x6D, 0xF6, 0x2C, 0x0E, 0xE5, 0x9D
 };
-  
+
 #define F(x, y, z) (((x) & (y)) | ((~x) & (z)))   
 #define G(x, y, z) (((x) & (z)) | ((y) & (~z)))   
 #define H(x, y, z) ((x) ^ (y) ^ (z))   
 #define I(x, y, z) ((y) ^ ((x) | (~z)))   
-  
+
 #define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32-(n))))   
-  
+
 #define FF(a, b, c, d, x, s, ac) {(a) += F((b), (c), (d)) + (x) + (UINT4)(ac); (a) = ROTATE_LEFT((a), (s)); (a) += (b);}   
 #define GG(a, b, c, d, x, s, ac) {(a) += G((b), (c), (d)) + (x) + (UINT4)(ac); (a) = ROTATE_LEFT((a), (s)); (a) += (b);}   
 #define HH(a, b, c, d, x, s, ac) {(a) += H((b), (c), (d)) + (x) + (UINT4)(ac); (a) = ROTATE_LEFT((a), (s)); (a) += (b);}   
 #define II(a, b, c, d, x, s, ac) {(a) += I((b), (c), (d)) + (x) + (UINT4)(ac); (a) = ROTATE_LEFT((a), (s)); (a) += (b);}   
-  
-  
-static void Encode(unsigned char *output, UINT4 *input, unsigned int len)   
+
+
+static void Encode(unsigned char* pOutPut, UINT4* pInput, unsigned int iLength)   
 {   
-    unsigned int i, j;   
-      
-    for (i = 0, j = 0; j < len; i++, j += 4) {   
-        output[j] = (unsigned char)(input[i] & 0xff);   
-        output[j+1] = (unsigned char)((input[i] >> 8) & 0xff);   
-        output[j+2] = (unsigned char)((input[i] >> 16) & 0xff);   
-        output[j+3] = (unsigned char)((input[i] >> 24) & 0xff);   
+    unsigned int iNumI, iNumJ;   
+
+    for (iNumI = 0, iNumJ = 0; iNumJ < iLength; iNumI++, iNumJ += 4) {   
+        pOutPut[iNumJ] = (unsigned char)(pInput[iNumI] & 0xff);   
+        pOutPut[iNumJ+1] = (unsigned char)((pInput[iNumI] >> 8) & 0xff);   
+        pOutPut[iNumJ+2] = (unsigned char)((pInput[iNumI] >> 16) & 0xff);   
+        pOutPut[iNumJ+3] = (unsigned char)((pInput[iNumI] >> 24) & 0xff);   
     }   
 }   
-  
-static void Decode(UINT4 *output, unsigned char *input, unsigned int len)   
+
+static void Decode(UINT4 *pOutPut, unsigned char *pInput, unsigned int iLength)   
 {   
-    unsigned int i, j;   
-     
-    for (i = 0, j = 0; j < len; i++, j += 4)   
-        output[i] = ((UINT4)input[j]) | (((UINT4)input[j+1]) << 8) |   
-        (((UINT4)input[j+2]) << 16) | (((UINT4)input[j+3]) << 24);   
+    unsigned int iNumI, iNumJ;   
+
+    for (iNumI = 0, iNumJ = 0; iNumJ < iLength; iNumI++, iNumJ += 4) {  
+        pOutPut[iNumI] = ((UINT4)pInput[iNumJ]) 
+            | (((UINT4)pInput[iNumJ+1]) << 8) 
+            | (((UINT4)pInput[iNumJ+2]) << 16) 
+            | (((UINT4)pInput[iNumJ+3]) << 24);   
+    }
 }   
-  
-static void MD5Transform(UINT4 state[4], unsigned char block[64])   
+
+static void MD5Transform(UINT4 cState[4], unsigned char cBlock[64])   
 {   
-    UINT4 a = state[0], b = state[1], c = state[2], d = state[3], x[16];   
-    Decode   (x,   block,   64);   
+    UINT4 a = cState[0], b = cState[1], c = cState[2], d = cState[3], x[16];   
+    Decode   (x,   cBlock,   64);   
     FF(a, b, c, d, x[0],  S11, 0xd76aa478);   /*   1   */   
     FF(d, a, b, c, x[1],  S12, 0xe8c7b756);   /*   2   */   
     FF(c, d, a, b, x[2],  S13, 0x242070db);   /*   3   */   
@@ -152,80 +155,84 @@ static void MD5Transform(UINT4 state[4], unsigned char block[64])
     II(d, a, b, c, x[11], S42, 0xbd3af235);   /*   62   */   
     II(c, d, a, b, x[2],  S43, 0x2ad7d2bb);   /*   63   */   
     II(b, c, d, a, x[9],  S44, 0xeb86d391);   /*   64   */   
-    state[0] += a;   
-    state[1] += b;   
-    state[2] += c;   
-    state[3] += d;   
+    cState[0] += a;   
+    cState[1] += b;   
+    cState[2] += c;   
+    cState[3] += d;   
     memset((POINTER)x, 0, sizeof(x));   
 }   
 
-/* Echo MD5 value */
-static char* MD5DigestDisplay(unsigned char* array) 
+// Echo MD5 value 
+static char* MD5DigestDisplay(unsigned char* pMD5Value) 
 {
     static char cMd5Buf[100];
 
-    int i;
-    for (i=0; i<MD5LEN; i++) {
-        sprintf(&cMd5Buf[i], "%02X", array[i]);
+    int iNum;
+    for (iNum = 0; iNum < MD5LEN; iNum++) {
+        sprintf(&cMd5Buf[iNum], "%02X", pMD5Value[iNum]);
     }
 
     return cMd5Buf;
 }
 
-static void MD5Init(MD5_CTX *context)   
+static void MD5Init(MD5_CTX *pContext)   
 {   
-    context->count[0] = context->count[1] = 0;   
-    context->state[0] = 0x67452301;   
-    context->state[1] = 0xefcdab89;   
-    context->state[2] = 0x98badcfe;   
-    context->state[3] = 0x10325476;   
+    pContext->count[0] = pContext->count[1] = 0;   
+    pContext->state[0] = 0x67452301;   
+    pContext->state[1] = 0xefcdab89;   
+    pContext->state[2] = 0x98badcfe;   
+    pContext->state[3] = 0x10325476;   
 }   
-  
-static void MD5Update(MD5_CTX *context, unsigned char *input, unsigned int inputLen)   
+
+static void MD5Update(MD5_CTX *pContext, 
+        unsigned char *pInput,unsigned int iInputLen)   
 {   
-    unsigned int i, index, partLen;   
-      
-    index = (unsigned int)((context->count[0] >> 3) & 0x3F);   
-    if ((context->count[0] += ((UINT4)inputLen << 3)) < ((UINT4)inputLen << 3))   
-        context->count[1]++;   
-    context->count[1] += ((UINT4)inputLen >> 29);   
-      
-    partLen = 64 - index;   
-      
-    if (inputLen >= partLen) {   
-        memcpy((POINTER)&context->buffer[index], (POINTER)input, partLen);   
-        MD5Transform(context->state, context->buffer);   
-      
-        for (i = partLen; i + 63 < inputLen; i += 64)   
-            MD5Transform(context->state, &input[i]);   
-        index = 0;   
-    }   
-    else   
-        i = 0;   
-      
-    memcpy((POINTER)&context->buffer[index], (POINTER)&input[i], inputLen-i);   
+    unsigned int iNum, iIndex, iPartLen;   
+
+    iIndex = (unsigned int)((pContext->count[0] >> 3) & 0x3F);   
+    if ((pContext->count[0] += ((UINT4)iInputLen << 3)) 
+            < ((UINT4)iInputLen << 3)) {   
+        pContext->count[1]++;   
+    }
+    pContext->count[1] += ((UINT4)iInputLen >> 29);   
+
+    iPartLen = 64 - iIndex;   
+
+    if (iInputLen >= iPartLen) {   
+        memcpy((POINTER)&pContext->buffer[iIndex], (POINTER)pInput, iPartLen);   
+        MD5Transform(pContext->state, pContext->buffer);   
+
+        for (iNum = iPartLen; iNum + 63 < iInputLen; iNum += 64) {
+            MD5Transform(pContext->state, &pInput[iNum]);   
+        }
+        iIndex = 0;   
+    } else {   
+        iNum = 0;   
+    }
+
+    memcpy((POINTER)&pContext->buffer[iIndex], (POINTER)&pInput[iNum], iInputLen-iNum);   
 }   
-  
-static void MD5Final(unsigned char digest[16], MD5_CTX *context)   
+
+static void MD5Final(unsigned char cDigest[16], MD5_CTX *pContext)   
 {   
-    unsigned char bits[8];   
-    unsigned int index, padLen;   
-      
-    Encode(bits, context->count, 8);   
-    index = (unsigned int)((context->count[0] >> 3) & 0x3f);   
-    padLen = (index < 56) ? (56 - index) : (120 - index);   
-    MD5Update(context, PADDING, padLen);   
-    MD5Update(context, bits, 8);   
-    Encode(digest, context->state, 16);   
-    memset((POINTER)context, 0, sizeof(*context));   
+    unsigned char cBits[8];   
+    unsigned int iIndex, iPadLen;   
+
+    Encode(cBits, pContext->count, 8);   
+    iIndex = (unsigned int)((pContext->count[0] >> 3) & 0x3f);   
+    iPadLen = (iIndex < 56) ? (56 - iIndex) : (120 - iIndex);   
+    MD5Update(pContext, PADDING, iPadLen);   
+    MD5Update(pContext, cBits, 8);   
+    Encode(cDigest, pContext->state, 16);   
+    memset((POINTER)pContext, 0, sizeof(*pContext));   
 }   
-  
+
 /* Verify password */
 static int IsPasswdOK(unsigned char* pPasswdMD5)
 {
-    int iCounter;
-    for (iCounter=0; iCounter<MD5LEN; iCounter++) {
-        if (pPasswdMD5[iCounter] != ACTIVEPASSWD[iCounter]) {
+    int iNum;
+    for (iNum = 0; iNum < MD5LEN; iNum++) {
+        if (pPasswdMD5[iNum] != ACTIVEPASSWD[iNum]) {
             return 0;
         }
     }
@@ -240,7 +247,7 @@ unsigned char* MD5Digest(char* pszInput)
     unsigned int len = strlen(pszInput); 
 
     MD5_CTX context;   
-      
+
     MD5Init(&context);   
     MD5Update(&context, (unsigned char *)pszInput, len);
     MD5Final(pszOutPut, &context);   
@@ -254,16 +261,16 @@ unsigned char* MD5Digest(char* pszInput)
 /* Superman user login authentication */
 void SuperManUser()
 {
-    char    passwd[32];
+    char    cInputPasswd[32];
 
     LOGRECORD(DEBUG, "User login authentication start");
     LOGRECORD(INFO, "Please input password:");
 
-    if (scanf("%s", passwd) < 0) {
+    if (scanf("%s", cInputPasswd) < 0) {
         LOGRECORD(ERROR, "Input error");
     }
 
-    if (IsPasswdOK(MD5Digest(passwd))) {
+    if (IsPasswdOK(MD5Digest(cInputPasswd))) {
         remove(pLogName);
         LOGRECORD(INFO, "Execute successfully and please run the software again");
     } else {
@@ -290,7 +297,7 @@ static void UseTimesFunction(int iUseNumber, int iNum)
     if (write(iUseFd, cUseNumber, strlen(cUseNumber)) < 0) {
         LOGRECORD(ERROR, "License file write failed");
     }
-    
+
     close(iUseFd);
     LOGRECORD(DEBUG, "Use Times: [%d/%d]", iUseNumber, MAXUSETIMES);
 } 
@@ -319,7 +326,7 @@ void CertificationAuthority()
     if (iUseNumber > MAXUSETIMES) {
         LOGRECORD(ERROR, "The number of users has reached the upper limit");
     }
-    
+
     close(iUseFd);
     UseTimesFunction(iUseNumber, 1);
 }

@@ -9,8 +9,8 @@
 /* Pcap header processing entry */
 void PcapHeadProcessing(int iReadFd, int iSaveFd)
 {
-    char cPcapHdrBuf[PCAPHDRLEN];
-    if (read(iReadFd, cPcapHdrBuf, PCAPHDRLEN) < 0) {
+    char cPcapHdrBuf[PCAP_HDR_LEN];
+    if (read(iReadFd, cPcapHdrBuf, PCAP_HDR_LEN) < 0) {
         LOGRECORD(ERROR, "Pcap header read failed");
     }
 
@@ -20,7 +20,7 @@ void PcapHeadProcessing(int iReadFd, int iSaveFd)
         LOGRECORD(ERROR, "File type does not recognize");
     }
 
-    if (write(iSaveFd, cPcapHdrBuf, PCAPHDRLEN) < 0) {
+    if (write(iSaveFd, cPcapHdrBuf, PCAP_HDR_LEN) < 0) {
         LOGRECORD(ERROR, "Pcap header duplicate failed");
     }
 }
@@ -29,7 +29,7 @@ void PcapHeadProcessing(int iReadFd, int iSaveFd)
 int PcapDataProcessing(int iReadFd)
 {
     int iEndPosition = lseek(iReadFd, 0, SEEK_END);
-    int iInitPosition = lseek(iReadFd, PCAPHDRLEN, SEEK_SET);
+    int iInitPosition = lseek(iReadFd, PCAP_HDR_LEN, SEEK_SET);
     return (iEndPosition - iInitPosition);
 }
 
@@ -152,9 +152,9 @@ char* GenerateFileName(char* pFileName)
 void SplitPacket()
 {
     int  iSaveFd;
-    char cPcapHdrBuf[PCAPHDRLEN];
-    char cPktHdrBuf[PKTHDRLEN];
-    char cDataBuf[PKTMAXLEN];
+    char cPcapHdrBuf[PCAP_HDR_LEN];
+    char cPktHdrBuf[PKT_HDR_LEN];
+    char cDataBuf[PKT_MAX_LEN];
     char* pNewFileName = NULL; 
     _pkthdr* pPktHdr = (_pkthdr*)cPktHdrBuf;
 
@@ -163,22 +163,22 @@ void SplitPacket()
     char* pReadFileName = GetcValue("read");
     int   iReadFd = OpenReadFile(pReadFileName);
 
-    if (read(iReadFd, cPcapHdrBuf, PCAPHDRLEN) < 0) {
+    if (read(iReadFd, cPcapHdrBuf, PCAP_HDR_LEN) < 0) {
         LOGRECORD(ERROR, "Pcap Header read failed");
     }
 
     // Split function
-    while (read(iReadFd, cPktHdrBuf, PKTHDRLEN)) {
+    while (read(iReadFd, cPktHdrBuf, PKT_HDR_LEN)) {
         pNewFileName = GenerateFileName(pReadFileName);
         iSaveFd = OpenSaveFile(pNewFileName);
 
         if (read(iReadFd, cDataBuf, pPktHdr->len) < 0) {
             LOGRECORD(ERROR, "Pcap file data read failed");
         }
-        if (write(iSaveFd, cPcapHdrBuf, PCAPHDRLEN) < 0) {
+        if (write(iSaveFd, cPcapHdrBuf, PCAP_HDR_LEN) < 0) {
             LOGRECORD(ERROR, "Pcap header write failed");
         }
-        if (write(iSaveFd, cPktHdrBuf, PKTHDRLEN) < 0) {
+        if (write(iSaveFd, cPktHdrBuf, PKT_HDR_LEN) < 0) {
             LOGRECORD(ERROR, "Packet header write failed");
         }
         if (write(iSaveFd, cDataBuf, pPktHdr->len) < 0) {

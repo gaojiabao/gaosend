@@ -10,13 +10,17 @@
 
 #define     PKTBUFLEN   SIZE_1K*2
 
-static int  iCursor = 0;
 /* Packet structure */
 static stPktStrc stPkt;
+static stPktInfo stInfo;
 
 void ModifyPacket(stPktStrc);
 void ExtractMessage(char*, int );
 
+
+void StreamStorageInit();
+void StreamStorage(const char*, _tcphdr*, int);
+void DisplayStreamStorage();
 
 /* Packet structure pointer Initialization */
 void PacketStrcInit()
@@ -35,25 +39,25 @@ void PacketStrcInit()
 /* Pcap file header parsing */
 void PcapHdrInspection(int iReadFd)
 {
-    static char cPcapHdrBuf[PCAPHDRLEN];
+    static char cPcapHdrBuf[PCAP_HDR_LEN];
     stPkt.pPcapHdr = (_pcaphdr*) cPcapHdrBuf;
     
-    if (read(iReadFd, stPkt.pPcapHdr, PCAPHDRLEN) < 0) {
+    if (read(iReadFd, stPkt.pPcapHdr, PCAP_HDR_LEN) < 0) {
         LOGRECORD(ERROR, "Pcap header read failed");
     }
 
     if (htonl(stPkt.pPcapHdr->magic) != 0xd4c3b2a1) {
         LOGRECORD(ERROR, "File format not supported");
     }
-    // ExtractMessage(stPkt.pPcapHdr, PCAPHDRLEN);
+    // ExtractMessage(stPkt.pPcapHdr, PCAP_HDR_LEN);
 }
 
 /* Message header information analysis */
 int PktHdrInspection(int iReadFd)
 {
-    static char cPktHdrBuf[PKTHDRLEN];
+    static char cPktHdrBuf[PKT_HDR_LEN];
     stPkt.pPktHdr = (_pkthdr*) cPktHdrBuf;
-    if (read(iReadFd, stPkt.pPktHdr, PKTHDRLEN) < 1) {
+    if (read(iReadFd, stPkt.pPktHdr, PKT_HDR_LEN) < 1) {
         LOGRECORD(DEBUG, "Data has been read finished");
         return -1;
     }
@@ -64,24 +68,28 @@ int PktHdrInspection(int iReadFd)
 /* Layer four protocol analysis */
 void L4HdrInspection(U8 pro)
 {
-    char * pL4Hdr =  stPkt.pPacket + iCursor;
+    char * pL4Hdr =  stPkt.pPacket + stInfo.iCursor;
 
     if (pro == TCP) {
-        iCursor += TCPHDRLEN;
         stPkt.pTcpHdr = (_tcphdr *) pL4Hdr;
+        stInfo.iCursor += ((stPkt.pTcpHdr->hdrlen >> 4) * 4);
+        int iTcpDataLen = htons(stPkt.pIp4Hdr->total_len) 
+            - (stPkt.pIp4Hdr->ver_len & 0x0f) * 4
+            - ((stPkt.pTcpHdr->hdrlen >> 4) * 4);
         // TCP flow check
         if(GetiValue("flow") == ON) {
             char iFiveTupleSum[32];
-            sprintf(iFiveTupleSum, "%d", stPkt.pIp4Hdr->sip + stPkt.pIp4Hdr->dip
-                + stPkt.pTcpHdr->sport + stPkt.pTcpHdr->dport + stPkt.pIp4Hdr->protocol);
-            StoreStreamInfo(MD5Digest(iFiveTupleSum));
+            sprintf(iFiveTupleSum, "%d", stPkt.pIp4Hdr->sip 
+                + stPkt.pIp4Hdr->dip + stPkt.pTcpHdr->sport 
+                + stPkt.pTcpHdr->dport + stPkt.pIp4Hdr->protocol);
+            StreamStorage(iFiveTupleSum, stPkt.pTcpHdr, iTcpDataLen);
         }
 
         // PacketProcessing();
         RecordStatisticsInfo(EMPRO_TCP);
         StatisticUpperTcp(htons(stPkt.pTcpHdr->sport), htons(stPkt.pTcpHdr->dport));
     } else if (pro == UDP) {
-        iCursor += UDPHDRLEN;
+        stInfo.iCursor += UDP_HDR_LEN;
         stPkt.pUdpHdr = (_udphdr *) pL4Hdr;
         RecordStatisticsInfo(EMPRO_UDP);
         StatisticUpperUdp(htons(stPkt.pUdpHdr->sport), htons(stPkt.pUdpHdr->dport));  
@@ -99,21 +107,21 @@ void L4HdrInspection(U8 pro)
 U8 L3HdrInspection(U16 pro)
 {
     U8 iPro = 0;
-    char * pL3Hdr =  stPkt.pPacket + iCursor;
+    char * pL3Hdr =  stPkt.pPacket + stInfo.iCursor;
 
     if (pro == IPv4) {
-        iCursor += IP4HDRLEN;
+        stInfo.iCursor += IP4_HDR_LEN;
         stPkt.pIp4Hdr = (_ip4hdr *) pL3Hdr;
         iPro = stPkt.pIp4Hdr->protocol;
         RecordStatisticsInfo(EMPRO_IPv4);
         L4HdrInspection(iPro);
     } else if (pro == VLAN) {
-        iCursor += VLANTAGLEN;
-        if (iCursor == MACHDRLEN+VLANTAGLEN) { // VLAN layer 1
+        stInfo.iCursor += VLAN_TAG_LEN;
+        if (stInfo.iCursor == MAC_HDR_LEN+VLAN_TAG_LEN) { // VLAN layer 1
             stPkt.pVlanHdr = (_vlanhdr *) pL3Hdr;
             iPro = L3HdrInspection(htons(stPkt.pVlanHdr->pro));
             RecordStatisticsInfo(EMPRO_VLAN);
-        } else if (iCursor == MACHDRLEN+VLANTAGLEN*2){ // VLAN layer 2
+        } else if (stInfo.iCursor == MAC_HDR_LEN+VLAN_TAG_LEN*2){ // VLAN layer 2
             stPkt.pQinQHdr = (_vlanhdr *) pL3Hdr;
             iPro = L3HdrInspection(htons(stPkt.pQinQHdr->pro));
             RecordStatisticsInfo(EMPRO_QinQ);
@@ -122,11 +130,11 @@ U8 L3HdrInspection(U16 pro)
         stPkt.pArpHdr = (_arphdr *) pL3Hdr;
         RecordStatisticsInfo(EMPRO_ARP);
     } else if (pro == IPv6) {
-        iCursor += IP6HDRLEN;
+        stInfo.iCursor += IP6_HDR_LEN;
         stPkt.pIp6Hdr = (_ip6hdr *) pL3Hdr;
         iPro = stPkt.pIp6Hdr->protocol;
         RecordStatisticsInfo(EMPRO_IPv6);
-        L4HdrInspection(iPro);
+        //L4HdrInspection(iPro);
     } else {
         RecordStatisticsInfo(EMPRO_L3OTHER);
     }
@@ -137,8 +145,8 @@ U8 L3HdrInspection(U16 pro)
 /* Layer two protocol analysis */
 void L2HdrInspection()
 {
-    stPkt.pMacHdr = (_machdr *) (stPkt.pPacket + iCursor);
-    iCursor += MACHDRLEN;
+    stPkt.pMacHdr = (_machdr *) (stPkt.pPacket + stInfo.iCursor);
+    stInfo.iCursor += MAC_HDR_LEN;
     L3HdrInspection(htons(stPkt.pMacHdr->pro));
 }
 
@@ -147,10 +155,10 @@ void PacketProcessing()
 {
     static int iNum = ON;
     if (iNum == ON) {
-        ExtractMessage((char*)stPkt.pPcapHdr, PCAPHDRLEN);
+        ExtractMessage((char*)stPkt.pPcapHdr, PCAP_HDR_LEN);
         iNum = OFF;
     }
-    ExtractMessage((char*)stPkt.pPktHdr, PKTHDRLEN);
+    ExtractMessage((char*)stPkt.pPktHdr, PKT_HDR_LEN);
     ExtractMessage((char*)stPkt.pPacket, stPkt.pPktHdr->len);
 }
 
@@ -184,17 +192,17 @@ void PcapFilePraseEntrance()
     
     PcapHdrInspection(iReadFd);
 
-    int iPktLen = 0;
     int iPktNum = 1;
-    while ((iPktLen = PktHdrInspection(iReadFd)) > 0) {
-        if (iPktLen > PKTBUFLEN) {
-            LOGRECORD(ERROR, "Overlength packet[%d:%d]", iPktNum, iPktLen);
+    stInfo.iPktLen = 0;
+    while ((stInfo.iPktLen = PktHdrInspection(iReadFd)) > 0) {
+        if (stInfo.iPktLen > PKTBUFLEN) {
+            LOGRECORD(ERROR, "Overlength packet[%d:%d]", iPktNum, stInfo.iPktLen);
         }
-        if (read(iReadFd, stPkt.pPacket, iPktLen) < 0) {
+        if (read(iReadFd, stPkt.pPacket, stInfo.iPktLen) < 0) {
             LOGRECORD(ERROR, "Pcap header read failed");
         }
         PacketPraseEntrance();
-        iCursor = 0;
+        stInfo.iCursor = 0;
         iPktNum++;
     } // end of while
 
@@ -209,7 +217,7 @@ void DeepPacketInspection()
 
     // Turn on flow assoition
     if(GetiValue("flow") == ON) {
-        CreateStreamStorage();
+        StreamStorageInit();
     }
 
     PcapFilePraseEntrance();
@@ -219,7 +227,7 @@ void DeepPacketInspection()
     }
 
     if (GetiValue("flow") == ON) {
-        DisplayAllStreamMD5();
+        DisplayStreamStorage();
     }
 
     if (GetiValue("exec") == 0) {

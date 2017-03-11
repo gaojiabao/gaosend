@@ -48,7 +48,7 @@ char* GetRandStr(int iLength)
 U16 GetCheckSum(U16* pDataBuf, int iLength)
 {
     unsigned long iSum;
-    for (iSum=0; iLength>0; iLength--) {
+    for (iSum = 0; iLength > 0; iLength--) {
         iSum += *pDataBuf++;
     }
     iSum = (iSum >> 16) + (iSum & 0xffff);
@@ -179,9 +179,9 @@ int FillInMacAddr(char *pMacStr, char *pMacBuf)
         LOGRECORD(ERROR, "Failed to fill MAC address");
     }
 
-    int iNum = 0;
+    int iNum;
     char *pMacTmp = NULL;
-    for (; iNum < 6; iNum++) {
+    for (iNum = 0; iNum < 6; iNum++) {
         pMacBuf[iNum] = pMacStr ? strtoul (pMacStr, &pMacTmp, 16) : 0;
         if (pMacStr) {
             pMacStr = (*pMacTmp) ? pMacTmp + 1 : pMacTmp;
@@ -413,9 +413,9 @@ int GetDataLen(int iPktLen)
     int iDataLen = 0;
     char* pL4Pro = GetcValue("l4pro");
     if (strcmp(pL4Pro, "UDP") == 0) {
-        iDataLen = iPktLen - MACHDRLEN - IP4HDRLEN - UDPHDRLEN;
+        iDataLen = iPktLen - MAC_HDR_LEN - IP4_HDR_LEN - UDP_HDR_LEN;
     } else if (strcmp(pL4Pro, "TCP") == 0) {
-        iDataLen = iPktLen - MACHDRLEN - IP4HDRLEN - TCPHDRLEN;
+        iDataLen = iPktLen - MAC_HDR_LEN - IP4_HDR_LEN - TCP_HDR_LEN;
     }
 
     return iDataLen;
@@ -425,9 +425,9 @@ int GetDataLen(int iPktLen)
 void ProgramProgress(int iVaribleNum, int iStanderNum)
 {
     // To display program process with 20 '>'
-    int iProgressBarLength = 20;
-    int iProgressPercent = iVaribleNum * iProgressBarLength / iStanderNum ;
-    static int iProgressPercentLength = 2; // Percentage position length
+    int iBarLength = 20;
+    int iProgressPercent = iVaribleNum * iBarLength / iStanderNum ;
+    static int iPercentLength = 2; // Percentage position length
     static int iLastPercent = -1; // Remeber last percent, can't equal
     static unsigned int iCounter = 1;
 
@@ -435,27 +435,27 @@ void ProgramProgress(int iVaribleNum, int iStanderNum)
     if (iProgressPercent != iLastPercent) {
         if (iCounter != 1) {
             // Back to init state
-            for (iNumI=0; iNumI<iProgressBarLength+iProgressPercentLength; iNumI++) {
+            for (iNumI = 0; iNumI < iBarLength + iPercentLength; iNumI++) {
                 putchar('\b');
             }
         }
 
         // Progress display
-        for (iNumJ=0; iNumJ<iProgressPercent; iNumJ++) {
+        for (iNumJ = 0; iNumJ<iProgressPercent; iNumJ++) {
             putchar('>');
         }
-        for (iNumK=iProgressBarLength-1; iNumK>=iProgressPercent; iNumK--) {
+        for (iNumK = iBarLength - 1; iNumK >= iProgressPercent; iNumK--) {
             putchar('=');
         }
         // True percentage
-        printf("%d%%", iProgressPercent * (100 / iProgressBarLength)); 
+        printf("%d%%", iProgressPercent * (100 / iBarLength)); 
 
         iLastPercent = iProgressPercent;
         fflush(stdout);
 
         // Correction is greater than 10% of the show 
         if (iProgressPercent > 1) {
-            iProgressPercentLength = 3;
+            iPercentLength = 3;
         }
         iCounter++;
     }
@@ -468,8 +468,8 @@ void DisplayPacketData(char* pPacket, int iPacketLength)
         LOGRECORD(ERROR, "Packet display failed");
     }
 
-    int iNum = 0;
-    for (; iNum<iPacketLength; iNum+=2) {
+    int iNum;
+    for (iNum = 0; iNum < iPacketLength; iNum += 2) {
         printf("%02hhx%02hhx ", pPacket[iNum], pPacket[iNum+1]);
         if (iNum%16 == 14) {
             printf("\n");
@@ -481,17 +481,17 @@ void DisplayPacketData(char* pPacket, int iPacketLength)
 /* Copy function */
 void BufferCopy(char* pDstBuf, int iPos, char* pSrcStr, int iLength)
 {
-    int iNum = 0;
-    for (; iNum<iLength; iNum++)
+    int iNum;
+    for (iNum = 0; iNum<iLength; iNum++)
         pDstBuf[iPos+iNum] = pSrcStr[iNum];
 }
 
 /* Compare IPv6 address */
 int CompareIpv6Address(unsigned char* pSrcIp6Addr, unsigned char* pDstIp6Addr)
 {
-    int iNum = 0;
+    int iNum;
     int iLength = sizeof(struct in6_addr);
-    for (; iNum<iLength; iNum++) {
+    for (iNum = 0; iNum<iLength; iNum++) {
         if (pSrcIp6Addr[8+iNum] != pDstIp6Addr[iNum])
             return -1 ;
     }

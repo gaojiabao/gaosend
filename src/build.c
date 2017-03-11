@@ -22,7 +22,7 @@ static stPktInfo stInfo;
 /* Constructing pcap header used to identify file type */
 static void BuildPcapHeader()
 {
-    static char cPcapHdrBuf[PCAPHDRLEN];
+    static char cPcapHdrBuf[PCAP_HDR_LEN];
     stPkt.pPcapHdr = (_pcaphdr *)cPcapHdrBuf;
 
     stPkt.pPcapHdr->magic = htonl(0xd4c3b2a1);
@@ -37,7 +37,7 @@ static void BuildPcapHeader()
 /* Constructing packet header used to identify packet information */
 static void BuildPacketHeader()
 {
-    static char cPktHdrBuf[PKTHDRLEN];
+    static char cPktHdrBuf[PKT_HDR_LEN];
     stPkt.pPktHdr = (_pkthdr *)cPktHdrBuf;
 
     struct timeval tp;
@@ -55,7 +55,7 @@ static U16 BuildPseduoPacket(void* pData)
     U8  iL4Pro = GetL4HexPro(GetcValue("l4pro"));
 
     // Build pseudo header
-    static char cPseudoPacket[PACKETLEN];
+    static char cPseudoPacket[SIZE_1K];
     _pseudohdr* pPseudoHdr = (_pseudohdr *)cPseudoPacket;
     pPseudoHdr->sip = stPkt.pIp4Hdr->sip;
     pPseudoHdr->dip = stPkt.pIp4Hdr->dip;
@@ -64,10 +64,10 @@ static U16 BuildPseduoPacket(void* pData)
     pPseudoHdr->len = iDataLen;
 
     // Build pseudo packet data
-    char *pPseudoData = cPseudoPacket + PSEUDOHDRLEN;
+    char *pPseudoData = cPseudoPacket + PSEUDO_HDR_LEN;
     memcpy(pPseudoData, pData, iDataLen);
 
-    return GetCheckSum((U16 *)cPseudoPacket, PSEUDOHDRLEN+iDataLen);
+    return GetCheckSum((U16 *)cPseudoPacket, PSEUDO_HDR_LEN+iDataLen);
 }
 
 /* Data save program entry */
@@ -82,21 +82,21 @@ static void SaveModeProgram(int iSwitch)
                 LOGRECORD(ERROR, "File doesn't exist");
             }
             BuildPcapHeader();
-            if (write(iSaveFd, stPkt.pPcapHdr, PCAPHDRLEN) < 0) {
+            if (write(iSaveFd, stPkt.pPcapHdr, PCAP_HDR_LEN) < 0) {
                 LOGRECORD(ERROR, "write packet to pacp file error");
             }
         } 
 
         // Data saving 
         BuildPacketHeader();
-        if (write(iSaveFd, stPkt.pPktHdr, PKTHDRLEN) < 0) {
+        if (write(iSaveFd, stPkt.pPktHdr, PKT_HDR_LEN) < 0) {
             LOGRECORD(ERROR, "write packet to pacp file error");
         }
         if (write(iSaveFd, stPkt.pPacket, stInfo.iPktLen) < 0) {
             LOGRECORD(ERROR, "write packet to pacp file error");
         }
         if (GetiValue("debug")) {
-            DisplayPacketData((char *)stPkt.pPcapHdr, PCAPHDRLEN);
+            DisplayPacketData((char *)stPkt.pPcapHdr, PCAP_HDR_LEN);
         }
         
     } else {
@@ -118,7 +118,7 @@ static void RecycleProgram()
 /* Constructing ethernet data header */
 static void BuildMacHeader()
 {
-    stInfo.iCursor -= MACHDRLEN;
+    stInfo.iCursor -= MAC_HDR_LEN;
     stPkt.pMacHdr = (_machdr *)(stPkt.pPacket + stInfo.iCursor);
 
     FillInMacAddr(GetcValue("dmac"), (char*)&stPkt.pMacHdr->dmac);
@@ -134,8 +134,8 @@ static void BuildVlanTag(int iVlanNum)
         stPkt.pQinQHdr
     }; 
 
-    stInfo.iCursor -= VLANTAGLEN;
-    int iVlanLayer = (stInfo.iCursor == MACHDRLEN ? 0 : 1);
+    stInfo.iCursor -= VLAN_TAG_LEN;
+    int iVlanLayer = (stInfo.iCursor == MAC_HDR_LEN ? 0 : 1);
     pVlanInfo[iVlanLayer] = (_vlanhdr *)(stPkt.pPacket + stInfo.iCursor);
 
     pVlanInfo[iVlanNum]->id = ((iVlanNum - iVlanLayer) == 1 ?  
@@ -147,11 +147,11 @@ static void BuildVlanTag(int iVlanNum)
 /* Building IP protocol header */
 static void BuildIp4Header()
 {
-    stInfo.iCursor -= IP4HDRLEN;
+    stInfo.iCursor -= IP4_HDR_LEN;
     stPkt.pIp4Hdr = (_ip4hdr *)(stPkt.pPacket + stInfo.iCursor);
 
     U8 iL4Pro = GetL4HexPro(GetcValue("l4pro"));
-    stPkt.pIp4Hdr->ver_len = (4 << 4 | IP4HDRLEN / 4);
+    stPkt.pIp4Hdr->ver_len = (4 << 4 | IP4_HDR_LEN / 4);
     stPkt.pIp4Hdr->tos = 0;
     stPkt.pIp4Hdr->total_len = htons(stInfo.iPktLen - stInfo.iCursor);
     stPkt.pIp4Hdr->ident = 1;
@@ -161,7 +161,7 @@ static void BuildIp4Header()
     stPkt.pIp4Hdr->checksum = 0;
     stPkt.pIp4Hdr->sip = inet_addr(GetcValue("sip"));
     stPkt.pIp4Hdr->dip = inet_addr(GetcValue("dip"));
-    stPkt.pIp4Hdr->checksum = GetCheckSum((U16 *)stPkt.pIp4Hdr, IP4HDRLEN);
+    stPkt.pIp4Hdr->checksum = GetCheckSum((U16 *)stPkt.pIp4Hdr, IP4_HDR_LEN);
 
     // Calculate TCP of UDP checksum
     if (iL4Pro == TCP) {
@@ -175,7 +175,7 @@ static void BuildIp4Header()
 static void BuildArpHeader(int iOperationType)
 {
     stInfo.iCursor = stInfo.iPktLen = 60;
-    stInfo.iCursor = MACHDRLEN;
+    stInfo.iCursor = MAC_HDR_LEN;
     stPkt.pArpHdr = (_arphdr *)(stPkt.pPacket + stInfo.iCursor);
 
     stPkt.pArpHdr->hrd = 0x01; // Ethernet
@@ -192,7 +192,7 @@ static void BuildArpHeader(int iOperationType)
 /* Building TCP protocol header */
 static void BuildTcpHeader()
 {
-    stInfo.iCursor -= TCPHDRLEN;
+    stInfo.iCursor -= TCP_HDR_LEN;
     stPkt.pTcpHdr = (_tcphdr *)(stPkt.pPacket + stInfo.iCursor);
 
     stPkt.pTcpHdr->sport = htons(GetiValue("sport"));
@@ -210,7 +210,7 @@ static void BuildTcpHeader()
 /* Building UDP protocol header */
 static void BuildUdpHeader()
 {
-    stInfo.iCursor -= UDPHDRLEN;
+    stInfo.iCursor -= UDP_HDR_LEN;
     stPkt.pUdpHdr = (_udphdr *)(stPkt.pPacket + stInfo.iCursor);
 
     stPkt.pUdpHdr->sport = htons(GetiValue("sport"));
@@ -223,7 +223,7 @@ static void BuildUdpHeader()
 static void BuildIcmp4Header(int iOperationType)
 {
     stInfo.iPktLen = 74;
-    stInfo.iCursor = MACHDRLEN + IP4HDRLEN;
+    stInfo.iCursor = MAC_HDR_LEN + IP4_HDR_LEN;
     int iIcmpMessageLen = stInfo.iPktLen - stInfo.iCursor;
     stPkt.pIcmp4Hdr = (_icmp4hdr *)(stPkt.pPacket + stInfo.iCursor);
 
@@ -236,11 +236,11 @@ static void BuildIcmp4Header(int iOperationType)
     stPkt.pIcmp4Hdr->seq = 256;
 
     // Build ICMP message data
-    char* pData = stPkt.pPacket + stInfo.iCursor + ICMP4HDRLEN;
-    int iDataLen = iIcmpMessageLen - ICMP4HDRLEN;
+    char* pData = stPkt.pPacket + stInfo.iCursor + ICMP4_HDR_LEN;
+    int iDataLen = iIcmpMessageLen - ICMP4_HDR_LEN;
     int iNum = 0;
     U8  iStartPos = 0x61; // 'a' = 0x61
-    for (; iNum<iDataLen; iNum++) {
+    for (; iNum < iDataLen; iNum++) {
         pData[iNum] = iStartPos++;
         if (iStartPos > 0x77) { // 'w' = 0x77
             iStartPos = 0x41;
@@ -274,17 +274,17 @@ static void BuildDnsMessage()
     pDnsHdr->adrrs = htons(0x0000);
 
     // Build DNS message data
-    int iCursor = stInfo.iCursor + DNSHDRLEN;
+    int iCursor = stInfo.iCursor + DNS_HDR_LEN;
     char* pDnsData = (char *)(stPkt.pPacket + iCursor);
 
     // Switch url format, Eg: 03www09venustech03com 
     char cDomain[1024];
     sprintf(cDomain, ".%s.", pUrlStr);
 
-    int iNum = 1;
+    int iNum;
     int iCounter = 0;
     int iDomainLen = strlen(cDomain);
-    for (; iNum<iDomainLen; iNum++) {
+    for (iNum = 1; iNum < iDomainLen; iNum++) {
          if (cDomain[iNum] == '.') {
             cDomain[iNum-iCounter-1] = iCounter;
             iCounter = 0;
@@ -395,9 +395,9 @@ static void BuildDataContexts()
                 iFixedStrLen = (iFixedStrLen - 2) / 2; 
                 iStrLen = (iFixedStrLen > iStrLen ? iStrLen : iFixedStrLen);
 
-                int  iNum = 1;
+                int  iNum;
                 char cTmpStr[2];
-                for (; iNum<=iStrLen; iNum++) {
+                for (iNum = 1; iNum <= iStrLen; iNum++) {
                     memcpy(cTmpStr, pFixedStr+(2*iNum), 2);
                     pData[iNum-1] = strtol(cTmpStr, NULL, 16);
                 }
@@ -478,7 +478,7 @@ static void BuildApplicationData()
 
 static void BuildInitialization()
 {
-    static char cPacketBuf[PACKETLEN];
+    static char cPacketBuf[SIZE_1K*2];
     stPkt.pPacket = cPacketBuf;
 
     stInfo.iPktLen = GetiValue("pktlen");

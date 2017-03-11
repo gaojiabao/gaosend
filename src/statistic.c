@@ -101,7 +101,7 @@ void DisplayStatisticsResults()
     LOGRECORD(INFO, "---------------------------------------------");
     LOGRECORD(INFO, " |---ARP           : |---%d(%.2f%%)", iArpNum, PercentCalc(iArpNum, iTotleNum));
     LOGRECORD(INFO, " |---IPv4          : |---%d(%.2f%%)", iIpv4Num, PercentCalc(iIpv4Num, iTotleNum));
-    LOGRECORD(INFO, "   |----ICMP4     :   |----%d(%.2f%%)", iIcmpv4Num, PercentCalc(iIcmpv4Num, iTotleNum));
+    LOGRECORD(INFO, "   |----ICMP4      :   |----%d(%.2f%%)", iIcmpv4Num, PercentCalc(iIcmpv4Num, iTotleNum));
     LOGRECORD(INFO, "   |----UDP        :   |----%d(%.2f%%)", iUdpNum, PercentCalc(iUdpNum, iTotleNum));
     LOGRECORD(INFO, "     |-----DNS     :     |-----%d(%.2f%%)", iDnsNum, PercentCalc(iDnsNum, iTotleNum));
     LOGRECORD(INFO, "   |----TCP        :   |----%d(%.2f%%)", iTcpNum, PercentCalc(iTcpNum, iTotleNum));
@@ -113,7 +113,7 @@ void DisplayStatisticsResults()
     LOGRECORD(INFO, "     |-----IMAP    :     |-----%d(%.2f%%)", iImapNum, PercentCalc(iImapNum, iTotleNum));
     LOGRECORD(INFO, "   |----L4_Other   :   |----%d(%.2f%%)", iL4OtherNum, PercentCalc(iL4OtherNum, iTotleNum));
     LOGRECORD(INFO, " |---IPv6          : |---%d(%.2f%%)", iIpv6Num, PercentCalc(iIpv6Num, iTotleNum));
-    LOGRECORD(INFO, "   |----ICMP6     :   |----%d(%.2f%%)", iIcmpv6Num, PercentCalc(iIcmpv6Num, iTotleNum));
+    LOGRECORD(INFO, "   |----ICMP6      :   |----%d(%.2f%%)", iIcmpv6Num, PercentCalc(iIcmpv6Num, iTotleNum));
     LOGRECORD(INFO, "   |----UDP        :   |----%d(%.2f%%)", iUdp6Num, PercentCalc(iUdp6Num, iTotleNum));
     LOGRECORD(INFO, "   |----TCP        :   |----%d(%.2f%%)", iTcp6Num, PercentCalc(iTcp6Num, iTotleNum));
     LOGRECORD(INFO, "   |----L4_Other   :   |----%d(%.2f%%)", iL4Other6Num, PercentCalc(iL4Other6Num, iTotleNum));

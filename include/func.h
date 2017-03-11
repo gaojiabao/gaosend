@@ -10,6 +10,7 @@ void MergePacket(int, char**);
 void SwitchPcapFormat();  
 void ReplayPacket();
 void DeepPacketInspection();
+void SuperManUser();
 char* ParseReadList(char* pCmd);
 
 // Rules
@@ -21,8 +22,6 @@ void CloseSendConnect();
 
 // Authority
 void CertificationAuthority();
-void SuperManUser();
-unsigned char* MD5Digest(char* );
 
 #endif
 

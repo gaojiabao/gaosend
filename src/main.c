@@ -15,8 +15,8 @@ struct option LongOptions[] = {
     {.name = "dip",       .has_arg = optional_argument, .val = 'd'}, 
     {.name = "sport",     .has_arg = optional_argument, .val = 'P'}, 
     {.name = "dport",     .has_arg = optional_argument, .val = 'Q'}, 
-    {.name = "vlan",     .has_arg = optional_argument, .val = 'V'}, 
-    {.name = "qinq",     .has_arg = optional_argument, .val = 'W'}, 
+    {.name = "vlan",      .has_arg = optional_argument, .val = 'V'}, 
+    {.name = "qinq",      .has_arg = optional_argument, .val = 'W'}, 
     {.name = "protocol",  .has_arg = optional_argument, .val = 'p'}, 
     {.name = "len",       .has_arg = optional_argument, .val = 'l'}, 
     {.name = "url",       .has_arg = optional_argument, .val = 'u'}, 
@@ -140,17 +140,17 @@ void ParametersInit()
 /* Analysis of command line parameters */
 void TerminalParametersAnalyse(int argc, char *argv[])
 {
-    char    cCmdInput;
+    char  cCmdInput;
     // Residual parameter: notxz GHJKLNTUY
-    char*   pParaOption = "fBFgDCmAMvhRX"
+    char* pParaOption = "fBFgDCmAMvhRX"
                 "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:I:S:y:O:Z:e:j:k:q:E:";
 
-    int     iCounter = 0;
-    char    cCmdBuf[1024];
+    int   iCounter;
+    char  cCmdBuf[1024];
 
     // Save command line input
     memset(cCmdBuf, 0 , sizeof(cCmdBuf));
-    for (; iCounter<argc; iCounter++) {
+    for (iCounter = 0; iCounter < argc; iCounter++) {
         strcat(cCmdBuf, argv[iCounter]);
         strcat(cCmdBuf, " ");
     }
@@ -178,7 +178,8 @@ void TerminalParametersAnalyse(int argc, char *argv[])
             case 'i': StorageInput("interval", optarg, 'i'); break;
             case 'c': StorageInput("count", optarg, 'i'); break;
             case 'r': StorageInput("read", optarg, 'c'); 
-                      StorageInput("filelist", ParseReadList(cCmdBuf), 'c'); break; 
+                      StorageInput("filelist", \
+                          ParseReadList(cCmdBuf), 'c'); break; 
             case 'w': StorageInput("save", optarg, 'c'); 
                       StorageInput("exec", "1", 'i'); break;
             case 'I': StorageInput("interface", optarg, 'c'); break;

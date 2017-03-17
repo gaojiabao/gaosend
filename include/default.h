@@ -21,7 +21,7 @@
 #define DNS_HDR_LEN    12
 #define PSEUDO_HDR_LEN 12
 #define PKT_MIN_LEN    64 
-#define PKT_MAX_LEN    1518
+#define PKT_MAX_LEN    1518*20
 
 // Define MD5 character length
 #define MD5LEN         16
@@ -61,7 +61,7 @@
 #define ACLEXFILE      "aclex.cfg"
 #define MACTABLEFILE   "mac_table.cfg"
 #define L2PRO          "ethernet"
-#define VERSION        "v4.9.3"
+#define VERSION        "v4.9.4"
 
 #endif
 

@@ -55,7 +55,7 @@ static U16 BuildPseduoPacket(void* pData)
     U8  iL4Pro = GetL4HexPro(GetcValue("l4pro"));
 
     // Build pseudo header
-    static char cPseudoPacket[SIZE_1K];
+    static char cPseudoPacket[SIZE_1K*20];
     _pseudohdr* pPseudoHdr = (_pseudohdr *)cPseudoPacket;
     pPseudoHdr->sip = stPkt.pIp4Hdr->sip;
     pPseudoHdr->dip = stPkt.pIp4Hdr->dip;
@@ -98,7 +98,7 @@ static void SaveModeProgram(int iSwitch)
         if (GetiValue("debug")) {
             DisplayPacketData((char *)stPkt.pPcapHdr, PCAP_HDR_LEN);
         }
-        
+
     } else {
         close(iSaveFd);
         LOGRECORD(DEBUG, "Write packets finished");
@@ -151,9 +151,11 @@ static void BuildIp4Header()
     stPkt.pIp4Hdr = (_ip4hdr *)(stPkt.pPacket + stInfo.iCursor);
 
     U8 iL4Pro = GetL4HexPro(GetcValue("l4pro"));
-    stPkt.pIp4Hdr->ver_len = (4 << 4 | IP4_HDR_LEN / 4);
+    //stPkt.pIp4Hdr->ver_len = (4 << 4 | IP4_HDR_LEN / 4);
+    stPkt.pIp4Hdr->version = 4;
+    stPkt.pIp4Hdr->hdlen = (IP4_HDR_LEN / 4);
     stPkt.pIp4Hdr->tos = 0;
-    stPkt.pIp4Hdr->total_len = htons(stInfo.iPktLen - stInfo.iCursor);
+    stPkt.pIp4Hdr->ttlen = htons(stInfo.iPktLen - stInfo.iCursor);
     stPkt.pIp4Hdr->ident = 1;
     stPkt.pIp4Hdr->flag_offset = (4 << 4);
     stPkt.pIp4Hdr->ttl = 128;
@@ -165,9 +167,39 @@ static void BuildIp4Header()
 
     // Calculate TCP of UDP checksum
     if (iL4Pro == TCP) {
-       stPkt.pTcpHdr->checksum = BuildPseduoPacket(stPkt.pTcpHdr);
+        stPkt.pTcpHdr->checksum = BuildPseduoPacket(stPkt.pTcpHdr);
     } else if (iL4Pro == UDP) {
-       stPkt.pUdpHdr->checksum = BuildPseduoPacket(stPkt.pUdpHdr);
+        stPkt.pUdpHdr->checksum = BuildPseduoPacket(stPkt.pUdpHdr);
+    }
+}
+
+/* Building IP protocol header */
+static void BuildIp6Header()
+{
+    int iPayLen = stInfo.iPktLen - stInfo.iCursor;
+    stInfo.iCursor -= IP6_HDR_LEN;
+    stPkt.pIp6Hdr = (_ip6hdr *)(stPkt.pPacket + stInfo.iCursor);
+
+    U8 iL4Pro = GetL4HexPro(GetcValue("l4pro"));
+    stPkt.pIp6Hdr->version = htons(24576);
+    /*
+    stPkt.pIp6Hdr->traffic = 0;
+    stPkt.pIp6Hdr->flowLabel = 0;
+    */
+    stPkt.pIp6Hdr->payload = htons(iPayLen);
+    stPkt.pIp6Hdr->protocol = iL4Pro;
+    stPkt.pIp6Hdr->nextHop = 0xff;
+    //inet_pton(AF_INET6, "2a01:198:603:0:396e:4789:8e99:890f", stPkt.pIp6Hdr->sip);
+    inet_pton(AF_INET6, "::192.168.1.1", stPkt.pIp6Hdr->sip);
+    inet_pton(AF_INET6, "2a01:198:603:0::", stPkt.pIp6Hdr->dip);
+
+    // Calculate TCP of UDP checksum
+    if (iL4Pro == TCP) {
+        //stPkt.pTcpHdr->checksum = BuildPseduoPacket(stPkt.pTcpHdr);
+        stPkt.pTcpHdr->checksum = 0;
+    } else if (iL4Pro == UDP) {
+        //stPkt.pUdpHdr->checksum = BuildPseduoPacket(stPkt.pUdpHdr);
+        stPkt.pUdpHdr->checksum = htons(0xffff);
     }
 }
 
@@ -240,8 +272,8 @@ static void BuildIcmp4Header(int iOperationType)
     int iDataLen = iIcmpMessageLen - ICMP4_HDR_LEN;
     int iNum = 0;
     U8  iStartPos = 0x61; // 'a' = 0x61
-    for (; iNum < iDataLen; iNum++) {
-        pData[iNum] = iStartPos++;
+    for (; iNum < iDataLen; iNum ++) {
+        pData[iNum] = iStartPos ++;
         if (iStartPos > 0x77) { // 'w' = 0x77
             iStartPos = 0x41;
         }
@@ -284,13 +316,13 @@ static void BuildDnsMessage()
     int iNum;
     int iCounter = 0;
     int iDomainLen = strlen(cDomain);
-    for (iNum = 1; iNum < iDomainLen; iNum++) {
-         if (cDomain[iNum] == '.') {
+    for (iNum = 1; iNum < iDomainLen; iNum ++) {
+        if (cDomain[iNum] == '.') {
             cDomain[iNum-iCounter-1] = iCounter;
             iCounter = 0;
-         } else {
-             iCounter++;
-         }
+        } else {
+            iCounter ++;
+        }
     }
     cDomain[iNum-1] = 0;
 
@@ -310,7 +342,6 @@ static void BuildHttpMessage()
     }
     int iPayLen = GetDataLen(stInfo.iPktLen);
 
-    
     char* pUriStr = NULL;
     char* pHostStr = NULL;
     char* pUrlStr = GetcValue("url");
@@ -397,7 +428,7 @@ static void BuildDataContexts()
 
                 int  iNum;
                 char cTmpStr[2];
-                for (iNum = 1; iNum <= iStrLen; iNum++) {
+                for (iNum = 1; iNum <= iStrLen; iNum ++) {
                     memcpy(cTmpStr, pFixedStr+(2*iNum), 2);
                     pData[iNum-1] = strtol(cTmpStr, NULL, 16);
                 }
@@ -430,6 +461,7 @@ static void BuildLayer3Header()
 {
     switch(GetL3HexPro(GetcValue("l3pro"))) {
         case IPv4 : BuildIp4Header(); break;
+        case IPv6 : BuildIp6Header(); break;
         case ARP  : BuildArpHeader(2); break; // 2:ARP response
         default   : LOGRECORD(ERROR, "Layer three protocol is not found");
     }
@@ -441,7 +473,7 @@ static void BuildLayer3Header()
 static void BuildLayer4Header()
 {
     char* pL4Pro = GetcValue("l4pro");
-    
+
     if (pL4Pro != NULL) {
         switch(GetL4HexPro(pL4Pro)) {
             case TCP   : BuildTcpHeader(); break;
@@ -464,12 +496,12 @@ static void BuildApplicationData()
     if (pProStr != NULL && (strcmp(pProStr, "DNS") == 0)) {
         BuildDnsMessage();
     } else if (pProStr != NULL 
-        && ((strcmp(pProStr, "HTTP-GET") == 0) 
-        || (strcmp(pProStr, "HTTP-POST") == 0))) {
+            && ((strcmp(pProStr, "HTTP-GET") == 0) 
+                || (strcmp(pProStr, "HTTP-POST") == 0))) {
         BuildHttpMessage();
     } else if (pProStr != NULL 
-        && ((strcmp(pProStr, "TCP") == 0)
-        || (strcmp(pProStr, "UDP") == 0))) {
+            && ((strcmp(pProStr, "TCP") == 0)
+                || (strcmp(pProStr, "UDP") == 0))) {
         BuildDataContexts();
     }
 
@@ -478,7 +510,7 @@ static void BuildApplicationData()
 
 static void BuildInitialization()
 {
-    static char cPacketBuf[SIZE_1K*2];
+    static char cPacketBuf[SIZE_1K*20];
     stPkt.pPacket = cPacketBuf;
 
     stInfo.iPktLen = GetiValue("pktlen");
@@ -499,7 +531,16 @@ static void MessageGenerator()
 
         // Message sending or saving program 
         if (GetiValue("exec") == 0) { //send
-            SendPacketProcess(stPkt.pPacket, stInfo.iPktLen);
+            //SendPacketProcess(stPkt.pPacket, stInfo.iPktLen);
+            char buf[5000];
+            memcpy(buf, stPkt.pPacket, stInfo.iPktLen);
+            int i = 0;
+            for (;i<7;i ++) {
+                buf[stInfo.iPktLen+i] = 0x00;
+            }
+            memcpy(buf+stInfo.iPktLen+7, stPkt.pPacket, stInfo.iPktLen);
+            SendPacketProcess(buf, stInfo.iPktLen*2+7);
+
         } else { //save
             SaveModeProgram(1);
         }
@@ -514,7 +555,7 @@ static void MessageGenerator()
         }
 
         // Display program process 
-        ProgramProgress(++iLoop, iCount);
+        ProgramProgress( ++iLoop, iCount);
     } // End of while
     printf("\n");
     RecycleProgram();

@@ -46,7 +46,7 @@ void SendModeInitialization()
     sockAddr.sll_family=PF_PACKET;
     sockAddr.sll_protocol=htons(ETH_P_ALL);
     sockAddr.sll_ifindex=ifr.ifr_ifindex;
-    
+
     // Bind socket interface
     if (bind(iSockFd, (struct sockaddr *)&sockAddr, sizeof(sockAddr)) < 0) {
         LOGRECORD(ERROR, "Socket bind failed");
@@ -70,7 +70,7 @@ void SendPacketProcess(char* pPacket,int iLength)
         SendModeInitialization();
     }
     if ((sendto(iSockFd, (const void*)pPacket, iLength, 0, \
-        (struct sockaddr*)&sockAddr, sizeof(sockAddr)))<0) {
+                    (struct sockaddr*)&sockAddr, sizeof(sockAddr)))<0) {
         LOGRECORD(ERROR, "Packet send failed");
     }
 

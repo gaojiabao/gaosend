@@ -67,7 +67,7 @@ static void Encode(unsigned char* pOutPut, UINT4* pInput, unsigned int iLength)
 {   
     unsigned int iNumI, iNumJ;   
 
-    for (iNumI = 0, iNumJ = 0; iNumJ < iLength; iNumI++, iNumJ += 4) {   
+    for (iNumI = 0, iNumJ = 0; iNumJ < iLength; iNumI ++, iNumJ += 4) {   
         pOutPut[iNumJ] = (unsigned char)(pInput[iNumI] & 0xff);   
         pOutPut[iNumJ+1] = (unsigned char)((pInput[iNumI] >> 8) & 0xff);   
         pOutPut[iNumJ+2] = (unsigned char)((pInput[iNumI] >> 16) & 0xff);   
@@ -79,7 +79,7 @@ static void Decode(UINT4 *pOutPut, unsigned char *pInput, unsigned int iLength)
 {   
     unsigned int iNumI, iNumJ;   
 
-    for (iNumI = 0, iNumJ = 0; iNumJ < iLength; iNumI++, iNumJ += 4) {  
+    for (iNumI = 0, iNumJ = 0; iNumJ < iLength; iNumI ++, iNumJ += 4) {  
         pOutPut[iNumI] = ((UINT4)pInput[iNumJ]) 
             | (((UINT4)pInput[iNumJ+1]) << 8) 
             | (((UINT4)pInput[iNumJ+2]) << 16) 
@@ -168,7 +168,7 @@ static char* MD5DigestDisplay(unsigned char* pMD5Value)
     static char cMd5Buf[100];
 
     int iNum;
-    for (iNum = 0; iNum < MD5LEN; iNum++) {
+    for (iNum = 0; iNum < MD5LEN; iNum ++) {
         sprintf(&cMd5Buf[iNum], "%02X", pMD5Value[iNum]);
     }
 
@@ -192,7 +192,7 @@ static void MD5Update(MD5_CTX *pContext,
     iIndex = (unsigned int)((pContext->count[0] >> 3) & 0x3F);   
     if ((pContext->count[0] += ((UINT4)iInputLen << 3)) 
             < ((UINT4)iInputLen << 3)) {   
-        pContext->count[1]++;   
+        pContext->count[1] ++;   
     }
     pContext->count[1] += ((UINT4)iInputLen >> 29);   
 
@@ -231,7 +231,7 @@ static void MD5Final(unsigned char cDigest[16], MD5_CTX *pContext)
 static int IsPasswdOK(unsigned char* pPasswdMD5)
 {
     int iNum;
-    for (iNum = 0; iNum < MD5LEN; iNum++) {
+    for (iNum = 0; iNum < MD5LEN; iNum ++) {
         if (pPasswdMD5[iNum] != ACTIVEPASSWD[iNum]) {
             return 0;
         }

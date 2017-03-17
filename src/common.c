@@ -28,13 +28,13 @@ char* GetRandStr(int iLength)
 {
     int iNum;
     int iRandNum = 0;
-    static char cRandStrBuf[SIZE_1K*2] = {0};
+    static char cRandStrBuf[SIZE_1K*20] = {0};
 
-    for (iNum = 0; iNum < iLength; iNum++) {
+    for (iNum = 0; iNum < iLength; iNum ++) {
         iRandNum = GetRandNum() % 200;
-        if (((iRandNum <= 122) && (iRandNum >= 97)) ||
-            ((iRandNum <= 90)  && (iRandNum >= 65)) ||
-            ((iRandNum <= 57)  && (iRandNum >= 48))) {
+        if (((iRandNum <= 122) && (iRandNum >= 97)) 
+                || ((iRandNum <= 90)  && (iRandNum >= 65)) 
+                || ((iRandNum <= 57)  && (iRandNum >= 48))) {
             sprintf(cRandStrBuf+iNum, "%c", iRandNum);
         } else {
             iNum--;
@@ -49,7 +49,7 @@ U16 GetCheckSum(U16* pDataBuf, int iLength)
 {
     unsigned long iSum;
     for (iSum = 0; iLength > 0; iLength--) {
-        iSum += *pDataBuf++;
+        iSum += *pDataBuf ++;
     }
     iSum = (iSum >> 16) + (iSum & 0xffff);
     iSum += (iSum >> 16);
@@ -105,13 +105,13 @@ char* GetRandURL(char* pField, int iTotleLen)
     char* pThirdDomain  = "www";
 
     int iURILen = iTotleLen - strlen(pFirstDomain) 
-                    - strlen(pSecondDomain) - strlen(pSecondDomain);
+        - strlen(pSecondDomain) - strlen(pSecondDomain);
     if (strcmp(pField, "HOST") == 0) {
         sprintf(cURLBuf, "%s.%s.%s", 
-            pThirdDomain, pSecondDomain, pFirstDomain);
+                pThirdDomain, pSecondDomain, pFirstDomain);
     } else {
         sprintf(cURLBuf, "%s.%s.%s/%s", 
-            pThirdDomain, pSecondDomain, pFirstDomain , GetRandStr(iURILen));
+                pThirdDomain, pSecondDomain, pFirstDomain , GetRandStr(iURILen));
     }
 
     return cURLBuf;
@@ -165,7 +165,7 @@ char* GetIncrMacAddr(int iSoD)
             }
             iMacLenth--;
         } else {
-            cMacAddr[iSoD][iMacLenth]++;
+            cMacAddr[iSoD][iMacLenth] ++;
             break;
         }
     }
@@ -181,7 +181,7 @@ int FillInMacAddr(char *pMacStr, char *pMacBuf)
 
     int iNum;
     char *pMacTmp = NULL;
-    for (iNum = 0; iNum < 6; iNum++) {
+    for (iNum = 0; iNum < 6; iNum ++) {
         pMacBuf[iNum] = pMacStr ? strtoul (pMacStr, &pMacTmp, 16) : 0;
         if (pMacStr) {
             pMacStr = (*pMacTmp) ? pMacTmp + 1 : pMacTmp;
@@ -223,18 +223,18 @@ int CheckIpAddrLegal(char* pIpStr)
             }
         }
     } 
-    
+
     // IP address detection 
     if (sscanf(pIpStr, "%d%c%d%c%d%c%d", 
-            &iIpNum[0], &cIpDot[0], &iIpNum[1], &cIpDot[1],
-            &iIpNum[2], &cIpDot[2], &iIpNum[3]) == 7) {
+                &iIpNum[0], &cIpDot[0], &iIpNum[1], &cIpDot[1],
+                &iIpNum[2], &cIpDot[2], &iIpNum[3]) == 7) {
         int iNum;
-        for (iNum = 0; iNum < 3; ++iNum) {
+        for (iNum = 0; iNum < 3;  ++iNum) {
             if (cIpDot[iNum] != '.') {
                 return ERROR;
             }
         }
-        for (iNum = 0; iNum < 4; ++iNum) {
+        for (iNum = 0; iNum < 4;  ++iNum) {
             if (iIpNum[iNum] > 255 || iIpNum[iNum] < 0) {
                 return ERROR;
             }
@@ -256,7 +256,7 @@ char* GetRandIp4Addr()
     return cIpAddr;
 }
 
-/* Get increased IP address */
+/* Get increased IPv4 address */
 char* GetIncrIp4Addr(int iSoD)
 {
     if (iSoD < 0 || iSoD > 1) {
@@ -265,15 +265,36 @@ char* GetIncrIp4Addr(int iSoD)
 
     // SIP:192.168.1.1 DIP:10.10.1.1
     static unsigned int iIpAddr[] = {3232235777, 168430081};
-    unsigned int iIpSwitch = htonl(iIpAddr[iSoD]++);
+    unsigned int iIpSwitch = htonl(iIpAddr[iSoD] ++);
     static char cIpAddrBuf[SIZE_16B*2];
     if (((unsigned char *)&iIpSwitch)[3] != 0) {
         sprintf(cIpAddrBuf, "%u.%u.%u.%u", 
-            ((unsigned char *)&iIpSwitch)[0],
-            ((unsigned char *)&iIpSwitch)[1],
-            ((unsigned char *)&iIpSwitch)[2],
-            ((unsigned char *)&iIpSwitch)[3]);
+                ((unsigned char *)&iIpSwitch)[0],
+                ((unsigned char *)&iIpSwitch)[1],
+                ((unsigned char *)&iIpSwitch)[2],
+                ((unsigned char *)&iIpSwitch)[3]);
     }
+
+    return cIpAddrBuf;
+}
+
+/* Get random IPv6 address */
+char* GetRandIp6Addr()
+{
+    static char cIpAddrBuf[SIZE_128B];
+    strcpy(cIpAddrBuf, "::");
+    strcat(cIpAddrBuf, GetRandIp4Addr());
+
+    return cIpAddrBuf;
+}
+
+
+/* Get increased IPv6 address */
+char* GetIncrIp6Addr(int iSoD)
+{
+    static char cIpAddrBuf[SIZE_128B];
+    strcpy(cIpAddrBuf, "::");
+    strcat(cIpAddrBuf, GetIncrIp4Addr(iSoD));
 
     return cIpAddrBuf;
 }
@@ -293,7 +314,7 @@ int GetIncrPort(int iSoD)
     }
 
     static int iPortArray[] = {0, 0};
-    if (iPortArray[iSoD]++ > 65535) {
+    if (iPortArray[iSoD] ++ > 65535) {
         iPortArray[iSoD] = 0;
     }
 
@@ -312,7 +333,7 @@ int GetIncrPktLen()
 {
     // Minimum packet length is 64 bytes
     static int iLength = 64;
-    return ((iLength >= 1518) ? 64 : iLength++); 
+    return ((iLength >= 1518) ? 64 : iLength ++); 
 }
 
 /* Get random VLAN ID */
@@ -330,14 +351,14 @@ int GetIncrVlan(int iVoQ)
     }
 
     static int iVlanId[] = {0, 0};
-    return ((iVlanId[iVoQ] > 4094) ? 1 : iVlanId[iVoQ]++);
+    return ((iVlanId[iVoQ] > 4094) ? 1 : iVlanId[iVoQ] ++);
 }
 
 /* Get random protocol */
 U8 GetRandL4HexPro()
 {
     U8 iResPro;
-    
+
     // UDP:45% TCP:45% ICMP4:10%
     switch(random() % 100 / 45) {
         case 0 : iResPro = UDP;
@@ -356,7 +377,7 @@ char* GetStrPro(U16 iHexPro)
     switch(iHexPro) {
         case ARP    : pStrPro = "ARP";  
         case VLAN   : pStrPro = "VLAN";  
-        case ICMP4 : pStrPro = "ICMP4";  
+        case ICMP4  : pStrPro = "ICMP4";  
         case IPv4   : pStrPro = "IPv4";  
         case UDP    : pStrPro = "UDP";  
         case TCP    : pStrPro = "TCP";  
@@ -381,6 +402,8 @@ U16 GetL3HexPro(char* pStrPro)
         iResPro = VLAN;
     } else if (strcmp(pStrPro, "IPv4") == 0) { 
         iResPro = IPv4;
+    } else if (strcmp(pStrPro, "IPv6") == 0) { 
+        iResPro = IPv6;
     } else {
         LOGRECORD(ERROR, "Protocol input error");
     }
@@ -412,10 +435,19 @@ int GetDataLen(int iPktLen)
 {
     int iDataLen = 0;
     char* pL4Pro = GetcValue("l4pro");
+    char* pL3Pro = GetcValue("l3pro");
+
+    int iIpHdrLen;
+    if (strcmp(pL3Pro, "IPv6") == 0) {
+        iIpHdrLen = IP6_HDR_LEN;
+    } else {
+        iIpHdrLen = IP4_HDR_LEN;
+    }
+
     if (strcmp(pL4Pro, "UDP") == 0) {
-        iDataLen = iPktLen - MAC_HDR_LEN - IP4_HDR_LEN - UDP_HDR_LEN;
+        iDataLen = iPktLen - MAC_HDR_LEN - iIpHdrLen - UDP_HDR_LEN;
     } else if (strcmp(pL4Pro, "TCP") == 0) {
-        iDataLen = iPktLen - MAC_HDR_LEN - IP4_HDR_LEN - TCP_HDR_LEN;
+        iDataLen = iPktLen - MAC_HDR_LEN - iIpHdrLen - TCP_HDR_LEN;
     }
 
     return iDataLen;
@@ -435,13 +467,13 @@ void ProgramProgress(int iVaribleNum, int iStanderNum)
     if (iProgressPercent != iLastPercent) {
         if (iCounter != 1) {
             // Back to init state
-            for (iNumI = 0; iNumI < iBarLength + iPercentLength; iNumI++) {
+            for (iNumI = 0; iNumI < iBarLength + iPercentLength; iNumI ++) {
                 putchar('\b');
             }
         }
 
         // Progress display
-        for (iNumJ = 0; iNumJ<iProgressPercent; iNumJ++) {
+        for (iNumJ = 0; iNumJ<iProgressPercent; iNumJ ++) {
             putchar('>');
         }
         for (iNumK = iBarLength - 1; iNumK >= iProgressPercent; iNumK--) {
@@ -457,7 +489,7 @@ void ProgramProgress(int iVaribleNum, int iStanderNum)
         if (iProgressPercent > 1) {
             iPercentLength = 3;
         }
-        iCounter++;
+        iCounter ++;
     }
 }
 
@@ -482,7 +514,7 @@ void DisplayPacketData(char* pPacket, int iPacketLength)
 void BufferCopy(char* pDstBuf, int iPos, char* pSrcStr, int iLength)
 {
     int iNum;
-    for (iNum = 0; iNum<iLength; iNum++)
+    for (iNum = 0; iNum<iLength; iNum ++)
         pDstBuf[iPos+iNum] = pSrcStr[iNum];
 }
 
@@ -491,7 +523,7 @@ int CompareIpv6Address(unsigned char* pSrcIp6Addr, unsigned char* pDstIp6Addr)
 {
     int iNum;
     int iLength = sizeof(struct in6_addr);
-    for (iNum = 0; iNum<iLength; iNum++) {
+    for (iNum = 0; iNum<iLength; iNum ++) {
         if (pSrcIp6Addr[8+iNum] != pDstIp6Addr[iNum])
             return -1 ;
     }
@@ -524,7 +556,7 @@ int OpenSaveFile(char* pFileName)
         LOGRECORD(ERROR, "Filename is NULL");
     }
     if ((iSaveFd = open(pFileName, \
-        O_WRONLY | O_CREAT | O_APPEND, PERM)) < 0 ) {
+                    O_WRONLY | O_CREAT | O_APPEND, PERM)) < 0 ) {
         LOGRECORD(ERROR, "Open save-file failed:%d", iSaveFd);
     }
 

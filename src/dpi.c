@@ -73,8 +73,8 @@ void L4HdrInspection(U8 pro)
     if (pro == TCP) {
         stPkt.pTcpHdr = (_tcphdr *) pL4Hdr;
         stInfo.iCursor += ((stPkt.pTcpHdr->hdrlen >> 4) * 4);
-        int iTcpDataLen = htons(stPkt.pIp4Hdr->total_len) 
-            - (stPkt.pIp4Hdr->ver_len & 0x0f) * 4
+        int iTcpDataLen = htons(stPkt.pIp4Hdr->ttlen) 
+            - (stPkt.pIp4Hdr->hdlen * 4)
             - ((stPkt.pTcpHdr->hdrlen >> 4) * 4);
         // TCP flow check
         if(GetiValue("flow") == ON) {
@@ -203,7 +203,7 @@ void PcapFilePraseEntrance()
         }
         PacketPraseEntrance();
         stInfo.iCursor = 0;
-        iPktNum++;
+        iPktNum ++;
     } // end of while
 
     close(iReadFd);

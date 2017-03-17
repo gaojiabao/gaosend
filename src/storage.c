@@ -140,7 +140,7 @@ static int CalcStorageSize()
     pNode pCur = pHead->next;
 
     while (pCur != NULL) {
-        iCounter++;
+        iCounter ++;
         pCur = pCur->next;
     }
     return iCounter;
@@ -170,7 +170,7 @@ void ShowParameter()
     iLength = CalcStorageSize();
     pNode pCur =  pHead->next;
 
-    for (iCounter = 0; iCounter < iLength; iCounter++) {
+    for (iCounter = 0; iCounter < iLength; iCounter ++) {
         printf("%s:%s,%d[%d]\n", pCur->title, pCur->cValue, pCur->iValue, pCur->flag);    
         pCur = pCur->next;
     }
@@ -179,15 +179,15 @@ void ShowParameter()
 /* Refresh the value of the parameter based on the input parameters */
 void RefreshParameter()
 {
-    char* pParaName = NULL;
     int iParaMode;
     int iCounter;
     int iLength = 0;
+    char* pParaName = NULL;
 
     iLength = CalcStorageSize();
     pNode pCur =  pHead->next;
 
-    for (iCounter = 0; iCounter < iLength; iCounter++) {
+    for (iCounter = 0; iCounter < iLength; iCounter ++) {
         pParaName = pCur->title;
         iParaMode = pCur->flag;
         if (iParaMode == FG_RAND) { // random 
@@ -249,7 +249,7 @@ void StorageInput(char* title, char* value, char mode)
 
         // Converting arguments to uppercase characters
         int iStrLength = strlen(value);
-        for (iCounter = 0; iCounter < iStrLength; iCounter++) {
+        for (iCounter = 0; iCounter < iStrLength; iCounter ++) {
             cProtocal[iCounter] = toupper(value[iCounter]);
         }
 
@@ -277,6 +277,9 @@ void StorageInput(char* title, char* value, char mode)
         UpdateNode("l4pro", pL4Pro, -1, 0);
         UpdateNode("l7pro", pL7Pro, -1, 0);
     }
+
+    // Test IPv6
+    //UpdateNode("l3pro", "IPv6", -1, 0);
 
     // Marking parameters are variable 
     int iParaMode;

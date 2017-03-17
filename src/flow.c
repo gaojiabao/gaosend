@@ -10,10 +10,11 @@ typedef struct HashNode_Struct stHashNode;
 
 struct HashNode_Struct {  
     char* sKey;  
-    int iState;
     int iSSeq;
     int iDSeq;
-    int iDLen; // The length of forward packet data part
+    int iDLen;  // The length of forward packet data part
+    U8  iFFlag; // The flag of forward packet
+    U8  iState; // The flag of stream.  0111 three handshake. 1111 four wave
     int iHit;  
     stHashNode* pNext;  
 };  
@@ -21,27 +22,27 @@ struct HashNode_Struct {
 stHashNode* pcHashTable[HASH_TABLE_MAX_SIZE]; 
 int iHashTableSize;  
 
-// Initialize hash table  
+/* Initialize hash table */  
 void StreamStorageInit()  
 {  
     iHashTableSize = 0;  
     memset(pcHashTable, 0, sizeof(stHashNode*) * HASH_TABLE_MAX_SIZE);  
 }  
 
-// Calculate the position in the hash table based on the hash value of key 
+/* Calculate the position in the hash table based on the hash value of key */
 unsigned int CalcPosWithKey(const char* pKeyStr)  
 {  
     const signed char* pKey = (const signed char*)pKeyStr;  
     unsigned int iPos = *pKey;  
     if (iPos) {  
-        for (pKey += 1; *pKey != '\0'; ++pKey)  
+        for (pKey += 1; *pKey != '\0';  ++pKey)  
             iPos = (iPos << 5) - iPos + *pKey;  
     }  
 
     return iPos;  
 }  
 
-// Insert key-value into hash table  
+/* Insert key-value into hash table */ 
 void StreamStorage(const char* pKey, _tcphdr* pTcpHdr, int iDataLen)  
 {  
     if (iHashTableSize >= HASH_TABLE_MAX_SIZE) {  
@@ -56,7 +57,8 @@ void StreamStorage(const char* pKey, _tcphdr* pTcpHdr, int iDataLen)
     while (pHead) {  
         // Check ack and seq
         if (strcmp(pHead->sKey, pKey) == 0) {
-            if (htonl(pTcpHdr->seq) != pHead->iSSeq && htonl(pTcpHdr->seq) != pHead->iDSeq) {
+            if (htonl(pTcpHdr->seq) != pHead->iSSeq 
+                    && htonl(pTcpHdr->seq) != pHead->iDSeq) {
                 if (iDataLen > 0 || pHead->iDLen > 0) {
                     iAmendNum = pHead->iDLen;
                 } else {
@@ -66,10 +68,36 @@ void StreamStorage(const char* pKey, _tcphdr* pTcpHdr, int iDataLen)
                     pHead->iDSeq = htonl(pTcpHdr->seq);
                 } else if (htonl(pTcpHdr->ack) - iAmendNum == pHead->iDSeq) {
                     pHead->iSSeq = htonl(pTcpHdr->seq);
-                } 
+                } else {
+                    if (pTcpHdr->flag == 0x14) {
+                        pHead->iState |= (1 << 7);
+                    }
+                }
             } 
+
+            switch (pHead->iFFlag) {
+                case 0x02:
+                    pHead->iState |= (1 << 5);
+                    break;
+                case 0x12:
+                    pHead->iState |= (1 << 4);
+                    break;
+                case 0x11:
+                    pHead->iState |= 
+                        (pHead->iState & (1 << 2)) ? (1 << 0) : (1<<2);
+                    break;
+            }
+
+            if (pTcpHdr->flag == 0x011) {
+                if (pHead->iState & (1 << 3)) { 
+                    pHead->iState |= (1 << 1);
+                } else {
+                    pHead->iState |= (1 << 3); 
+                }
+            }
+            pHead->iFFlag = pTcpHdr->flag;
             pHead->iDLen = iDataLen;
-            pHead->iHit++;
+            pHead->iHit ++;
             return;  
         }
 
@@ -86,16 +114,17 @@ void StreamStorage(const char* pKey, _tcphdr* pTcpHdr, int iDataLen)
     pNewNode->iSSeq = htonl(pTcpHdr->seq);  
     pNewNode->iDSeq = 0;  
     pNewNode->iDLen = iDataLen;  
-    pNewNode->iState = pTcpHdr->flag;  
+    pNewNode->iFFlag = pTcpHdr->flag;  
+    pNewNode->iState = (1 << 6); // syn
     pNewNode->iHit = 1;
 
     pNewNode->pNext = pcHashTable[iPos];  
     pcHashTable[iPos] = pNewNode;  
 
-    iHashTableSize++;  
+    iHashTableSize ++;  
 }  
 
-// Delete key-value from hash table
+/* Delete key-value from hash table */
 void DeleteStreamStorage(const char* pkey)  
 {  
     unsigned int iPos = CalcPosWithKey(pkey) % HASH_TABLE_MAX_SIZE;  
@@ -124,7 +153,7 @@ void DeleteStreamStorage(const char* pkey)
     }  
 }  
 
-// Find hash node based on key
+/* Find hash node based on key */
 stHashNode* QueryStreamStorage(const char* pkey)  
 {  
     unsigned int iPos = CalcPosWithKey(pkey) % HASH_TABLE_MAX_SIZE;  
@@ -141,33 +170,40 @@ stHashNode* QueryStreamStorage(const char* pkey)
     return NULL;  
 }  
 
-// Display the contents of the hash table
+/* Display the contents of the hash table */
 void DisplayStreamStorage()  
 {  
     int iNum;  
-    int iCounter = 0;
+    int iAllFlowNum = 0;
+    int iPerfectNum = 0;
     printf("================The content of Hash table================\n");
-    for (iNum = 0; iNum < HASH_TABLE_MAX_SIZE; ++iNum) {
+    for (iNum = 0; iNum < HASH_TABLE_MAX_SIZE;  ++iNum) {
         if (pcHashTable[iNum]) {  
+            iAllFlowNum ++;
             stHashNode* pHead = pcHashTable[iNum];  
-            printf("Node[%4d] => ", iNum);  
+            if (pHead->iState < 0x7f) {
+                continue;
+            }
             while (pHead) {  
-                printf("%s:%d,%x,%x,%d  ", pHead->sKey, pHead->iState, pHead->iSSeq, pHead->iDSeq, pHead->iHit);  
-                iCounter++;
+                printf("Node[%7d] => %s:0x%x,0x%x,0x%x,%d  ", 
+                        iNum, pHead->sKey, pHead->iState, 
+                        pHead->iSSeq, pHead->iDSeq, pHead->iHit);  
+                iPerfectNum ++;
                 pHead = pHead->pNext;  
             }  
             printf("\n");  
         }  
     }
-    printf("Totle flow num:%d\n", iCounter);
+    printf("Total flow num:%d\n", iAllFlowNum);
+    printf("Perfect flow num:%d\n", iPerfectNum);
     printf("===========================END===========================\n");
 }  
 
-// Free the memory of the hash table  
+/* Free the memory of the hash table */ 
 void ReleaseStreamStorage()  
 {  
     int iNum;  
-    for (iNum = 0; iNum < HASH_TABLE_MAX_SIZE; ++iNum) {  
+    for (iNum = 0; iNum < HASH_TABLE_MAX_SIZE;  ++iNum) {  
         if (pcHashTable[iNum]) {  
             stHashNode* pHead = pcHashTable[iNum];  
             while (pHead) {  

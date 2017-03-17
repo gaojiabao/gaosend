@@ -150,7 +150,7 @@ void TerminalParametersAnalyse(int argc, char *argv[])
 
     // Save command line input
     memset(cCmdBuf, 0 , sizeof(cCmdBuf));
-    for (iCounter = 0; iCounter < argc; iCounter++) {
+    for (iCounter = 0; iCounter < argc; iCounter ++) {
         strcat(cCmdBuf, argv[iCounter]);
         strcat(cCmdBuf, " ");
     }
@@ -225,8 +225,7 @@ int main(int argc, char* argv[])
     CertificationAuthority(argv);
 
     // Functional program entry
-    switch(GetiValue("entrance"))
-    {
+    switch(GetiValue("entrance")) {
         case 101: BuildPacket(); break;
         case 102: DuplicatePacket();break; 
         case 103: SplitPacket(); break; 

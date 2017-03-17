@@ -41,7 +41,7 @@ static void RecordRunningLog(char* pLog)
     int iLogFd = 0;
 
     if ((iLogFd = open("/etc/.sendlog", \
-        O_WRONLY | O_CREAT | O_APPEND, PERM)) < 0 ) {
+                    O_WRONLY | O_CREAT | O_APPEND, PERM)) < 0 ) {
         LOGRECORD(ERROR, "Open log failed");
     }
 
@@ -84,7 +84,7 @@ static void ErrorProcessing(char* pLog, char* pInfo)
 
 /* Log handler entry */
 void LogProcessingEntrance(char* pFileName, 
-    int iLineNum, int iLevel, char* pFmt, ...)
+        int iLineNum, int iLevel, char* pFmt, ...)
 {
     char       cLogMessage[SIZE_1K*4];
     char       cInfoMessage[SIZE_1K*4];
@@ -95,8 +95,8 @@ void LogProcessingEntrance(char* pFileName,
     va_end(vaArgPtr);
 
     sprintf(cLogMessage, "[%11s][%4d][%-24s][====>][%d][%s]\n", 
-        (char*)(basename(pFileName)), iLineNum, 
-        GetCurrentTime(), iLevel, cInfoMessage);
+            (char*)(basename(pFileName)), iLineNum, 
+            GetCurrentTime(), iLevel, cInfoMessage);
 
     switch(iLevel) {
         case ERROR   : ErrorProcessing(cLogMessage, cInfoMessage); break;

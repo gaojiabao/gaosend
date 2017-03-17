@@ -67,9 +67,10 @@ typedef struct arphdr {
 }__attribute__((packed)) _arphdr;
 
 typedef struct ip4hdr {
-    U8     ver_len;
+    U8     hdlen:4,
+           version:4;
     U8     tos;
-    U16    total_len;
+    U16    ttlen;
     U16    ident;
     U16    flag_offset;
     U8     ttl;
@@ -80,9 +81,12 @@ typedef struct ip4hdr {
 }_ip4hdr;
 
 typedef struct ip6hdr {
+/*
     U32    version:4,
            traffic:8,
            flowLabel:20;
+            */
+    U32    version;
     U16    payload;
     U8     protocol;
     U8     nextHop;

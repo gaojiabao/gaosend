@@ -52,9 +52,9 @@ void DuplicatePacket()
 
     int iCopyCount = GetiValue("count");
     int iCounter = 1;
-    
+
     // Append data
-    for (; iCounter<=iCopyCount; iCounter++) {
+    for (; iCounter<=iCopyCount; iCounter ++) {
         if (write(iSaveFd, pPcapData, iPcapDataLen) < 0) {
             LOGRECORD(ERROR, "Duplication write error");
         }
@@ -93,7 +93,7 @@ char* ParseReadList(char* pCmd)
 
     return cCmdBuf;
 }
-    
+
 /* Merge packets into one pcap file */
 void MergePacket(int argc, char* argv[])
 {
@@ -104,6 +104,7 @@ void MergePacket(int argc, char* argv[])
     int iParsePcapSwitch = 1;
 
     char* filelist = GetcValue("filelist");
+    printf("filelist:%s\n", filelist);
     char* file = strtok(filelist, " "); // Get rid of 'r'
 
     while (1 == 1) {
@@ -143,7 +144,7 @@ char* GenerateFileName(char* pFileName)
     static char cNewFileName[32];
     static int  iNameSuffix = 0;
     char *pNamePrefix = strtok(pFileName, ".");
-    sprintf(cNewFileName, "%s-%d.pcap", pNamePrefix, iNameSuffix++);
+    sprintf(cNewFileName, "%s_%d.pcap", pNamePrefix, iNameSuffix ++);
 
     return cNewFileName;
 }

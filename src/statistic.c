@@ -58,31 +58,31 @@ void StatisticUpperTcp(int sport, int dport)
 void RecordStatisticsInfo(int iEmProNum)
 {
     switch(iEmProNum) {
-        case EMPRO_ARP      : iArpNum++;
-                              iTotleNum++;   break;
-        case EMPRO_VLAN     : iVlanNum++;    break;
-        case EMPRO_QinQ     : iQinQNum++;    break;
-        case EMPRO_IPv4     : iIpv4Num++;    
-                              iTotleNum++;   break;
-        case EMPRO_IPv6     : iIpv6Num++; 
-                              iTotleNum++;   break;
-        case EMPRO_ICMP4   : iIcmpv4Num++;  break;
-        case EMPRO_ICMP6   : iIcmpv6Num++;  break;
-        case EMPRO_UDP      : iUdpNum++;     break;
-        case EMPRO_TCP      : iTcpNum++;     break;
-        case EMPRO_UDP6     : iUdp6Num++;    break; 
-        case EMPRO_TCP6     : iTcp6Num++;    break;
-        case EMPRO_HTTP     : iHttpNum++;    break;
-        case EMPRO_DNS      : iDnsNum++;     break;
-        case EMPRO_SMB      : iSmbNum++;     break;
-        case EMPRO_FTP      : iFtpNum++;     break;
-        case EMPRO_SMTP     : iSmtpNum++;    break;
-        case EMPRO_POP3     : iPop3Num++;    break;
-        case EMPRO_IMAP     : iImapNum++;    break;
-        case EMPRO_L4OTHER  : iL4OtherNum++; break;   
-        case EMPRO_L4OTHER6 : iL4Other6Num++;break;   
-        case EMPRO_L3OTHER  : iL3OtherNum++;     
-                              iTotleNum++;   break;
+        case EMPRO_ARP      : iArpNum ++;
+                              iTotleNum ++;   break;
+        case EMPRO_VLAN     : iVlanNum ++;    break;
+        case EMPRO_QinQ     : iQinQNum ++;    break;
+        case EMPRO_IPv4     : iIpv4Num ++;    
+                              iTotleNum ++;   break;
+        case EMPRO_IPv6     : iIpv6Num ++; 
+                              iTotleNum ++;   break;
+        case EMPRO_ICMP4    : iIcmpv4Num ++;  break;
+        case EMPRO_ICMP6    : iIcmpv6Num ++;  break;
+        case EMPRO_UDP      : iUdpNum ++;     break;
+        case EMPRO_TCP      : iTcpNum ++;     break;
+        case EMPRO_UDP6     : iUdp6Num ++;    break; 
+        case EMPRO_TCP6     : iTcp6Num ++;    break;
+        case EMPRO_HTTP     : iHttpNum ++;    break;
+        case EMPRO_DNS      : iDnsNum ++;     break;
+        case EMPRO_SMB      : iSmbNum ++;     break;
+        case EMPRO_FTP      : iFtpNum ++;     break;
+        case EMPRO_SMTP     : iSmtpNum ++;    break;
+        case EMPRO_POP3     : iPop3Num ++;    break;
+        case EMPRO_IMAP     : iImapNum ++;    break;
+        case EMPRO_L4OTHER  : iL4OtherNum ++; break;   
+        case EMPRO_L4OTHER6 : iL4Other6Num ++;break;   
+        case EMPRO_L3OTHER  : iL3OtherNum ++;     
+                              iTotleNum ++;   break;
     }
 }
 

@@ -68,33 +68,47 @@ void StreamStorage(const char* pKey, _tcphdr* pTcpHdr, int iDataLen)
                     pHead->iDSeq = htonl(pTcpHdr->seq);
                 } else if (htonl(pTcpHdr->ack) - iAmendNum == pHead->iDSeq) {
                     pHead->iSSeq = htonl(pTcpHdr->seq);
-                } else {
-                    if (pTcpHdr->flag == 0x14) {
-                        pHead->iState |= (1 << 7);
-                    }
                 }
             } 
 
-            switch (pHead->iFFlag) {
-                case 0x02:
-                    pHead->iState |= (1 << 5);
-                    break;
-                case 0x12:
-                    pHead->iState |= (1 << 4);
-                    break;
-                case 0x11:
-                    pHead->iState |= 
-                        (pHead->iState & (1 << 2)) ? (1 << 0) : (1<<2);
-                    break;
+            if (pTcpHdr->flag == 0x14) { // RST
+                pHead->iState |= (1 << 7);
+            } else if (pTcpHdr->flag == 0x012) { // SYN + ACK
+                pHead->iState |= (1 << 5);
+            } else if (pHead->iFFlag == 0x012 
+                    && pTcpHdr->flag == 0x010) { // ACK
+                pHead->iState |= (1 << 4);
+            } else if ((pTcpHdr->flag & 0x001) && (pTcpHdr->flag & 0x010)) {
+                pHead->iState |= 
+                    (pHead->iState & (1 << 3)) ? (1 << 1) : (1 << 3);
+            } else if (((pHead->iFFlag & 0x001) && (pHead->iFFlag & 0x010))
+                    && (pTcpHdr->flag == 0x010)) {
+                pHead->iState |= 
+                    (pHead->iState & (1 << 2)) ? (1 << 0) : (1 << 2);
             }
 
-            if (pTcpHdr->flag == 0x011) {
-                if (pHead->iState & (1 << 3)) { 
-                    pHead->iState |= (1 << 1);
-                } else {
-                    pHead->iState |= (1 << 3); 
-                }
-            }
+            /*
+               switch (pHead->iFFlag) {
+               case 0x02:
+               pHead->iState |= (1 << 5);
+               break;
+               case 0x12:
+               pHead->iState |= (1 << 4);
+               break;
+               case 0x11:
+               pHead->iState |= 
+               (pHead->iState & (1 << 2)) ? (1 << 0) : (1<<2);
+               break;
+               }
+
+               if (pTcpHdr->flag == 0x011) {
+               if (pHead->iState & (1 << 3)) { 
+               pHead->iState |= (1 << 1);
+               } else {
+               pHead->iState |= (1 << 3); 
+               }
+               }
+               */
             pHead->iFFlag = pTcpHdr->flag;
             pHead->iDLen = iDataLen;
             pHead->iHit ++;
@@ -115,7 +129,7 @@ void StreamStorage(const char* pKey, _tcphdr* pTcpHdr, int iDataLen)
     pNewNode->iDSeq = 0;  
     pNewNode->iDLen = iDataLen;  
     pNewNode->iFFlag = pTcpHdr->flag;  
-    pNewNode->iState = (1 << 6); // syn
+    pNewNode->iState = (1 << 6); // SYN
     pNewNode->iHit = 1;
 
     pNewNode->pNext = pcHashTable[iPos];  
@@ -181,9 +195,9 @@ void DisplayStreamStorage()
         if (pcHashTable[iNum]) {  
             iAllFlowNum ++;
             stHashNode* pHead = pcHashTable[iNum];  
-            if (pHead->iState < 0x7f) {
-                continue;
-            }
+               if (pHead->iState < 0x7f) {
+               continue;
+               }
             while (pHead) {  
                 printf("Node[%7d] => %s:0x%x,0x%x,0x%x,%d  ", 
                         iNum, pHead->sKey, pHead->iState, 

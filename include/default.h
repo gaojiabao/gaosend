@@ -20,8 +20,8 @@
 #define TCP_HDR_LEN    20
 #define DNS_HDR_LEN    12
 #define PSEUDO_HDR_LEN 12
-#define PKT_MIN_LEN    64 
-#define PKT_MAX_LEN    1518*20
+#define PKT_MIN_LEN    54
+#define PKT_MAX_LEN    1518
 
 // Define MD5 character length
 #define MD5LEN         16
@@ -47,21 +47,19 @@
 #define VLANID         4032
 #define SPORT          1024
 #define DPORT          2048
-#define PKTLEN         64
+#define PKTLEN         100
 #define PROTOCOL       "udp"
 #define INTERFACE      "lo"
+#define OFFSET         0
 #define INTERVAL       0    
 #define COUNT          1
 #define RULENUM        1
-#define MODE           "1"
-#define OFFSET         0
-#define STRLEN         10
 #define PCAPFILE       "temp.pcap"
 #define ACLNMASKFILE   "aclnmask.cfg"
 #define ACLEXFILE      "aclex.cfg"
 #define MACTABLEFILE   "mac_table.cfg"
 #define L2PRO          "ethernet"
-#define VERSION        "v4.9.4"
+#define VERSION        "v4.9.5"
 
 #endif
 

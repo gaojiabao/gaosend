@@ -104,7 +104,6 @@ void MergePacket(int argc, char* argv[])
     int iParsePcapSwitch = 1;
 
     char* filelist = GetcValue("filelist");
-    printf("filelist:%s\n", filelist);
     char* file = strtok(filelist, " "); // Get rid of 'r'
 
     while (1 == 1) {

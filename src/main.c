@@ -29,6 +29,8 @@ struct option LongOptions[] = {
     {.name = "rulelen",   .has_arg = optional_argument, .val = 'y'}, 
     {.name = "offset",    .has_arg = optional_argument, .val = 'O'}, 
     {.name = "rule",      .has_arg = required_argument, .val = 'Z'}, 
+    {.name = "ip-flags",  .has_arg = required_argument, .val = 'x'}, 
+    {.name = "ip-offset", .has_arg = required_argument, .val = 'o'}, 
     {.name = "tcp-flag",  .has_arg = required_argument, .val = 'e'}, 
     {.name = "tcp-seq",   .has_arg = required_argument, .val = 'j'}, 
     {.name = "tcp-ack",   .has_arg = required_argument, .val = 'k'}, 
@@ -82,6 +84,9 @@ void UsageOfProgram()
         "OTHER ARGS\n"
         "\t--read       -r   Read packet from the  pcap file < filename >\n"
         "\t--save       -w   Save packet into a pcap file < filename >\n"
+        "\t--ip-flags   -x   Set IP fragment flags\n"
+        "\t--ip-offset  -x   Set IP fragment offset\n"
+        "\t--save       -w   Save packet into a pcap file < filename >\n"
         "\t--flowcheck  -F   Turn on flow check switch, only use with -A\n"
         "\t--tcp-flag   -e   TCP flag bit\n"
         "\t--tcp-seq    -j   TCP sequence number\n"
@@ -123,9 +128,11 @@ void ParametersInit()
     InsertNode("tcp-hdrlen", NULL, 20, 0);
     InsertNode("dport", NULL, DPORT, 0);
     InsertNode("vlannum", NULL, 0, 0);
+    InsertNode("ip_flags", NULL, 1, 0);
+    InsertNode("ip_offset", NULL, 0, 0);
     InsertNode("l3pro", "IPv4", -1, 0);
     InsertNode("l4pro", "UDP", -1, 0);
-    InsertNode("offset", NULL, 0, 0);
+    InsertNode("offset", NULL, OFFSET, 0);
     InsertNode("debug", NULL, 0, 0);
     InsertNode("flow", NULL, 0, 0);
     InsertNode("exec", NULL, 0, 0); // 0:send,1:save
@@ -141,9 +148,9 @@ void ParametersInit()
 void TerminalParametersAnalyse(int argc, char *argv[])
 {
     char  cCmdInput;
-    // Residual parameter: notxz GHJKLNTUY
+    // Residual parameter: ntz GHJKLNTUY
     char* pParaOption = "fBFgDCmAMvhRX"
-                "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:I:S:y:O:Z:e:j:k:q:E:";
+                "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:x:I:S:y:o:O:Z:e:j:k:q:E:";
 
     int   iCounter;
     char  cCmdBuf[1024];
@@ -185,6 +192,8 @@ void TerminalParametersAnalyse(int argc, char *argv[])
             case 'I': StorageInput("interface", optarg, 'c'); break;
             case 'S': StorageInput("string", optarg, 'c'); break;
             case 'y': StorageInput("rulelen", optarg, 'c'); break;
+            case 'x': StorageInput("ip_flags", optarg, 'i'); break;
+            case 'o': StorageInput("ip_offset", optarg, 'i'); break;
             case 'O': StorageInput("offset", optarg, 'i'); break;
             case 'Z': StorageInput("rule", optarg, 'c'); break;
             case 'E': StorageInput("expression", optarg, 'c'); break;

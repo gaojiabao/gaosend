@@ -8,7 +8,7 @@
 #define     ON   1 // Switch ON
 #define     OFF  0 // Switch OFF
 
-#define     PKTBUFLEN   SIZE_1K*2
+#define     PKTBUFLEN   SIZE_1K*10
 
 /* Packet structure */
 static stPktStrc stPkt;

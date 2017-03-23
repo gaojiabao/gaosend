@@ -272,7 +272,22 @@ void StorageInput(char* title, char* value, char mode)
             pL3Pro = "IPv4";
             pL4Pro = "UDP";
             pL7Pro = cProtocal;
+        } else if ((strcmp(cProtocal, "ICMP6") == 0) 
+            || (strcmp(cProtocal, "UDP6") == 0) 
+            || (strcmp(cProtocal, "TCP6") == 0)) {
+            pL3Pro = "IPv6";
+            pL4Pro = cProtocal;
+        } else if ((strcmp(cProtocal, "HTTP-GET6") == 0)
+            || (strcmp(cProtocal, "HTTP-POST6") == 0)) {
+            pL3Pro = "IPv6";
+            pL4Pro = "TCP";
+            pL7Pro = cProtocal;
+        } else if (strcmp(cProtocal, "DNS6") == 0) {
+            pL3Pro = "IPv6";
+            pL4Pro = "UDP";
+            pL7Pro = cProtocal;
         }
+
         UpdateNode("l3pro", pL3Pro, -1, 0);
         UpdateNode("l4pro", pL4Pro, -1, 0);
         UpdateNode("l7pro", pL7Pro, -1, 0);

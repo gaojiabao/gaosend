@@ -28,7 +28,7 @@ char* GetRandStr(int iLength)
 {
     int iNum;
     int iRandNum = 0;
-    static char cRandStrBuf[SIZE_1K*20] = {0};
+    static char cRandStrBuf[SIZE_1K] = {0};
 
     for (iNum = 0; iNum < iLength; iNum ++) {
         iRandNum = GetRandNum() % 200;
@@ -378,7 +378,9 @@ char* GetStrPro(U16 iHexPro)
         case ARP    : pStrPro = "ARP";  
         case VLAN   : pStrPro = "VLAN";  
         case ICMP4  : pStrPro = "ICMP4";  
+        case ICMP6  : pStrPro = "ICMP6";  
         case IPv4   : pStrPro = "IPv4";  
+        case IPv6   : pStrPro = "IPv6";  
         case UDP    : pStrPro = "UDP";  
         case TCP    : pStrPro = "TCP";  
         default     : LOGRECORD(ERROR, "Protocol not identified");
@@ -420,11 +422,15 @@ U8 GetL4HexPro(char* pStrPro)
 
     U8 iResPro = 0;
 
-    if (strcmp(pStrPro, "ICMP4") == 0) {
+    if (strcmp(pStrPro, "ICMP") == 0) {
         iResPro = ICMP4;
-    } else if (strcmp(pStrPro, "TCP") == 0) {
+    } else if (strcmp(pStrPro, "ICMP6") == 0) {
+        iResPro = ICMP6;
+    } else if ((strcmp(pStrPro, "TCP") == 0)
+            || (strcmp(pStrPro, "TCP6") == 0)) {
         iResPro = TCP;
-    } else if (strcmp(pStrPro, "UDP") == 0) {
+    } else if ((strcmp(pStrPro, "UDP") == 0)
+            || (strcmp(pStrPro, "UDP6") == 0)) {
         iResPro = UDP;
     }
 
@@ -434,8 +440,9 @@ U8 GetL4HexPro(char* pStrPro)
 int GetDataLen(int iPktLen)
 {
     int iDataLen = 0;
-    char* pL4Pro = GetcValue("l4pro");
     char* pL3Pro = GetcValue("l3pro");
+    char* pL4Pro = GetcValue("l4pro");
+    int   iVlanLen = VLAN_TAG_LEN * GetiValue("vlannum");
 
     int iIpHdrLen;
     if (strcmp(pL3Pro, "IPv6") == 0) {
@@ -444,10 +451,14 @@ int GetDataLen(int iPktLen)
         iIpHdrLen = IP4_HDR_LEN;
     }
 
-    if (strcmp(pL4Pro, "UDP") == 0) {
-        iDataLen = iPktLen - MAC_HDR_LEN - iIpHdrLen - UDP_HDR_LEN;
-    } else if (strcmp(pL4Pro, "TCP") == 0) {
-        iDataLen = iPktLen - MAC_HDR_LEN - iIpHdrLen - TCP_HDR_LEN;
+    if ((strcmp(pL4Pro, "UDP") == 0) 
+            || (strcmp(pL4Pro, "UDP6") == 0)) {
+        iDataLen = iPktLen - MAC_HDR_LEN 
+            - iVlanLen - iIpHdrLen - UDP_HDR_LEN;
+    } else if ((strcmp(pL4Pro, "TCP") == 0)
+            || (strcmp(pL4Pro, "TCP6") == 0)){
+        iDataLen = iPktLen - MAC_HDR_LEN 
+            - iVlanLen - iIpHdrLen - TCP_HDR_LEN;
     }
 
     return iDataLen;

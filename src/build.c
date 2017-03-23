@@ -19,6 +19,8 @@
 static stPktStrc stPkt;
 static stPktInfo stInfo;
 
+#define PKT_BUF_LEN SIZE_1K*5
+
 /* Constructing pcap header used to identify file type */
 static void BuildPcapHeader()
 {
@@ -55,7 +57,7 @@ static U16 BuildPseduoPacket(void* pData)
     U8  iL4Pro = GetL4HexPro(GetcValue("l4pro"));
 
     // Build pseudo header
-    static char cPseudoPacket[SIZE_1K*20];
+    static char cPseudoPacket[PKT_BUF_LEN];
     _pseudohdr* pPseudoHdr = (_pseudohdr *)cPseudoPacket;
     pPseudoHdr->sip = stPkt.pIp4Hdr->sip;
     pPseudoHdr->dip = stPkt.pIp4Hdr->dip;
@@ -123,11 +125,13 @@ static void BuildMacHeader()
 
     FillInMacAddr(GetcValue("dmac"), (char*)&stPkt.pMacHdr->dmac);
     FillInMacAddr(GetcValue("smac"), (char*)&stPkt.pMacHdr->smac);
-    stPkt.pMacHdr->pro = htons(GetL3HexPro(GetcValue("l3pro")));
+    U16 iNextPro = GetiValue("vlannum") ? 
+        htons(VLAN) : htons(GetL3HexPro(GetcValue("l3pro"))); 
+    stPkt.pMacHdr->pro = iNextPro;
 }
 
 /* Constructing vlan tag */
-static void BuildVlanTag(int iVlanNum)
+static void BuildVlanTag(int iVlanNum, int iTotleNum)
 {
     _vlanhdr* pVlanInfo[] = {
         stPkt.pVlanHdr,
@@ -135,13 +139,14 @@ static void BuildVlanTag(int iVlanNum)
     }; 
 
     stInfo.iCursor -= VLAN_TAG_LEN;
+
     int iVlanLayer = (stInfo.iCursor == MAC_HDR_LEN ? 0 : 1);
     pVlanInfo[iVlanLayer] = (_vlanhdr *)(stPkt.pPacket + stInfo.iCursor);
 
-    pVlanInfo[iVlanNum]->id = ((iVlanNum - iVlanLayer) == 1 ?  
-            htons(VLAN) : htons(GetL3HexPro(GetcValue("l3pro"))));
-    pVlanInfo[iVlanNum]->pro = (iVlanNum == 1 ? 
-            GetiValue("vlan") : GetiValue("qinq"));
+    pVlanInfo[iVlanLayer]->id = ((iVlanNum == 1) ? 
+            htons(GetiValue("vlan")) : htons(GetiValue("qinq")));
+    pVlanInfo[iVlanLayer]->pro = ((iVlanNum == iTotleNum) ?  
+            htons(GetL3HexPro(GetcValue("l3pro"))) : htons(VLAN));
 }
 
 /* Building IP protocol header */
@@ -157,7 +162,10 @@ static void BuildIp4Header()
     stPkt.pIp4Hdr->tos = 0;
     stPkt.pIp4Hdr->ttlen = htons(stInfo.iPktLen - stInfo.iCursor);
     stPkt.pIp4Hdr->ident = 1;
-    stPkt.pIp4Hdr->flag_offset = (4 << 4);
+    //stPkt.pIp4Hdr->flag_offset = (4 << 4);
+    //stPkt.pIp4Hdr->flag_offset = ((2 << 4) | GetiValue("off_frag") / 8);
+    stPkt.pIp4Hdr->flag_offset = (GetiValue("ip_flags") << 6) 
+        | (htons(GetiValue("ip_offset") / 8));
     stPkt.pIp4Hdr->ttl = 128;
     stPkt.pIp4Hdr->protocol = iL4Pro;
     stPkt.pIp4Hdr->checksum = 0;
@@ -189,7 +197,6 @@ static void BuildIp6Header()
     stPkt.pIp6Hdr->payload = htons(iPayLen);
     stPkt.pIp6Hdr->protocol = iL4Pro;
     stPkt.pIp6Hdr->nextHop = 0xff;
-    //inet_pton(AF_INET6, "2a01:198:603:0:396e:4789:8e99:890f", stPkt.pIp6Hdr->sip);
     inet_pton(AF_INET6, "::192.168.1.1", stPkt.pIp6Hdr->sip);
     inet_pton(AF_INET6, "2a01:198:603:0::", stPkt.pIp6Hdr->dip);
 
@@ -254,13 +261,17 @@ static void BuildUdpHeader()
 /* Building ICMP protocol header */
 static void BuildIcmp4Header(int iOperationType)
 {
-    stInfo.iPktLen = 74;
-    stInfo.iCursor = MAC_HDR_LEN + IP4_HDR_LEN;
+    //stInfo.iPktLen = 100;
+    //stInfo.iCursor = MAC_HDR_LEN + IP4_HDR_LEN;
+    int iVlanLen = VLAN_TAG_LEN * GetiValue("vlannum");
+    //stInfo.iCursor = MAC_HDR_LEN + IP6_HDR_LEN;
+    stInfo.iCursor = (strcmp(GetcValue("l3pro"), "IPv4") == 0) ? 
+        MAC_HDR_LEN + iVlanLen + IP4_HDR_LEN : MAC_HDR_LEN + iVlanLen + IP6_HDR_LEN;
     int iIcmpMessageLen = stInfo.iPktLen - stInfo.iCursor;
     stPkt.pIcmp4Hdr = (_icmp4hdr *)(stPkt.pPacket + stInfo.iCursor);
 
     // Build ICMP message header
-    stPkt.pIcmp4Hdr->type= htons(iOperationType);
+    stPkt.pIcmp4Hdr->type = iOperationType;
     // Echo request(type:8 code:0), Echo reply(type:0 code:0)
     stPkt.pIcmp4Hdr->code = 0;
     stPkt.pIcmp4Hdr->checksum = 0;
@@ -275,7 +286,7 @@ static void BuildIcmp4Header(int iOperationType)
     for (; iNum < iDataLen; iNum ++) {
         pData[iNum] = iStartPos ++;
         if (iStartPos > 0x77) { // 'w' = 0x77
-            iStartPos = 0x41;
+            iStartPos = 0x61;
         }
     }
     stPkt.pIcmp4Hdr->checksum = 
@@ -447,13 +458,14 @@ static void BuildDataContexts()
 /* Layer two protocol processing */
 static void BuildLayer2Header()
 {
-    BuildMacHeader();
-
     int iVlanNum = GetiValue("vlannum");
+    int iTotleNum = iVlanNum;
     while (iVlanNum) {
-        BuildVlanTag(iVlanNum);
+        BuildVlanTag(iVlanNum, iTotleNum);
         iVlanNum--;
     }
+
+    BuildMacHeader();
 }
 
 /* Layer three protocol processing */
@@ -479,6 +491,7 @@ static void BuildLayer4Header()
             case TCP   : BuildTcpHeader(); break;
             case UDP   : BuildUdpHeader(); break;
             case ICMP4 : BuildIcmp4Header(8); break;
+            case ICMP6 : BuildIcmp4Header(128); break;
         }
     }
 
@@ -492,7 +505,7 @@ static void BuildApplicationData()
     if (pProStr == NULL) {
         pProStr = GetcValue("l4pro");
     }
-
+ 
     if (pProStr != NULL && (strcmp(pProStr, "DNS") == 0)) {
         BuildDnsMessage();
     } else if (pProStr != NULL 
@@ -501,7 +514,9 @@ static void BuildApplicationData()
         BuildHttpMessage();
     } else if (pProStr != NULL 
             && ((strcmp(pProStr, "TCP") == 0)
-                || (strcmp(pProStr, "UDP") == 0))) {
+                || (strcmp(pProStr, "UDP") == 0)
+                || (strcmp(pProStr, "TCP6") == 0)
+                || (strcmp(pProStr, "UDP6") == 0))) { 
         BuildDataContexts();
     }
 
@@ -510,7 +525,7 @@ static void BuildApplicationData()
 
 static void BuildInitialization()
 {
-    static char cPacketBuf[SIZE_1K*20];
+    static char cPacketBuf[PKT_BUF_LEN];
     stPkt.pPacket = cPacketBuf;
 
     stInfo.iPktLen = GetiValue("pktlen");

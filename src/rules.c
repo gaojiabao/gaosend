@@ -5,7 +5,6 @@
 #include    "runlog.h"
 #include    "common.h"
 #include    "storage.h"
-#include    "statistic.h"
 
 
 static int RuleModeInitialization(char* pRuleName)

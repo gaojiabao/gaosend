@@ -35,7 +35,7 @@ struct option LongOptions[] = {
     {.name = "tcp-seq",   .has_arg = required_argument, .val = 'j'}, 
     {.name = "tcp-ack",   .has_arg = required_argument, .val = 'k'}, 
     {.name = "tcp-hdrlen",.has_arg = required_argument, .val = 'q'}, 
-    {.name = "expression",.has_arg = required_argument, .val = 'E'}, 
+    {.name = "express",   .has_arg = required_argument, .val = 'E'}, 
     {.name = "flow",      .has_arg = no_argument,       .val = 'F'}, 
     {.name = "debug",     .has_arg = no_argument,       .val = 'g'}, 
     {.name = "build",     .has_arg = no_argument,       .val = 'B'}, 
@@ -79,18 +79,19 @@ void UsageOfProgram()
         "\t--devide     -C   Devide the pcap file to single pcap file, use with -r\n"
         "\t--merge      -m   Merge the pcap files into frist pcap file, use with -r and -w\n"
         "\t--statistic  -A   Statistic informations, use with -r\n"
-        "\t--modify     -M   Modify packet, use with -r and other needed parameters\n"
+        "\t--modify     -M   Modify packet, use with -r -E and other needed parameters\n"
         "\t--format     -f   Switch packet format to *.pcap, use with -r and -w\n"
         "OTHER ARGS\n"
         "\t--read       -r   Read packet from the  pcap file < filename >\n"
         "\t--save       -w   Save packet into a pcap file < filename >\n"
         "\t--ip-flags   -x   Set IP fragment flags\n"
-        "\t--ip-offset  -x   Set IP fragment offset\n"
+        "\t--ip-offset  -o   Set IP fragment offset\n"
         "\t--save       -w   Save packet into a pcap file < filename >\n"
         "\t--flowcheck  -F   Turn on flow check switch, only use with -A\n"
         "\t--tcp-flag   -e   TCP flag bit\n"
         "\t--tcp-seq    -j   TCP sequence number\n"
         "\t--tcp-ack    -k   TCP acknowledge number\n"
+        "\t--express    -E   Used to find the target packet\n"
         "\t--ruletype   -Z   Rule type [ aclnmask | aclex | mac_table ]\n"
         "\t--interval   -i   Interval time\n"
         "\t--interface  -I   Interface number\n"
@@ -196,7 +197,7 @@ void TerminalParametersAnalyse(int argc, char *argv[])
             case 'o': StorageInput("ip_offset", optarg, 'i'); break;
             case 'O': StorageInput("offset", optarg, 'i'); break;
             case 'Z': StorageInput("rule", optarg, 'c'); break;
-            case 'E': StorageInput("expression", optarg, 'c'); break;
+            case 'E': StorageInput("express", optarg, 'c'); break;
             case 'F': StorageInput("flow", "1", 'i'); break;
             case 'e': StorageInput("tcp-flag", optarg, 'i'); break;
             case 'j': StorageInput("tcp-seq", optarg, 'i'); break;
@@ -239,8 +240,8 @@ int main(int argc, char* argv[])
         case 102: DuplicatePacket();break; 
         case 103: SplitPacket(); break; 
         case 104: MergePacket(argc, argv); break; 
-        case 105: 
-        case 106: DeepPacketInspection(); break; 
+        case 105: StatisticPacket(); break;
+        case 106: ModifyPacket(); break;
         case 107: VersionOfProgram (); break; 
         case 108: UsageOfProgram (); break; 
         case 109: SwitchPcapFormat(); break; 

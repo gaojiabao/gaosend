@@ -52,7 +52,7 @@ void StreamStorage(const char* pKey, _tcphdr* pTcpHdr, int iDataLen)
 
     unsigned int iPos = CalcPosWithKey(pKey) % HASH_TABLE_MAX_SIZE;  
 
-    stHashNode* pHead =  pcHashTable[iPos];  
+    stHashNode* pHead = pcHashTable[iPos];  
     int iAmendNum = 0;
     while (pHead) {  
         // Check ack and seq
@@ -71,7 +71,7 @@ void StreamStorage(const char* pKey, _tcphdr* pTcpHdr, int iDataLen)
                 }
             } 
 
-            if (pTcpHdr->flag == 0x14) { // RST
+            if (pTcpHdr->flag & 0x04) { // RST
                 pHead->iState |= (1 << 7);
             } else if (pTcpHdr->flag == 0x012) { // SYN + ACK
                 pHead->iState |= (1 << 5);
@@ -87,28 +87,6 @@ void StreamStorage(const char* pKey, _tcphdr* pTcpHdr, int iDataLen)
                     (pHead->iState & (1 << 2)) ? (1 << 0) : (1 << 2);
             }
 
-            /*
-               switch (pHead->iFFlag) {
-               case 0x02:
-               pHead->iState |= (1 << 5);
-               break;
-               case 0x12:
-               pHead->iState |= (1 << 4);
-               break;
-               case 0x11:
-               pHead->iState |= 
-               (pHead->iState & (1 << 2)) ? (1 << 0) : (1<<2);
-               break;
-               }
-
-               if (pTcpHdr->flag == 0x011) {
-               if (pHead->iState & (1 << 3)) { 
-               pHead->iState |= (1 << 1);
-               } else {
-               pHead->iState |= (1 << 3); 
-               }
-               }
-               */
             pHead->iFFlag = pTcpHdr->flag;
             pHead->iDLen = iDataLen;
             pHead->iHit ++;
@@ -195,9 +173,9 @@ void DisplayStreamStorage()
         if (pcHashTable[iNum]) {  
             iAllFlowNum ++;
             stHashNode* pHead = pcHashTable[iNum];  
-               if (pHead->iState < 0x7f) {
-               continue;
-               }
+            if (pHead->iState < 0x7e) { // At least one ACK
+                continue;
+            }
             while (pHead) {  
                 printf("Node[%7d] => %s:0x%x,0x%x,0x%x,%d  ", 
                         iNum, pHead->sKey, pHead->iState, 

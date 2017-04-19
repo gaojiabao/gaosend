@@ -11,6 +11,7 @@
 #include    "common.h"
 #include    "runlog.h"
 #include    "storage.h"
+#include    <unistd.h>
 
 
 /* Get a random number with microsecond */
@@ -173,16 +174,23 @@ char* GetIncrMacAddr(int iSoD)
 }
 
 /* Writes a string MAC address to the packet */
-int FillInMacAddr(char *pMacStr, char *pMacBuf)
+int FillInMacAddr(char *pMacTarget, char *pMacStr)
 {
-    if ((pMacBuf == NULL) || (pMacStr == NULL)) {
+    if ((pMacTarget == NULL) || (pMacStr == NULL)) {
+        if (pMacTarget == NULL)
+            printf("pMacTarget is Null\n");
+        else
+            printf("pMacStr is Null\n");
+
+
+        
         LOGRECORD(ERROR, "Failed to fill MAC address");
     }
 
     int iNum;
     char *pMacTmp = NULL;
     for (iNum = 0; iNum < 6; iNum ++) {
-        pMacBuf[iNum] = pMacStr ? strtoul (pMacStr, &pMacTmp, 16) : 0;
+        pMacTarget[iNum] = pMacStr ? strtoul (pMacStr, &pMacTmp, 16) : 0;
         if (pMacStr) {
             pMacStr = (*pMacTmp) ? pMacTmp + 1 : pMacTmp;
         }
@@ -246,14 +254,14 @@ int CheckIpAddrLegal(char* pIpStr)
 }
 
 /* Get random IP address */
-char* GetRandIp4Addr()
+char* GetRandIp4Addr(int iSoD)
 {
-    static char cIpAddr[SIZE_16B*2];
+    static char cIpAddr[2][SIZE_16B*2];
 
-    sprintf(cIpAddr, "%d.%d.%d.%d", 192, GetRandNum() % 256, 
+    sprintf(cIpAddr[iSoD], "%d.%d.%d.%d", 192, GetRandNum() % 256, 
             GetRandNum() % 256, GetRandNum() % 255 + 1);
 
-    return cIpAddr;
+    return cIpAddr[iSoD];
 }
 
 /* Get increased IPv4 address */
@@ -266,24 +274,24 @@ char* GetIncrIp4Addr(int iSoD)
     // SIP:192.168.1.1 DIP:10.10.1.1
     static unsigned int iIpAddr[] = {3232235777, 168430081};
     unsigned int iIpSwitch = htonl(iIpAddr[iSoD] ++);
-    static char cIpAddrBuf[SIZE_16B*2];
+    static char cIpAddrBuf[2][SIZE_16B*2];
     if (((unsigned char *)&iIpSwitch)[3] != 0) {
-        sprintf(cIpAddrBuf, "%u.%u.%u.%u", 
+        sprintf(cIpAddrBuf[iSoD], "%u.%u.%u.%u", 
                 ((unsigned char *)&iIpSwitch)[0],
                 ((unsigned char *)&iIpSwitch)[1],
                 ((unsigned char *)&iIpSwitch)[2],
                 ((unsigned char *)&iIpSwitch)[3]);
     }
 
-    return cIpAddrBuf;
+    return cIpAddrBuf[iSoD];
 }
 
 /* Get random IPv6 address */
-char* GetRandIp6Addr()
+char* GetRandIp6Addr(int iSoD)
 {
     static char cIpAddrBuf[SIZE_128B];
     strcpy(cIpAddrBuf, "::");
-    strcat(cIpAddrBuf, GetRandIp4Addr());
+    strcat(cIpAddrBuf, GetRandIp4Addr(iSoD));
 
     return cIpAddrBuf;
 }
@@ -300,10 +308,12 @@ char* GetIncrIp6Addr(int iSoD)
 }
 
 /* Get random port number */
-int GetRandPort()
+int GetRandPort(int iSoD)
 {
-    // Return registered port number
-    return (1025 + GetRandNum() % (65535 - 1025));
+    static int iPortArray[] = {0, 0};
+    iPortArray[iSoD] = 1025 + GetRandNum() % (65535 - 1025);
+
+    return iPortArray[iSoD];
 }
 
 /* Get increase port number */
@@ -337,10 +347,12 @@ int GetIncrPktLen()
 }
 
 /* Get random VLAN ID */
-int GetRandVlan()
+int GetRandVlan(int iSoD)
 {
+    static int iVlanArray[] = {0, 0};
     // 0 and 4095 retain VLAN, 1 is Management VLAN
-    return (2 + GetRandNum() % (4095 - 2));
+    iVlanArray[iSoD] = 2 + GetRandNum() % (4095 - 2);
+    return iVlanArray[iSoD];
 }
 
 /* Get increased VLAN ID */
@@ -350,7 +362,7 @@ int GetIncrVlan(int iVoQ)
         LOGRECORD(ERROR, "Unrecognized identifier");
     }
 
-    static int iVlanId[] = {0, 0};
+    static int iVlanId[] = {1000, 2000};
     return ((iVlanId[iVoQ] > 4094) ? 1 : iVlanId[iVoQ] ++);
 }
 
@@ -581,10 +593,34 @@ int OpenReadFile(char* pFileName)
     if (pFileName == NULL) {
         LOGRECORD(ERROR, "Filename is NULL");
     }
-    if ((iReadFd = open(pFileName, O_RDONLY)) < 0 ) {
+    //if ((iReadFd = open(pFileName, O_RDONLY)) < 0 ) {
+    if ((iReadFd = open(pFileName, O_RDWR)) < 0 ) {
         LOGRECORD(ERROR, "Open read-file failed:%d", iReadFd);
     }
 
     return iReadFd;
+}
+
+/* Extract data and save */
+void ExtractMessage(char* pDataBuf, int iDataLen)
+{
+    int iSaveFd = OpenSaveFile(GetcValue("save"));
+    if (write(iSaveFd, pDataBuf, iDataLen) < 0) {
+        LOGRECORD(ERROR, "Data extraction failed");
+    } 
+
+    close(iSaveFd);
+}
+
+/* Extracting data message */
+void PacketProcessing(stPktStrc stPkt)
+{
+    static int iNum = 0;
+    if (iNum == 0) {
+        ExtractMessage((char*)stPkt.pPcapHdr, PCAP_HDR_LEN);
+        iNum ++;
+    }
+    ExtractMessage((char*)stPkt.pPktHdr, PKT_HDR_LEN);
+    ExtractMessage((char*)stPkt.pPacket, stPkt.pPktHdr->len);
 }
 

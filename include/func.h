@@ -3,14 +3,19 @@
 
 #include    "packet.h"
 
-void BuildPacket();
-void SplitPacket(); 
-void DuplicatePacket();
-void MergePacket(int, char**); 
-void SwitchPcapFormat();  
-void ReplayPacket();
-void DeepPacketInspection();
-void SuperManUser();
+// Functions
+void  BuildPacket();
+void  SplitPacket(); 
+void  DuplicatePacket();
+void  MergePacket(int, char**); 
+void  SwitchPcapFormat();  
+void  ReplayPacket();
+int   DeepPacketInspection();
+void  SuperManUser();
+void  ModifyPacket();
+void  StatisticPacket();
+
+// Parse file name list
 char* ParseReadList(char* pCmd);
 
 // Rules

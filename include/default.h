@@ -44,7 +44,7 @@
 #define DIP            "10.10.169.5"
 #define SMAC           "00:23:76:00:00:01"
 #define DMAC           "00:23:76:00:00:02"
-#define VLANID         4032
+#define VLANID         4000
 #define SPORT          1024
 #define DPORT          2048
 #define PKTLEN         100
@@ -59,7 +59,7 @@
 #define ACLEXFILE      "aclex.cfg"
 #define MACTABLEFILE   "mac_table.cfg"
 #define L2PRO          "ethernet"
-#define VERSION        "v4.9.5"
+#define VERSION        "v4.9.6"
 
 #endif
 

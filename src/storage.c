@@ -196,17 +196,17 @@ void RefreshParameter()
             } else if (strcmp(pParaName, "dmac") == 0) {
                 UpdatecValue(pParaName, GetRandMacAddr(1));
             } else if (strcmp(pParaName, "sip") == 0) {
-                UpdatecValue(pParaName, GetRandIp4Addr());
+                UpdatecValue(pParaName, GetRandIp4Addr(0));
             } else if (strcmp(pParaName, "dip") == 0) {
-                UpdatecValue(pParaName, GetRandIp4Addr());
+                UpdatecValue(pParaName, GetRandIp4Addr(1));
             } else if (strcmp(pParaName, "sport") == 0) {
                 UpdateiValue(pParaName, GetRandPort(0));
             } else if (strcmp(pParaName, "dport") == 0) {
                 UpdateiValue(pParaName, GetRandPort(1));
             } else if (strcmp(pParaName, "vlan") == 0) {
-                UpdateiValue(pParaName, GetRandVlan());
+                UpdateiValue(pParaName, GetRandVlan(0));
             } else if (strcmp(pParaName, "qinq") == 0) {
-                UpdateiValue(pParaName, GetRandVlan());
+                UpdateiValue(pParaName, GetRandVlan(1));
             } else if (strcmp(pParaName, "pktlen") == 0) {
                 UpdateiValue(pParaName, GetRandPktLen());
             }

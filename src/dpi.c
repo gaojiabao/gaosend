@@ -1,38 +1,31 @@
 #include    <unistd.h>
-#include    "func.h"
+#include    <string.h>
 #include    "runlog.h"
 #include    "common.h"
 #include    "storage.h"
 #include    "statistic.h"
 
-#define     ON   1 // Switch ON
-#define     OFF  0 // Switch OFF
 
 #define     PKTBUFLEN   SIZE_1K*10
 
 /* Packet structure */
-static stPktStrc stPkt;
-static stPktInfo stInfo;
+stPktStrc stPkt;
+stPktInfo stInfo;
 
-void ModifyPacket(stPktStrc);
-void ExtractMessage(char*, int );
-
-
-void StreamStorageInit();
+int iStatisticCode = 0;
 void StreamStorage(const char*, _tcphdr*, int);
-void DisplayStreamStorage();
 
 /* Packet structure pointer Initialization */
 void PacketStrcInit()
 {
-    stPkt.pMacHdr  = NULL;
-    stPkt.pArpHdr  = NULL;
-    stPkt.pVlanHdr = NULL;
-    stPkt.pQinQHdr = NULL;
-    stPkt.pIp4Hdr  = NULL;
-    stPkt.pIp6Hdr  = NULL;
-    stPkt.pUdpHdr  = NULL;
-    stPkt.pTcpHdr  = NULL;
+    stPkt.pMacHdr   = NULL;
+    stPkt.pArpHdr   = NULL;
+    stPkt.pVlanHdr  = NULL;
+    stPkt.pQinQHdr  = NULL;
+    stPkt.pIp4Hdr   = NULL;
+    stPkt.pIp6Hdr   = NULL;
+    stPkt.pUdpHdr   = NULL;
+    stPkt.pTcpHdr   = NULL;
     stPkt.pIcmp4Hdr = NULL;
 }
 
@@ -41,15 +34,13 @@ void PcapHdrInspection(int iReadFd)
 {
     static char cPcapHdrBuf[PCAP_HDR_LEN];
     stPkt.pPcapHdr = (_pcaphdr*) cPcapHdrBuf;
-    
+
     if (read(iReadFd, stPkt.pPcapHdr, PCAP_HDR_LEN) < 0) {
         LOGRECORD(ERROR, "Pcap header read failed");
     }
-
-    if (htonl(stPkt.pPcapHdr->magic) != 0xd4c3b2a1) {
+    if (stPkt.pPcapHdr->magic != htonl(0xd4c3b2a1)) {
         LOGRECORD(ERROR, "File format not supported");
     }
-    // ExtractMessage(stPkt.pPcapHdr, PCAP_HDR_LEN);
 }
 
 /* Message header information analysis */
@@ -57,49 +48,75 @@ int PktHdrInspection(int iReadFd)
 {
     static char cPktHdrBuf[PKT_HDR_LEN];
     stPkt.pPktHdr = (_pkthdr*) cPktHdrBuf;
+
     if (read(iReadFd, stPkt.pPktHdr, PKT_HDR_LEN) < 1) {
-        LOGRECORD(DEBUG, "Data has been read finished");
         return -1;
     }
 
     return stPkt.pPktHdr->len;
 }
 
+/* Layer seven protocol analysis */
+void L7HdrInspection(int iSport, int iDport)
+{
+    if (iSport == 53 || iDport == 53) { // UDP
+        iStatisticCode += EMPRO_L7_DNS;
+    } else if (iDport == 25) { // TCP
+        iStatisticCode += EMPRO_L7_SMTP;
+    } else if (iSport == 80 || iDport == 80 
+            || iSport == 8080 || iDport == 8080) {
+        iStatisticCode += EMPRO_L7_HTTP;
+    } else if (iDport == 110) {
+        iStatisticCode += EMPRO_L7_POP3;
+    } else if (iSport == 143 || iDport == 143) {
+        iStatisticCode += EMPRO_L7_IMAP;
+    } else if (iSport == 139 || iDport == 139 
+            || iSport == 445 || iDport == 445) {
+        iStatisticCode += EMPRO_L7_SMB;
+    } else if (iSport == 20 || iDport == 20 
+            || iSport == 21 || iDport == 21) {
+        iStatisticCode += EMPRO_L7_FTP;
+    }
+}
+
 /* Layer four protocol analysis */
-void L4HdrInspection(U8 pro)
+void L4HdrInspection(U8 iL4Pro)
 {
     char * pL4Hdr =  stPkt.pPacket + stInfo.iCursor;
 
-    if (pro == TCP) {
+    if (iL4Pro == TCP) {
         stPkt.pTcpHdr = (_tcphdr *) pL4Hdr;
         stInfo.iCursor += ((stPkt.pTcpHdr->hdrlen >> 4) * 4);
         int iTcpDataLen = htons(stPkt.pIp4Hdr->ttlen) 
             - (stPkt.pIp4Hdr->hdlen * 4)
             - ((stPkt.pTcpHdr->hdrlen >> 4) * 4);
         // TCP flow check
-        if(GetiValue("flow") == ON) {
+        if(GetiValue("flow") && stPkt.pMacHdr->pro == htons(IPv4)) {
             char iFiveTupleSum[32];
             sprintf(iFiveTupleSum, "%d", stPkt.pIp4Hdr->sip 
-                + stPkt.pIp4Hdr->dip + stPkt.pTcpHdr->sport 
-                + stPkt.pTcpHdr->dport + stPkt.pIp4Hdr->protocol);
+                    + stPkt.pIp4Hdr->dip + stPkt.pTcpHdr->sport 
+                    + stPkt.pTcpHdr->dport + stPkt.pIp4Hdr->protocol);
             StreamStorage(iFiveTupleSum, stPkt.pTcpHdr, iTcpDataLen);
         }
 
         // PacketProcessing();
-        RecordStatisticsInfo(EMPRO_TCP);
-        StatisticUpperTcp(htons(stPkt.pTcpHdr->sport), htons(stPkt.pTcpHdr->dport));
-    } else if (pro == UDP) {
+        iStatisticCode += EMPRO_L4_TCP * 100;
+        L7HdrInspection(htons(stPkt.pTcpHdr->sport), 
+                htons(stPkt.pTcpHdr->dport));
+    } else if (iL4Pro == UDP) {
         stInfo.iCursor += UDP_HDR_LEN;
         stPkt.pUdpHdr = (_udphdr *) pL4Hdr;
-        RecordStatisticsInfo(EMPRO_UDP);
-        StatisticUpperUdp(htons(stPkt.pUdpHdr->sport), htons(stPkt.pUdpHdr->dport));  
-    } else if (pro == ICMP4) {
+        iStatisticCode += EMPRO_L4_UDP * 100;
+        L7HdrInspection(htons(stPkt.pUdpHdr->sport), 
+                htons(stPkt.pUdpHdr->dport));
+    } else if (iL4Pro == ICMP4) {
         stPkt.pIcmp4Hdr = (_icmp4hdr *) pL4Hdr;
-        RecordStatisticsInfo(EMPRO_ICMP4);
-    } else if (pro == ICMP6) {
-        stPkt.pIcmp4Hdr = (_icmp4hdr *) pL4Hdr;
+        iStatisticCode += EMPRO_L4_ICMP4 * 100;
+    } else if (iL4Pro == ICMP6) {
+        //stPkt.pIcmp6Hdr = (_icmp6hdr *) pL4Hdr;
+        iStatisticCode += EMPRO_L4_ICMP6 * 100;
     } else {
-        RecordStatisticsInfo(EMPRO_L4OTHER);
+        iStatisticCode += EMPRO_L4_OTHER * 100;
     }
 }
 
@@ -113,30 +130,30 @@ U8 L3HdrInspection(U16 pro)
         stInfo.iCursor += IP4_HDR_LEN;
         stPkt.pIp4Hdr = (_ip4hdr *) pL3Hdr;
         iPro = stPkt.pIp4Hdr->protocol;
-        RecordStatisticsInfo(EMPRO_IPv4);
+        iStatisticCode += EMPRO_L3_IPv4 * 10000;
         L4HdrInspection(iPro);
     } else if (pro == VLAN) {
         stInfo.iCursor += VLAN_TAG_LEN;
-        if (stInfo.iCursor == MAC_HDR_LEN+VLAN_TAG_LEN) { // VLAN layer 1
+        if (stInfo.iCursor == (MAC_HDR_LEN + VLAN_TAG_LEN)) { // VLAN
             stPkt.pVlanHdr = (_vlanhdr *) pL3Hdr;
             iPro = L3HdrInspection(htons(stPkt.pVlanHdr->pro));
-            RecordStatisticsInfo(EMPRO_VLAN);
-        } else if (stInfo.iCursor == MAC_HDR_LEN+VLAN_TAG_LEN*2){ // VLAN layer 2
+            iStatisticCode += EMPRO_L3_VLAN * 1000;
+        } else if (stInfo.iCursor == (MAC_HDR_LEN + VLAN_TAG_LEN*2)) { // QinQ
             stPkt.pQinQHdr = (_vlanhdr *) pL3Hdr;
             iPro = L3HdrInspection(htons(stPkt.pQinQHdr->pro));
-            RecordStatisticsInfo(EMPRO_QinQ);
+            iStatisticCode += EMPRO_L3_QinQ * 1000;
         } 
     } else if (pro == ARP) {
         stPkt.pArpHdr = (_arphdr *) pL3Hdr;
-        RecordStatisticsInfo(EMPRO_ARP);
+        iStatisticCode += EMPRO_L3_ARP * 10000;
     } else if (pro == IPv6) {
         stInfo.iCursor += IP6_HDR_LEN;
         stPkt.pIp6Hdr = (_ip6hdr *) pL3Hdr;
         iPro = stPkt.pIp6Hdr->protocol;
-        RecordStatisticsInfo(EMPRO_IPv6);
-        //L4HdrInspection(iPro);
+        L4HdrInspection(iPro);
+        iStatisticCode += EMPRO_L3_IPv6 * 10000;
     } else {
-        RecordStatisticsInfo(EMPRO_L3OTHER);
+        iStatisticCode = EMPRO_L3_OTHER * 10000;
     }
 
     return iPro;
@@ -150,88 +167,54 @@ void L2HdrInspection()
     L3HdrInspection(htons(stPkt.pMacHdr->pro));
 }
 
-/* Extracting data message */
-void PacketProcessing()
-{
-    static int iNum = ON;
-    if (iNum == ON) {
-        ExtractMessage((char*)stPkt.pPcapHdr, PCAP_HDR_LEN);
-        iNum = OFF;
-    }
-    ExtractMessage((char*)stPkt.pPktHdr, PKT_HDR_LEN);
-    ExtractMessage((char*)stPkt.pPacket, stPkt.pPktHdr->len);
-}
-
 /* Data content resolution portal */
-void PacketPraseEntrance()
-{
-    LOGRECORD(DEBUG, "Deep packet inspection start...");
-
-    PacketStrcInit();
-    L2HdrInspection();
-
-    // Modify check
-    if (GetiValue("entrance") == 106) {
-        ModifyPacket(stPkt);
-        if (GetcValue("save") != NULL) { // Save packet
-            PacketProcessing();
-        } else { // Send packet
-            SendPacketProcess(stPkt.pPacket, stPkt.pPktHdr->len);
-        }
-    } else if (GetiValue("entrance") == 110) {
-        SendPacketProcess(stPkt.pPacket, stPkt.pPktHdr->len);
-    }
-
-    LOGRECORD(DEBUG, "Deep packet inspection finished...");
-}
-
-/* Pcap file resolution portal */
-void PcapFilePraseEntrance()
-{
-    int  iReadFd = OpenReadFile(GetcValue("read"));
-    
-    PcapHdrInspection(iReadFd);
-
-    int iPktNum = 1;
-    stInfo.iPktLen = 0;
-    while ((stInfo.iPktLen = PktHdrInspection(iReadFd)) > 0) {
-        if (stInfo.iPktLen > PKTBUFLEN) {
-            LOGRECORD(ERROR, "Overlength packet[%d:%d]", iPktNum, stInfo.iPktLen);
-        }
-        if (read(iReadFd, stPkt.pPacket, stInfo.iPktLen) < 0) {
-            LOGRECORD(ERROR, "Pcap header read failed");
-        }
-        PacketPraseEntrance();
-        stInfo.iCursor = 0;
-        iPktNum ++;
-    } // end of while
-
-    close(iReadFd);
-}
-
-/* Deep packet inspection portal */
-void DeepPacketInspection()
+void PacketInspection(int iReadFd)
 {
     static char cPacketBuf[PKTBUFLEN];
     stPkt.pPacket = cPacketBuf;
 
-    // Turn on flow assoition
-    if(GetiValue("flow") == ON) {
-        StreamStorageInit();
+    stInfo.iCursor = 0;
+    memset(cPacketBuf, 0, PKTBUFLEN);
+    if (read(iReadFd, stPkt.pPacket, stInfo.iPktLen) < 0) {
+        LOGRECORD(ERROR, "Pcap header read failed");
     }
 
-    PcapFilePraseEntrance();
-
-    if (GetiValue("entrance") == 105) {
-        DisplayStatisticsResults();
-    }
-
-    if (GetiValue("flow") == ON) {
-        DisplayStreamStorage();
-    }
-
-    if (GetiValue("exec") == 0) {
-        CloseSendConnect();
-    }
+    PacketStrcInit();
+    L2HdrInspection();
 }
 
+/* Deep packet inspection portal */
+int DeepPacketInspection()
+{
+    static int  iReadFd = 0;
+    int iPktNum = 1;
+    iStatisticCode = 0;
+
+    if (iReadFd < 3) {
+        iReadFd = OpenReadFile(GetcValue("read"));
+        PcapHdrInspection(iReadFd);
+    }
+
+    if ((stInfo.iPktLen = PktHdrInspection(iReadFd)) > 0) {
+        if (stInfo.iPktLen > PKTBUFLEN) {
+            LOGRECORD(ERROR, "Overlength packet[%d:%d]",
+                    iPktNum, stInfo.iPktLen);
+        }
+        PacketInspection(iReadFd);
+        iPktNum ++;
+    } else {
+        close(iReadFd);
+    }
+
+    return stInfo.iPktLen;
+}
+
+stPktStrc GetPktStrc()
+{
+    return stPkt;
+}
+
+int GetStatisticCode()
+{
+    return iStatisticCode;
+}

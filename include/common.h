@@ -50,8 +50,10 @@ void        BufferCopy(char*, int, char*, int);
 int         OpenReadFile(char* );
 int         OpenSaveFile(char* );
 
+void        ExtractMessage(char* , int);
+void        PacketProcessing(stPktStrc);
 
-#define     FALSE 0
+#define     FALSE   0
 #define     SUCCESS 1
 
 #endif

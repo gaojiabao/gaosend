@@ -12,14 +12,13 @@
 #include    "func.h"
 #include    "runlog.h"
 #include    "storage.h"
-#include    "statistic.h"
 
 
 /* Packet structure */
 static stPktStrc stPkt;
 static stPktInfo stInfo;
 
-#define PKT_BUF_LEN SIZE_1K*5
+#define PKT_BUF_LEN SIZE_1K*10
 
 /* Constructing pcap header used to identify file type */
 static void BuildPcapHeader()
@@ -32,7 +31,7 @@ static void BuildPcapHeader()
     stPkt.pPcapHdr->minor = 4;
     stPkt.pPcapHdr->thiszone = 0;
     stPkt.pPcapHdr->sigflags = 0;
-    stPkt.pPcapHdr->snaplen = 1518;
+    stPkt.pPcapHdr->snaplen = htonl(65535);
     stPkt.pPcapHdr->linktype = 1;
 }
 
@@ -123,8 +122,8 @@ static void BuildMacHeader()
     stInfo.iCursor -= MAC_HDR_LEN;
     stPkt.pMacHdr = (_machdr *)(stPkt.pPacket + stInfo.iCursor);
 
-    FillInMacAddr(GetcValue("dmac"), (char*)&stPkt.pMacHdr->dmac);
-    FillInMacAddr(GetcValue("smac"), (char*)&stPkt.pMacHdr->smac);
+    FillInMacAddr((char*)&stPkt.pMacHdr->dmac, GetcValue("dmac"));
+    FillInMacAddr((char*)&stPkt.pMacHdr->smac, GetcValue("smac"));
     U16 iNextPro = GetiValue("vlannum") ? 
         htons(VLAN) : htons(GetL3HexPro(GetcValue("l3pro"))); 
     stPkt.pMacHdr->pro = iNextPro;
@@ -156,14 +155,11 @@ static void BuildIp4Header()
     stPkt.pIp4Hdr = (_ip4hdr *)(stPkt.pPacket + stInfo.iCursor);
 
     U8 iL4Pro = GetL4HexPro(GetcValue("l4pro"));
-    //stPkt.pIp4Hdr->ver_len = (4 << 4 | IP4_HDR_LEN / 4);
     stPkt.pIp4Hdr->version = 4;
     stPkt.pIp4Hdr->hdlen = (IP4_HDR_LEN / 4);
     stPkt.pIp4Hdr->tos = 0;
     stPkt.pIp4Hdr->ttlen = htons(stInfo.iPktLen - stInfo.iCursor);
     stPkt.pIp4Hdr->ident = 1;
-    //stPkt.pIp4Hdr->flag_offset = (4 << 4);
-    //stPkt.pIp4Hdr->flag_offset = ((2 << 4) | GetiValue("off_frag") / 8);
     stPkt.pIp4Hdr->flag_offset = (GetiValue("ip_flags") << 6) 
         | (htons(GetiValue("ip_offset") / 8));
     stPkt.pIp4Hdr->ttl = 128;
@@ -222,9 +218,9 @@ static void BuildArpHeader(int iOperationType)
     stPkt.pArpHdr->len = 0x06;
     stPkt.pArpHdr->plen = 0x04;
     stPkt.pArpHdr->option = htons(iOperationType); // 1:ARP req 2:ARP res 3:RARP req 4:RARP res
-    FillInMacAddr(GetcValue("smac"), (char*)&stPkt.pArpHdr->smac);
+    FillInMacAddr((char*)&stPkt.pArpHdr->smac, GetcValue("smac"));
     stPkt.pArpHdr->sip = inet_addr(GetcValue("sip"));
-    FillInMacAddr(GetcValue("dmac"), (char*)&stPkt.pArpHdr->dmac);
+    FillInMacAddr((char*)&stPkt.pArpHdr->dmac, GetcValue("dmac"));
     stPkt.pArpHdr->dip = inet_addr(GetcValue("dip"));
 }
 
@@ -261,10 +257,7 @@ static void BuildUdpHeader()
 /* Building ICMP protocol header */
 static void BuildIcmp4Header(int iOperationType)
 {
-    //stInfo.iPktLen = 100;
-    //stInfo.iCursor = MAC_HDR_LEN + IP4_HDR_LEN;
     int iVlanLen = VLAN_TAG_LEN * GetiValue("vlannum");
-    //stInfo.iCursor = MAC_HDR_LEN + IP6_HDR_LEN;
     stInfo.iCursor = (strcmp(GetcValue("l3pro"), "IPv4") == 0) ? 
         MAC_HDR_LEN + iVlanLen + IP4_HDR_LEN : MAC_HDR_LEN + iVlanLen + IP6_HDR_LEN;
     int iIcmpMessageLen = stInfo.iPktLen - stInfo.iCursor;
@@ -582,10 +575,6 @@ void BuildPacket()
     LOGRECORD(DEBUG, "Build Packet start...");
 
     MessageGenerator();
-
-    if (GetiValue("entrance") == 105) {
-        DisplayStatisticsResults();
-    }
 
     LOGRECORD(DEBUG, "Build packet finished");
 } // End of Build 

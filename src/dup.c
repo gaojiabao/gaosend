@@ -67,17 +67,6 @@ void DuplicatePacket()
     LOGRECORD(DEBUG, "Packet duplication finished");
 }
 
-/* Extract data and save */
-void ExtractMessage(char* pDataBuf, int iDataLen)
-{
-    int iSaveFd = OpenSaveFile(GetcValue("save"));
-    if (write(iSaveFd, pDataBuf, iDataLen) < 0) {
-        LOGRECORD(ERROR, "Data extraction failed");
-    } 
-
-    close(iSaveFd);
-}
-
 /* Parse file list */
 char* ParseReadList(char* pCmd)
 {

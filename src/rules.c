@@ -1,3 +1,14 @@
+/*******************************************************
+ *
+ *  Author        : Mr.Gao
+ *  Email         : 729272771@qq.com
+ *  Filename      : rules.c
+ *  Last modified : 2017-04-25 14:13
+ *  Description   : Generate rule file
+ *
+ * *****************************************************/
+
+
 #include    <unistd.h>
 #include    <string.h>
 #include    <sys/time.h>
@@ -31,8 +42,8 @@ static void CloseRuleMode(int iRuleFd)
 void RulesGenerationEntrance(stPktStrc stPkt, int iRuleNum)
 {
     static int iSaveFd = -1;
-    const int iCount = GetiValue("count");
-    char* pRuleName = GetcValue("rule");
+    const int iCount = GetNum("count");
+    char* pRuleName = GetStr("rule");
 
     if (iSaveFd < 0) {
         iSaveFd = RuleModeInitialization(pRuleName);
@@ -42,13 +53,13 @@ void RulesGenerationEntrance(stPktStrc stPkt, int iRuleNum)
     if (strcmp(pRuleName, "aclnmask") == 0) {
         if (dprintf(iSaveFd, "add ruleset test aclnmask %d action=drop," 
                     "sip=%s,dip=%s,sport=%d,dport=%d,protocol=%s\n", 
-                    iRuleNum, GetcValue("sip"), GetcValue("dip"), 
-                    GetiValue("sport"), GetiValue("dport"),
-                    GetcValue("l4pro")) < 0) {
+                    iRuleNum, GetStr("sip"), GetStr("dip"), 
+                    GetNum("sport"), GetNum("dport"),
+                    GetStr("l4pro")) < 0) {
             LOGRECORD(ERROR, "write aclmask rules error");
         }
     } else if (strcmp(pRuleName, "aclex") == 0) {
-        int offset = GetiValue("offset");
+        int offset = GetNum("offset");
         if (dprintf(iSaveFd, "add ruleset test aclex %d "
                     "action=drop, offset=%d, strkey=%s\n", 
                     iRuleNum, offset, stPkt.pData+offset) < 0) {
@@ -56,7 +67,7 @@ void RulesGenerationEntrance(stPktStrc stPkt, int iRuleNum)
         }
     } else if (strcmp(pRuleName, "mac_table") == 0) {
         if (dprintf(iSaveFd, "add mac_table %s " "action=forward, outgroup=1\n", 
-                    GetcValue("smac")) < 0) {
+                    GetStr("smac")) < 0) {
             LOGRECORD(ERROR, "write mac table rules error");
         }
     }

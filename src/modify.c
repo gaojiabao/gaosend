@@ -1,3 +1,14 @@
+/*******************************************************
+ *
+ *  Author        : Mr.Gao
+ *  Email         : 729272771@qq.com
+ *  Filename      : modify.c
+ *  Last modified : 2017-04-25 14:11
+ *  Description   : Modify packet
+ *
+ * *****************************************************/
+ 
+
 #include    <string.h>
 #include    "func.h"
 #include    "common.h"
@@ -24,8 +35,8 @@ void ChangeListInit()
 
 void GenerateMacAddr(char* pTitle, int iSoD) //smac:0,dmac:1
 {
-    switch(GetFlag(pTitle)) {
-        case FG_FIXD : stChg.mac[iSoD] = GetcValue(pTitle); break;
+    switch(GetState(pTitle)) {
+        case FG_FIXD : stChg.mac[iSoD] = GetStr(pTitle); break;
         case FG_RAND : stChg.mac[iSoD] = GetRandMacAddr(iSoD); break;
         case FG_INCR : stChg.mac[iSoD] = GetIncrMacAddr(iSoD); break;
     }
@@ -33,8 +44,8 @@ void GenerateMacAddr(char* pTitle, int iSoD) //smac:0,dmac:1
 
 void GenerateVlanTag(char* pTitle, int iVoQ)
 {
-    switch(GetFlag(pTitle)) {
-        case FG_FIXD : stChg.vlan[iVoQ] = GetiValue(pTitle); break;
+    switch(GetState(pTitle)) {
+        case FG_FIXD : stChg.vlan[iVoQ] = GetNum(pTitle); break;
         case FG_RAND : stChg.vlan[iVoQ] = GetRandVlan(iVoQ); break;
         case FG_INCR : stChg.vlan[iVoQ] = GetIncrVlan(iVoQ); break;
     }
@@ -42,8 +53,8 @@ void GenerateVlanTag(char* pTitle, int iVoQ)
 
 void GenerateIp4Addr(char* pTitle, int iSoD)
 {
-    switch(GetFlag(pTitle)) {
-        case FG_FIXD : stChg.ip4[iSoD] = inet_addr(GetcValue(pTitle)); break;
+    switch(GetState(pTitle)) {
+        case FG_FIXD : stChg.ip4[iSoD] = inet_addr(GetStr(pTitle)); break;
         case FG_RAND : stChg.ip4[iSoD] = inet_addr(GetRandIp4Addr(iSoD)); break;
         case FG_INCR : stChg.ip4[iSoD] = inet_addr(GetIncrIp4Addr(iSoD)); break;
     }
@@ -51,8 +62,8 @@ void GenerateIp4Addr(char* pTitle, int iSoD)
 
 void GeneratePortNum(char* pTitle, int iSoD)
 {
-    switch(GetFlag(pTitle)) {
-        case FG_FIXD : stChg.port[iSoD] = htons(GetiValue(pTitle)); break;
+    switch(GetState(pTitle)) {
+        case FG_FIXD : stChg.port[iSoD] = htons(GetNum(pTitle)); break;
         case FG_RAND : stChg.port[iSoD] = htons(GetRandPort(iSoD)); break;
         case FG_INCR : stChg.port[iSoD] = htons(GetIncrPort(iSoD)); break;
     }
@@ -241,7 +252,7 @@ void DetectAndProcess(int iGoM)
     int iNum;
     for (iNum = 0; iNum < iLength; iNum ++) {
         int iSoD = iNum % 2;
-        if (GetFlag(pParaList[iNum]) > 1) {
+        if (GetState(pParaList[iNum]) > 1) {
             if (iNum == 0 || iNum == 1) {
                 if (!iGoM) GenerateMacAddr(pParaList[iNum], iSoD);
                 else ModifyMacAddr(iSoD);
@@ -277,7 +288,7 @@ U32 RuleInitialization()
     char  cExpBuf[SIZE_1K];
     memset(cExpBuf, 0, sizeof(cExpBuf));
 
-    char* pExpStr = GetcValue("express");
+    char* pExpStr = GetStr("express");
     memcpy(cExpBuf, pExpStr, strlen(pExpStr));
 
     char* pPosStr = NULL;
@@ -335,7 +346,11 @@ void ModifyProcessEntrance()
 
 void ModifyPacket()
 {
-    int iCount = GetiValue("count");
+    if (GetNum("debug")) {
+        ShowParameter();
+    }
+
+    int iCount = GetNum("count");
     while (iCount --) {
         ModifyProcessEntrance();
     }

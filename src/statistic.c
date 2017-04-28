@@ -1,3 +1,14 @@
+/*******************************************************
+ *
+ *  Author        : Mr.Gao
+ *  Email         : 729272771@qq.com
+ *  Filename      : statistic.c
+ *  Last modified : 2017-04-25 14:14
+ *  Description   : Protocol data statistics
+ *
+ * *****************************************************/
+
+
 #include    "func.h"
 #include    "flow.h"
 #include    "runlog.h"
@@ -134,7 +145,7 @@ void DisplayStatisticsResults()
 void StatisticPacket()
 {
     // Turn on flow assoition
-    if(GetiValue("flow") > 0) {
+    if(GetNum("flow") > 0) {
         StreamStorageInit();
     }
 
@@ -148,7 +159,7 @@ void StatisticPacket()
         L7Statistic(iL3Code, (iCode % 100));
     }
 
-    if (GetiValue("flow") > 0) {
+    if (GetNum("flow") > 0) {
         DisplayStreamStorage();
     }
 

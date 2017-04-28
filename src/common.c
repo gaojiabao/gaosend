@@ -1,10 +1,15 @@
-/*
- *  Author   : Mr. Gao
+/*******************************************************
  *
- *  Function : This file include some extracted informations 
- *             in a little function and all of them will be
- *             used in whole programs.
- */
+ *  Author        : Mr.Gao
+ *  Email         : 729272771@qq.com
+ *  Filename      : common.c
+ *  Last modified : 2017-04-25 14:12
+ *  Description   : This file include some extracted 
+ *                  function and all of them will be 
+ *                  used in whole software programs.
+ *
+ * *****************************************************/
+
 
 #include    <string.h>
 #include    <sys/time.h>
@@ -429,7 +434,7 @@ U16 GetL3HexPro(char* pStrPro)
 U8 GetL4HexPro(char* pStrPro)
 {
     if (pStrPro == NULL) {
-        LOGRECORD(ERROR, "Layer 3 protocol string is NULL");
+        LOGRECORD(ERROR, "Layer 4 protocol string is NULL");
     }
 
     U8 iResPro = 0;
@@ -452,9 +457,9 @@ U8 GetL4HexPro(char* pStrPro)
 int GetDataLen(int iPktLen)
 {
     int iDataLen = 0;
-    char* pL3Pro = GetcValue("l3pro");
-    char* pL4Pro = GetcValue("l4pro");
-    int   iVlanLen = VLAN_TAG_LEN * GetiValue("vlannum");
+    char* pL3Pro = GetStr("l3pro");
+    char* pL4Pro = GetStr("l4pro");
+    int   iVlanLen = VLAN_TAG_LEN * GetNum("vlannum");
 
     int iIpHdrLen;
     if (strcmp(pL3Pro, "IPv6") == 0) {
@@ -486,6 +491,10 @@ void ProgramProgress(int iVaribleNum, int iStanderNum)
     static int iLastPercent = -1; // Remeber last percent, can't equal
     static unsigned int iCounter = 1;
 
+    if (GetNum("debug")) {
+        return;
+    }
+
     int iNumI, iNumJ, iNumK;
     if (iProgressPercent != iLastPercent) {
         if (iCounter != 1) {
@@ -513,6 +522,10 @@ void ProgramProgress(int iVaribleNum, int iStanderNum)
             iPercentLength = 3;
         }
         iCounter ++;
+    } 
+
+    if (iVaribleNum == iStanderNum) {
+        printf("\n");
     }
 }
 
@@ -557,8 +570,8 @@ int CompareIpv6Address(unsigned char* pSrcIp6Addr, unsigned char* pDstIp6Addr)
 /* Packet format conversion to *.pcap */
 void SwitchPcapFormat()
 {
-    char* pReadFile = GetcValue("read");
-    char* pSaveFile = GetcValue("save");
+    char* pReadFile = GetStr("read");
+    char* pSaveFile = GetStr("save");
 
     if (pReadFile == NULL || pSaveFile == NULL) {
         LOGRECORD(ERROR, "Incomplete command");
@@ -604,7 +617,7 @@ int OpenReadFile(char* pFileName)
 /* Extract data and save */
 void ExtractMessage(char* pDataBuf, int iDataLen)
 {
-    int iSaveFd = OpenSaveFile(GetcValue("save"));
+    int iSaveFd = OpenSaveFile(GetStr("save"));
     if (write(iSaveFd, pDataBuf, iDataLen) < 0) {
         LOGRECORD(ERROR, "Data extraction failed");
     } 

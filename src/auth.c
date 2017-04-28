@@ -1,3 +1,14 @@
+/*******************************************************
+ *
+ *  Author        : Mr.Gao
+ *  Email         : 729272771@qq.com
+ *  Filename      : auth.c
+ *  Last modified : 2017-04-25 14:10
+ *  Description   : Check software usage rights 
+ *
+ * *****************************************************/
+ 
+
 #include    <stdio.h> 
 #include    <fcntl.h>
 #include    <stdlib.h>
@@ -251,7 +262,7 @@ unsigned char* MD5Digest(char* pszInput)
     MD5Init(&context);   
     MD5Update(&context, (unsigned char *)pszInput, len);
     MD5Final(pszOutPut, &context);   
-    if (GetiValue("debug")) {
+    if (GetNum("debug")) {
         LOGRECORD(DEBUG, "User Input MD5: %s", MD5DigestDisplay(pszOutPut));
     }
 
@@ -309,7 +320,7 @@ void CertificationAuthority()
     int     iUseNumber;
     char    cUseNumber[10];
 
-    if (GetiValue("entrance") == 111) {
+    if (GetNum("entrance") == 111) {
         SuperManUser();
         PROGRAMEND();
     }

@@ -1,9 +1,13 @@
-/*
- *  Author   : Mr. Gao
+/*******************************************************
  *
- *  Function : To construct a data message and save or send 
+ *  Author        : Mr.Gao
+ *  Email         : 729272771@qq.com
+ *  Filename      : build.c
+ *  Last modified : 2017-04-25 14:11
+ *  Description   : Construct data packet
  *
- */
+ * *****************************************************/
+
 
 #include    <unistd.h>
 #include    <string.h>
@@ -53,7 +57,7 @@ static void BuildPacketHeader()
 static U16 BuildPseduoPacket(void* pData)
 {
     int iDataLen = stInfo.iPktLen - stInfo.iCursor;
-    U8  iL4Pro = GetL4HexPro(GetcValue("l4pro"));
+    U8  iL4Pro = GetL4HexPro(GetStr("l4pro"));
 
     // Build pseudo header
     static char cPseudoPacket[PKT_BUF_LEN];
@@ -75,16 +79,20 @@ static U16 BuildPseduoPacket(void* pData)
 static void SaveModeProgram(int iSwitch)
 {
     static int iSaveFd = -1;
+    static int iCount = 1;
 
     if (iSwitch) {
         if (iSaveFd < 0) {
             // Data save initialization
-            if ((iSaveFd = OpenSaveFile(GetcValue("save"))) < 0) {
+            if ((iSaveFd = OpenSaveFile(GetStr("save"))) < 0) {
                 LOGRECORD(ERROR, "File doesn't exist");
             }
             BuildPcapHeader();
             if (write(iSaveFd, stPkt.pPcapHdr, PCAP_HDR_LEN) < 0) {
                 LOGRECORD(ERROR, "write packet to pacp file error");
+            }
+            if (GetNum("debug")) {
+                DisplayPacketData((char *)stPkt.pPcapHdr, PCAP_HDR_LEN);
             }
         } 
 
@@ -96,8 +104,10 @@ static void SaveModeProgram(int iSwitch)
         if (write(iSaveFd, stPkt.pPacket, stInfo.iPktLen) < 0) {
             LOGRECORD(ERROR, "write packet to pacp file error");
         }
-        if (GetiValue("debug")) {
-            DisplayPacketData((char *)stPkt.pPcapHdr, PCAP_HDR_LEN);
+        if (GetNum("debug")) {
+            DisplayPacketData((char *)stPkt.pPktHdr, PKT_HDR_LEN);
+            LOGRECORD(INFO, "NO.%d", iCount ++);
+            DisplayPacketData((char *)stPkt.pPacket, stInfo.iPktLen);
         }
 
     } else {
@@ -109,7 +119,7 @@ static void SaveModeProgram(int iSwitch)
 /* Close socket of save-file descriptor */
 static void RecycleProgram()
 {
-    if (GetiValue("exec") == 0) { //send
+    if (GetNum("exec") == 0) { //send
         CloseSendConnect();
     } else {
         SaveModeProgram(0);
@@ -122,10 +132,10 @@ static void BuildMacHeader()
     stInfo.iCursor -= MAC_HDR_LEN;
     stPkt.pMacHdr = (_machdr *)(stPkt.pPacket + stInfo.iCursor);
 
-    FillInMacAddr((char*)&stPkt.pMacHdr->dmac, GetcValue("dmac"));
-    FillInMacAddr((char*)&stPkt.pMacHdr->smac, GetcValue("smac"));
-    U16 iNextPro = GetiValue("vlannum") ? 
-        htons(VLAN) : htons(GetL3HexPro(GetcValue("l3pro"))); 
+    FillInMacAddr((char*)&stPkt.pMacHdr->dmac, GetStr("dmac"));
+    FillInMacAddr((char*)&stPkt.pMacHdr->smac, GetStr("smac"));
+    U16 iNextPro = GetNum("vlannum") ? 
+        htons(VLAN) : htons(GetL3HexPro(GetStr("l3pro"))); 
     stPkt.pMacHdr->pro = iNextPro;
 }
 
@@ -143,9 +153,9 @@ static void BuildVlanTag(int iVlanNum, int iTotleNum)
     pVlanInfo[iVlanLayer] = (_vlanhdr *)(stPkt.pPacket + stInfo.iCursor);
 
     pVlanInfo[iVlanLayer]->id = ((iVlanNum == 1) ? 
-            htons(GetiValue("vlan")) : htons(GetiValue("qinq")));
+            htons(GetNum("vlan")) : htons(GetNum("qinq")));
     pVlanInfo[iVlanLayer]->pro = ((iVlanNum == iTotleNum) ?  
-            htons(GetL3HexPro(GetcValue("l3pro"))) : htons(VLAN));
+            htons(GetL3HexPro(GetStr("l3pro"))) : htons(VLAN));
 }
 
 /* Building IP protocol header */
@@ -154,19 +164,19 @@ static void BuildIp4Header()
     stInfo.iCursor -= IP4_HDR_LEN;
     stPkt.pIp4Hdr = (_ip4hdr *)(stPkt.pPacket + stInfo.iCursor);
 
-    U8 iL4Pro = GetL4HexPro(GetcValue("l4pro"));
+    U8 iL4Pro = GetL4HexPro(GetStr("l4pro"));
     stPkt.pIp4Hdr->version = 4;
     stPkt.pIp4Hdr->hdlen = (IP4_HDR_LEN / 4);
     stPkt.pIp4Hdr->tos = 0;
     stPkt.pIp4Hdr->ttlen = htons(stInfo.iPktLen - stInfo.iCursor);
     stPkt.pIp4Hdr->ident = 1;
-    stPkt.pIp4Hdr->flag_offset = (GetiValue("ip_flags") << 6) 
-        | (htons(GetiValue("ip_offset") / 8));
+    stPkt.pIp4Hdr->flag_offset = (GetNum("ip_flags") << 6) 
+        | (htons(GetNum("ip_offset") / 8));
     stPkt.pIp4Hdr->ttl = 128;
     stPkt.pIp4Hdr->protocol = iL4Pro;
     stPkt.pIp4Hdr->checksum = 0;
-    stPkt.pIp4Hdr->sip = inet_addr(GetcValue("sip"));
-    stPkt.pIp4Hdr->dip = inet_addr(GetcValue("dip"));
+    stPkt.pIp4Hdr->sip = inet_addr(GetStr("sip"));
+    stPkt.pIp4Hdr->dip = inet_addr(GetStr("dip"));
     stPkt.pIp4Hdr->checksum = GetCheckSum((U16 *)stPkt.pIp4Hdr, IP4_HDR_LEN);
 
     // Calculate TCP of UDP checksum
@@ -184,12 +194,12 @@ static void BuildIp6Header()
     stInfo.iCursor -= IP6_HDR_LEN;
     stPkt.pIp6Hdr = (_ip6hdr *)(stPkt.pPacket + stInfo.iCursor);
 
-    U8 iL4Pro = GetL4HexPro(GetcValue("l4pro"));
+    U8 iL4Pro = GetL4HexPro(GetStr("l4pro"));
     stPkt.pIp6Hdr->version = htons(24576);
     /*
-    stPkt.pIp6Hdr->traffic = 0;
-    stPkt.pIp6Hdr->flowLabel = 0;
-    */
+       stPkt.pIp6Hdr->traffic = 0;
+       stPkt.pIp6Hdr->flowLabel = 0;
+       */
     stPkt.pIp6Hdr->payload = htons(iPayLen);
     stPkt.pIp6Hdr->protocol = iL4Pro;
     stPkt.pIp6Hdr->nextHop = 0xff;
@@ -218,10 +228,10 @@ static void BuildArpHeader(int iOperationType)
     stPkt.pArpHdr->len = 0x06;
     stPkt.pArpHdr->plen = 0x04;
     stPkt.pArpHdr->option = htons(iOperationType); // 1:ARP req 2:ARP res 3:RARP req 4:RARP res
-    FillInMacAddr((char*)&stPkt.pArpHdr->smac, GetcValue("smac"));
-    stPkt.pArpHdr->sip = inet_addr(GetcValue("sip"));
-    FillInMacAddr((char*)&stPkt.pArpHdr->dmac, GetcValue("dmac"));
-    stPkt.pArpHdr->dip = inet_addr(GetcValue("dip"));
+    FillInMacAddr((char*)&stPkt.pArpHdr->smac, GetStr("smac"));
+    stPkt.pArpHdr->sip = inet_addr(GetStr("sip"));
+    FillInMacAddr((char*)&stPkt.pArpHdr->dmac, GetStr("dmac"));
+    stPkt.pArpHdr->dip = inet_addr(GetStr("dip"));
 }
 
 /* Building TCP protocol header */
@@ -230,13 +240,13 @@ static void BuildTcpHeader()
     stInfo.iCursor -= TCP_HDR_LEN;
     stPkt.pTcpHdr = (_tcphdr *)(stPkt.pPacket + stInfo.iCursor);
 
-    stPkt.pTcpHdr->sport = htons(GetiValue("sport"));
-    stPkt.pTcpHdr->dport = htons(GetiValue("dport")); 
-    stPkt.pTcpHdr->seq = htonl(GetiValue("tcp-seq")); 
-    stPkt.pTcpHdr->ack = htonl(GetiValue("tcp-ack"));
-    stPkt.pTcpHdr->hdrlen = ((GetiValue("tcp-hdrlen") / 4) << 4);
+    stPkt.pTcpHdr->sport = htons(GetNum("sport"));
+    stPkt.pTcpHdr->dport = htons(GetNum("dport")); 
+    stPkt.pTcpHdr->seq = htonl(GetNum("tcp-seq")); 
+    stPkt.pTcpHdr->ack = htonl(GetNum("tcp-ack"));
+    stPkt.pTcpHdr->hdrlen = ((GetNum("tcp-hdrlen") / 4) << 4);
     // TCP FLAG: CWR|ECN|URG|ACK|PSH|RST|SYN|FIN
-    stPkt.pTcpHdr->flag = GetiValue("tcp-flag"); 
+    stPkt.pTcpHdr->flag = GetNum("tcp-flag"); 
     stPkt.pTcpHdr->win = htons(65535);
     stPkt.pTcpHdr->checksum = 0;
     stPkt.pTcpHdr->urg = 0;
@@ -248,8 +258,18 @@ static void BuildUdpHeader()
     stInfo.iCursor -= UDP_HDR_LEN;
     stPkt.pUdpHdr = (_udphdr *)(stPkt.pPacket + stInfo.iCursor);
 
-    stPkt.pUdpHdr->sport = htons(GetiValue("sport"));
-    stPkt.pUdpHdr->dport = htons(GetiValue("dport"));
+    stPkt.pUdpHdr->sport = htons(GetNum("sport"));
+    stPkt.pUdpHdr->dport = htons(GetNum("dport"));
+
+    char* pL7Pro = GetStr("l7pro");
+    if (pL7Pro) {
+        if (strcmp(pL7Pro, "DNS") == 0 || strcmp(pL7Pro, "DNS6") == 0) {
+            if (stPkt.pUdpHdr->sport != htons(53) 
+                    && stPkt.pUdpHdr->dport != htons(53)) {
+                stPkt.pUdpHdr->dport = htons(53);
+            }
+        }
+    }
     stPkt.pUdpHdr->len = htons(stInfo.iPktLen - stInfo.iCursor);
     stPkt.pUdpHdr->checksum = 0;
 }
@@ -257,8 +277,8 @@ static void BuildUdpHeader()
 /* Building ICMP protocol header */
 static void BuildIcmp4Header(int iOperationType)
 {
-    int iVlanLen = VLAN_TAG_LEN * GetiValue("vlannum");
-    stInfo.iCursor = (strcmp(GetcValue("l3pro"), "IPv4") == 0) ? 
+    int iVlanLen = VLAN_TAG_LEN * GetNum("vlannum");
+    stInfo.iCursor = (strcmp(GetStr("l3pro"), "IPv4") == 0) ? 
         MAC_HDR_LEN + iVlanLen + IP4_HDR_LEN : MAC_HDR_LEN + iVlanLen + IP6_HDR_LEN;
     int iIcmpMessageLen = stInfo.iPktLen - stInfo.iCursor;
     stPkt.pIcmp4Hdr = (_icmp4hdr *)(stPkt.pPacket + stInfo.iCursor);
@@ -293,7 +313,12 @@ static void BuildDnsMessage()
     int iUrlLen = strlen(pUrlStr);
 
     // Amand packet length
-    stInfo.iPktLen = 60 + iUrlLen;
+    if (strcmp(GetStr("l3pro"), "IPv4") == 0) {
+        stInfo.iPktLen = 60 + iUrlLen;
+    } else if (strcmp(GetStr("l3pro"), "IPv6") == 0) {
+        stInfo.iPktLen = 80 + iUrlLen;
+    }
+
     int iPayLen = GetDataLen(stInfo.iPktLen);
     stInfo.iCursor = stInfo.iPktLen;
 
@@ -338,17 +363,49 @@ static void BuildDnsMessage()
     *(pDnsData+3) = 0x01;
 }
 
-/* Building HTTP messages */
-static void BuildHttpMessage()
+static void BuildHttpRespone(int iCode)
 {
-    if (stInfo.iPktLen < 360) {
-        stInfo.iCursor = stInfo.iPktLen = 360;
+    if (stInfo.iPktLen < 300) {
+        stInfo.iCursor = stInfo.iPktLen = 300;
+    }
+    int iPayLen = GetDataLen(stInfo.iPktLen);
+    int iDataStrLen = iPayLen - 204; 
+
+    char cDataBuf[BUFSIZ];
+    char* pBufCursor = cDataBuf;
+
+    if (iCode == 0) {
+        sprintf(pBufCursor, "%s%s%s%s%s%s%s%s%s%s%s%s%s",
+                "HTTP/1.1 200 OK\r\n",
+                "Data: Sun, 26 Mar 2017 03:26:00 GMT\r\n",
+                "Content-Type: text/plain\r\n",
+                "Transfer-Encoding: chunked\r\n",
+                "Connection: keep-alive\r\n",
+                "Server: 360 web server\r\n",
+                "\r\n",
+                "{\"msg\":\"success\",",
+                "\"code\":\"0\",",
+                "\"data\":[", GetRandStr(iDataStrLen), "]}\n",
+                "\r\n0\r\n\r\n"
+               );
+    }
+
+    stInfo.iCursor -= iPayLen;
+    stPkt.pData = (char *)(stPkt.pPacket + stInfo.iCursor);
+    memcpy(stPkt.pData, cDataBuf, strlen(cDataBuf));
+}
+
+/* Building HTTP messages */
+static void BuildHttpRequest(int iCode)
+{
+    if (stInfo.iPktLen < 380) {
+        stInfo.iCursor = stInfo.iPktLen = 380;
     }
     int iPayLen = GetDataLen(stInfo.iPktLen);
 
     char* pUriStr = NULL;
     char* pHostStr = NULL;
-    char* pUrlStr = GetcValue("url");
+    char* pUrlStr = GetStr("url");
     if (pUrlStr == NULL) {
         char* pUrlStr = GetRandURL("ALL", 20);
         pHostStr = strtok(pUrlStr, "/");
@@ -360,16 +417,14 @@ static void BuildHttpMessage()
 
     stInfo.iCursor -= iPayLen;
     stPkt.pData = (char *)(stPkt.pPacket + stInfo.iCursor);
-    char* pL7Pro = GetcValue("l7pro");
-
 
     char cDataBuf[BUFSIZ];
     char* pBufCursor = cDataBuf;
 
     char* pMethod = NULL;
-    if (strcmp(pL7Pro, "HTTP-GET") == 0) {
+    if (iCode == 0) {
         pMethod = "GET /";
-    } else if (strcmp(pL7Pro, "HTTP-POST") == 0) {
+    } else if (iCode == 1) {
         pMethod = "POST /";
     }
 
@@ -401,8 +456,8 @@ static void BuildDataContexts()
     int iPayLen = GetDataLen(stInfo.iPktLen);
     stInfo.iCursor -= iPayLen;
 
-    int iStrOffset = GetiValue("offset");
-    int iStrType = GetFlag("string");
+    int iStrOffset = GetNum("offset");
+    int iStrType = GetState("string");
     if (iPayLen < 0) {
         LOGRECORD(ERROR, "Payload length error");
     } else if (iPayLen > 0) {
@@ -419,10 +474,10 @@ static void BuildDataContexts()
         }
 
         // Generate data
-        if (iStrType == FG_RAND) {
+        if (iStrType == FG_RAND || iStrType == FG_INIT) {
             memcpy(pData, GetRandStr(iStrLen), iStrLen);
         } else if (iStrType == FG_FIXD) {
-            char* pFixedStr = GetcValue("string");
+            char* pFixedStr = GetStr("string");
             int iFixedStrLen = strlen(pFixedStr);
             // Handling strings beginning with '0x'
             if (pFixedStr[0] == '0' && pFixedStr[1] == 'x') {
@@ -440,8 +495,6 @@ static void BuildDataContexts()
                 iFixedStrLen = (iFixedStrLen > iStrLen ? iStrLen : iFixedStrLen);
                 memcpy(pData, pFixedStr, iFixedStrLen);
             }
-        } else if (iStrType == FG_NOINPUT) { // Handling no input situation
-            LOGRECORD(DEBUG, "No input string");
         } else {
             LOGRECORD(ERROR, "String type not supported");
         }
@@ -451,7 +504,7 @@ static void BuildDataContexts()
 /* Layer two protocol processing */
 static void BuildLayer2Header()
 {
-    int iVlanNum = GetiValue("vlannum");
+    int iVlanNum = GetNum("vlannum");
     int iTotleNum = iVlanNum;
     while (iVlanNum) {
         BuildVlanTag(iVlanNum, iTotleNum);
@@ -464,7 +517,7 @@ static void BuildLayer2Header()
 /* Layer three protocol processing */
 static void BuildLayer3Header()
 {
-    switch(GetL3HexPro(GetcValue("l3pro"))) {
+    switch(GetL3HexPro(GetStr("l3pro"))) {
         case IPv4 : BuildIp4Header(); break;
         case IPv6 : BuildIp6Header(); break;
         case ARP  : BuildArpHeader(2); break; // 2:ARP response
@@ -477,7 +530,7 @@ static void BuildLayer3Header()
 /* Layer four protocol processing */
 static void BuildLayer4Header()
 {
-    char* pL4Pro = GetcValue("l4pro");
+    char* pL4Pro = GetStr("l4pro");
 
     if (pL4Pro != NULL) {
         switch(GetL4HexPro(pL4Pro)) {
@@ -494,23 +547,33 @@ static void BuildLayer4Header()
 /* Layer seven protocol processing */
 static void BuildApplicationData()
 {
-    char *pProStr = GetcValue("l7pro");
+    char *pProStr = GetStr("l7pro");
     if (pProStr == NULL) {
-        pProStr = GetcValue("l4pro");
+        pProStr = GetStr("l4pro");
     }
- 
-    if (pProStr != NULL && (strcmp(pProStr, "DNS") == 0)) {
-        BuildDnsMessage();
-    } else if (pProStr != NULL 
-            && ((strcmp(pProStr, "HTTP-GET") == 0) 
-                || (strcmp(pProStr, "HTTP-POST") == 0))) {
-        BuildHttpMessage();
-    } else if (pProStr != NULL 
-            && ((strcmp(pProStr, "TCP") == 0)
-                || (strcmp(pProStr, "UDP") == 0)
-                || (strcmp(pProStr, "TCP6") == 0)
-                || (strcmp(pProStr, "UDP6") == 0))) { 
-        BuildDataContexts();
+
+    if (pProStr != NULL) { 
+        if ((strcmp(pProStr, "DNS") == 0)
+                || (strcmp(pProStr, "DNS6") == 0)) {
+            BuildDnsMessage();
+        } else if ((strcmp(pProStr, "HTTP") == 0)
+                || (strcmp(pProStr, "HTTP6") == 0)) {
+            BuildHttpRespone(0);
+        } else if ((strcmp(pProStr, "HTTP-GET") == 0) 
+                || (strcmp(pProStr, "HTTP-GET6") == 0)) {
+            BuildHttpRequest(0);
+        } else if ((strcmp(pProStr, "HTTP-POST") == 0)
+                || (strcmp(pProStr, "HTTP-POST6") == 0)) {
+            BuildHttpRequest(1);
+        } else if (pProStr != NULL 
+                && ((strcmp(pProStr, "TCP") == 0)
+                    || (strcmp(pProStr, "UDP") == 0)
+                    || (strcmp(pProStr, "TCP6") == 0)
+                    || (strcmp(pProStr, "UDP6") == 0))) { 
+            BuildDataContexts();
+        } else {
+            LOGRECORD(DEBUG, "Unknown layer seven protocol");
+        }
     }
 
     BuildLayer4Header();
@@ -521,7 +584,7 @@ static void BuildInitialization()
     static char cPacketBuf[PKT_BUF_LEN];
     stPkt.pPacket = cPacketBuf;
 
-    stInfo.iPktLen = GetiValue("pktlen");
+    stInfo.iPktLen = GetNum("pktlen");
     stInfo.iCursor = stInfo.iPktLen;
     RefreshParameter();
 }
@@ -530,42 +593,31 @@ static void BuildInitialization()
 static void MessageGenerator()
 {
     int iLoop = 0;
-    int iCount = GetiValue("count");
-    int iDebugSwitch = GetiValue("debug");
+    int iCount = GetNum("count");
 
-    while (!iCount || iLoop<iCount) {
+    if (GetNum("debug")) {
+        ShowParameter();
+    }
+
+    while (!iCount || iLoop < iCount) {
         BuildInitialization();
         BuildApplicationData();
 
         // Message sending or saving program 
-        if (GetiValue("exec") == 0) { //send
-            //SendPacketProcess(stPkt.pPacket, stInfo.iPktLen);
-            char buf[5000];
-            memcpy(buf, stPkt.pPacket, stInfo.iPktLen);
-            int i = 0;
-            for (;i<7;i ++) {
-                buf[stInfo.iPktLen+i] = 0x00;
-            }
-            memcpy(buf+stInfo.iPktLen+7, stPkt.pPacket, stInfo.iPktLen);
-            SendPacketProcess(buf, stInfo.iPktLen*2+7);
-
+        if (GetNum("exec") == 0) { //send
+            SendPacketProcess(stPkt.pPacket, stInfo.iPktLen);
         } else { //save
             SaveModeProgram(1);
         }
 
-        if (iDebugSwitch) {
-            ShowParameter();
-            DisplayPacketData(stPkt.pPacket, stInfo.iPktLen);
-        }
-
-        if (GetcValue("rule")) {
+        if (GetStr("rule")) {
             RulesGenerationEntrance(stPkt, iLoop);
         }
 
         // Display program process 
-        ProgramProgress( ++iLoop, iCount);
+        ProgramProgress( ++ iLoop, iCount);
     } // End of while
-    printf("\n");
+
     RecycleProgram();
 }
 

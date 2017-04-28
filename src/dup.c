@@ -1,3 +1,14 @@
+/*******************************************************
+ *
+ *  Author        : Mr.Gao
+ *  Email         : 729272771@qq.com
+ *  Filename      : dup.c
+ *  Last modified : 2017-04-25 14:11
+ *  Description   : Copy packets
+ *
+ * *****************************************************/
+
+
 #include    <stdio.h>
 #include    <unistd.h>
 #include    <string.h>
@@ -38,8 +49,8 @@ void DuplicatePacket()
 {
     LOGRECORD(DEBUG, "Packet duplicat start");
 
-    int iReadFd = OpenReadFile(GetcValue("read"));
-    int iSaveFd = OpenSaveFile(GetcValue("save"));
+    int iReadFd = OpenReadFile(GetStr("read"));
+    int iSaveFd = OpenSaveFile(GetStr("save"));
 
     PcapHeadProcessing(iReadFd, iSaveFd);
 
@@ -50,7 +61,7 @@ void DuplicatePacket()
         LOGRECORD(ERROR, "Data partial read failed");
     }
 
-    int iCopyCount = GetiValue("count");
+    int iCopyCount = GetNum("count");
     int iCounter = 1;
 
     // Append data
@@ -92,7 +103,7 @@ void MergePacket(int argc, char* argv[])
     int iSaveFd = 0;
     int iParsePcapSwitch = 1;
 
-    char* filelist = GetcValue("filelist");
+    char* filelist = GetStr("filelist");
     char* file = strtok(filelist, " "); // Get rid of 'r'
 
     while (1 == 1) {
@@ -102,7 +113,7 @@ void MergePacket(int argc, char* argv[])
 
         iReadFd = OpenReadFile(file);
         if (iParsePcapSwitch == 1) {
-            iSaveFd = OpenSaveFile(GetcValue("save"));
+            iSaveFd = OpenSaveFile(GetStr("save"));
             PcapHeadProcessing(iReadFd, iSaveFd);
             iParsePcapSwitch = 0;
         }
@@ -149,7 +160,7 @@ void SplitPacket()
 
     LOGRECORD(DEBUG, "Packet split start");
 
-    char* pReadFileName = GetcValue("read");
+    char* pReadFileName = GetStr("read");
     int   iReadFd = OpenReadFile(pReadFileName);
 
     if (read(iReadFd, cPcapHdrBuf, PCAP_HDR_LEN) < 0) {

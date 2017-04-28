@@ -1,3 +1,14 @@
+/*******************************************************
+ *
+ *  Author        : Mr.Gao
+ *  Email         : 729272771@qq.com
+ *  Filename      : storage.c
+ *  Last modified : 2017-04-27 16:16
+ *  Description   : Used to parameter storage
+ *
+ * *****************************************************/
+
+
 #include <ctype.h>
 #include <assert.h>
 #include <string.h>
@@ -13,48 +24,47 @@ void CreateStorage(void)
 {
     pHead = calloc(1, sizeof(st_node));
     assert(pHead != NULL);
-    pHead->title = NULL;
-    pHead->cValue = NULL;
-    pHead->iValue = -1;
-    pHead->flag = 0;
-    pHead->next = NULL;
+    pHead->pTitle = NULL;
+    pHead->pStr = NULL;
+    pHead->iNum = -1;
+    pHead->iState = 0;
+    pHead->pNext = NULL;
 }
 
 /* Add storage node and store data */
-pNode InsertNode(char* title, char* cValue, int iValue, int flag)
+void InsertNode(char* pTitle, char* pStr, int iNum, int iState)
 {
     assert(pHead != NULL);
     pNode pCur = pHead;
     pNode pPre = NULL;
     pNode pNew = (pNode)malloc(sizeof(st_node));
-    pNew->title = title;
-    pNew->cValue = cValue;
-    pNew->iValue = iValue;
-    pNew->flag = flag;
-    pNew->next = NULL;
+    pNew->pTitle = pTitle;
+    pNew->pStr = pStr;
+    pNew->iNum = iNum;
+    pNew->iState = iState;
+    pNew->pNext = NULL;
 
     assert(pNew != NULL);
     while (pCur != NULL) {
         pPre = pCur;
-        pCur = pCur->next;
+        pCur = pCur->pNext;
     }
-    pPre->next = pNew;
 
-    return pNew;
+    pPre->pNext = pNew;
 }
 
 /* Query parameter storage node */
-static pNode FindNode(char* title)
+static pNode FindNode(char* pTitle)
 {
     pNode pRes = NULL;
-    pNode pCur = pHead->next;
+    pNode pCur = pHead->pNext;
 
     while (pCur != NULL) {
-        if (strcmp(pCur->title, title) == 0) {
+        if (strcmp(pCur->pTitle, pTitle) == 0) {
             pRes = pCur;
             break;
         } else {
-            pCur = pCur->next;
+            pCur = pCur->pNext;
         }
     }
 
@@ -62,87 +72,92 @@ static pNode FindNode(char* title)
 }
 
 /* Update storage node data */
-static void UpdateNode(char* title, char* cValue, int iValue, int flag)
+static void UpdateNode(char* pTitle, char* pStr, int iNum, int iState)
 {
-    pNode pCur = FindNode(title);
+    pNode pCur = FindNode(pTitle);
 
     if (pCur == NULL) {
-        pCur = InsertNode(title, cValue, iValue, flag);
+        InsertNode(pTitle, pStr, iNum, iState);
+    } else {
+        pCur->pStr = pStr;
+        pCur->iNum = iNum;
+        pCur->iState = iState;
     }
-
-    pCur->cValue = cValue;
-    pCur->iValue = iValue;
-    pCur->flag = flag;
 }
 
 /* Updating the data content of a string type */
-static void UpdatecValue(char* title, char* cValue)
+static void UpdateStr(char* pTitle, char* pStr)
 {
-    pNode pCur = FindNode(title);
+    pNode pCur = FindNode(pTitle);
 
     if (NULL != pCur) {
-        UpdateNode(title, cValue, pCur->iValue, pCur->flag);
+        UpdateNode(pTitle, pStr, pCur->iNum, pCur->iState);
     } else {
-        printf("UpdateNodecValue error[%s:%s]\n", title, cValue);
+        printf("Update string error[%s:%s]\n", pTitle, pStr);
         exit(0);
     }
 }
 
 /* Updating the data content of an integral type */
-static void UpdateiValue(char* title, int iValue)
+static void UpdateNum(char* pTitle, int iNum)
 {
-    pNode pCur = FindNode(title);
+    pNode pCur = FindNode(pTitle);
 
     if (pCur != NULL) {
-        UpdateNode(title, pCur->cValue, iValue, pCur->flag);
+        UpdateNode(pTitle, pCur->pStr, iNum, pCur->iState);
     } else {
-        printf("UpdateNodeiValue error\n");
+        printf("Update number error\n");
         exit(0);
     }
 }
 
 /* Gets the data content of the string type */
-char* GetcValue(char* title)
+char* GetStr(char* pTitle)
 {
-    pNode pCur = FindNode(title);
+    pNode pCur = FindNode(pTitle);
 
-    if (pCur == NULL) 
+    if (pCur == NULL) {
         return NULL;
-    else 
-        return pCur->cValue;
+    }
+
+    return pCur->pStr;
 }
 
 /* Gets the data content of an integral type */
-int GetiValue(char* title)
+int GetNum(char* pTitle)
 {
-    pNode pCur = FindNode(title);
+    pNode pCur = FindNode(pTitle);
 
     if (pCur == NULL) {
         return 0;
     }
 
-    return pCur->iValue;
+    return pCur->iNum;
 }
 
-/* Gets the contents of the storage flag bit data */
-int GetFlag(char* title)
+/* Gets the contents of the storage state bit data */
+int GetState(char* pTitle)
 {
-    pNode pCur = FindNode(title);
+    pNode pCur = FindNode(pTitle);
 
-    if (!pCur) return -1;
-    return pCur->flag;
+    if (!pCur) {
+        return -1;
+    }
+
+    return pCur->iState;
 }
 
 /* Calculate storage container size */ 
 static int CalcStorageSize()
 {
     int iCounter = 0;
-    pNode pCur = pHead->next;
+    pNode pCur = pHead->pNext;
 
     while (pCur != NULL) {
         iCounter ++;
-        pCur = pCur->next;
+        pCur = pCur->pNext;
     }
+
     return iCounter;
 }
 
@@ -150,11 +165,11 @@ static int CalcStorageSize()
 void DestoryStorage()
 {
     pNode pCur = pHead;
-    pNode pNext = pHead->next;
+    pNode pNext = pHead->pNext;
 
     while (pNext != NULL) {
         pCur = pNext;
-        pNext = pNext->next;
+        pNext = pNext->pNext;
         free(pCur);
     }
 
@@ -168,12 +183,14 @@ void ShowParameter()
     int iLength = 0;
 
     iLength = CalcStorageSize();
-    pNode pCur =  pHead->next;
+    pNode pCur =  pHead->pNext;
 
     for (iCounter = 0; iCounter < iLength; iCounter ++) {
-        printf("%s:%s,%d[%d]\n", pCur->title, pCur->cValue, pCur->iValue, pCur->flag);    
-        pCur = pCur->next;
+        printf("%-10s:%18s,%6d[%d]\n", 
+                pCur->pTitle, pCur->pStr, pCur->iNum, pCur->iState);    
+        pCur = pCur->pNext;
     }
+    printf("\n");
 }
 
 /* Refresh the value of the parameter based on the input parameters */
@@ -185,136 +202,139 @@ void RefreshParameter()
     char* pParaName = NULL;
 
     iLength = CalcStorageSize();
-    pNode pCur =  pHead->next;
+    pNode pCur =  pHead->pNext;
 
     for (iCounter = 0; iCounter < iLength; iCounter ++) {
-        pParaName = pCur->title;
-        iParaMode = pCur->flag;
+        pParaName = pCur->pTitle;
+        iParaMode = pCur->iState;
         if (iParaMode == FG_RAND) { // random 
             if (strcmp(pParaName, "smac") == 0) {
-                UpdatecValue(pParaName, GetRandMacAddr(0));
+                UpdateStr(pParaName, GetRandMacAddr(0));
             } else if (strcmp(pParaName, "dmac") == 0) {
-                UpdatecValue(pParaName, GetRandMacAddr(1));
+                UpdateStr(pParaName, GetRandMacAddr(1));
             } else if (strcmp(pParaName, "sip") == 0) {
-                UpdatecValue(pParaName, GetRandIp4Addr(0));
+                UpdateStr(pParaName, GetRandIp4Addr(0));
             } else if (strcmp(pParaName, "dip") == 0) {
-                UpdatecValue(pParaName, GetRandIp4Addr(1));
+                UpdateStr(pParaName, GetRandIp4Addr(1));
             } else if (strcmp(pParaName, "sport") == 0) {
-                UpdateiValue(pParaName, GetRandPort(0));
+                UpdateNum(pParaName, GetRandPort(0));
             } else if (strcmp(pParaName, "dport") == 0) {
-                UpdateiValue(pParaName, GetRandPort(1));
+                UpdateNum(pParaName, GetRandPort(1));
             } else if (strcmp(pParaName, "vlan") == 0) {
-                UpdateiValue(pParaName, GetRandVlan(0));
+                UpdateNum(pParaName, GetRandVlan(0));
             } else if (strcmp(pParaName, "qinq") == 0) {
-                UpdateiValue(pParaName, GetRandVlan(1));
+                UpdateNum(pParaName, GetRandVlan(1));
             } else if (strcmp(pParaName, "pktlen") == 0) {
-                UpdateiValue(pParaName, GetRandPktLen());
+                UpdateNum(pParaName, GetRandPktLen());
             }
         } else if (iParaMode == FG_INCR) { // increase
             if (strcmp(pParaName, "smac") == 0) {
-                UpdatecValue(pParaName, GetIncrMacAddr(0));
+                UpdateStr(pParaName, GetIncrMacAddr(0));
             } else if (strcmp(pParaName, "dmac") == 0) {
-                UpdatecValue(pParaName, GetIncrMacAddr(1));
+                UpdateStr(pParaName, GetIncrMacAddr(1));
             } else if (strcmp(pParaName, "sip") == 0) {
-                UpdatecValue(pParaName, GetIncrIp4Addr(0));
+                UpdateStr(pParaName, GetIncrIp4Addr(0));
             } else if (strcmp(pParaName, "dip") == 0) {
-                UpdatecValue(pParaName, GetIncrIp4Addr(1));
+                UpdateStr(pParaName, GetIncrIp4Addr(1));
             } else if (strcmp(pParaName, "sport") == 0) {
-                UpdateiValue(pParaName, GetIncrPort(0));
+                UpdateNum(pParaName, GetIncrPort(0));
             } else if (strcmp(pParaName, "dport") == 0) {
-                UpdateiValue(pParaName, GetIncrPort(1));
+                UpdateNum(pParaName, GetIncrPort(1));
             } else if (strcmp(pParaName, "vlan") == 0) {
-                UpdateiValue(pParaName, GetIncrVlan(0));
+                UpdateNum(pParaName, GetIncrVlan(0));
             } else if (strcmp(pParaName, "qinq") == 0) {
-                UpdateiValue(pParaName, GetIncrVlan(1));
+                UpdateNum(pParaName, GetIncrVlan(1));
             } else if (strcmp(pParaName, "pktlen") == 0) {
-                UpdateiValue(pParaName, GetIncrPktLen());
+                UpdateNum(pParaName, GetIncrPktLen());
             }
         } else if (iParaMode == FG_DECR) { // decrease
             LOGRECORD(INFO, "This function isn't develop");
         }
 
-        pCur = pCur->next;
+        pCur = pCur->pNext;
     }
 }
 
+/* Analysis of layer two, three, seven protocol */
+char** ProtocolAnalyse(char* pProStr)
+{
+    static char* pProArray[3];
+
+    if (strcmp(pProStr, "ARP") == 0) {
+        pProArray[0] = pProStr;
+    } else if ((strcmp(pProStr, "ICMP") == 0) 
+        || (strcmp(pProStr, "UDP") == 0) 
+        || (strcmp(pProStr, "TCP") == 0)) {
+        pProArray[0] = "IPv4";
+        pProArray[1] = pProStr;
+    } else if ((strcmp(pProStr, "HTTP-GET") == 0)
+        || (strcmp(pProStr, "HTTP-POST") == 0)
+        || (strcmp(pProStr, "HTTP") == 0)) {
+        pProArray[0] = "IPv4";
+        pProArray[1] = "TCP";
+        pProArray[2] = pProStr;
+    } else if (strcmp(pProStr, "DNS") == 0) {
+        pProArray[0] = "IPv4";
+        pProArray[1] = "UDP";
+        pProArray[2] = pProStr;
+    } else if ((strcmp(pProStr, "ICMP6") == 0) 
+        || (strcmp(pProStr, "UDP6") == 0) 
+        || (strcmp(pProStr, "TCP6") == 0)) {
+        pProArray[0] = "IPv6";
+        pProArray[1] = pProStr;
+    } else if ((strcmp(pProStr, "HTTP-GET6") == 0)
+        || (strcmp(pProStr, "HTTP-POST6") == 0)
+        || (strcmp(pProStr, "HTTP6") == 0)) {
+        pProArray[0] = "IPv6";
+        pProArray[1] = "TCP";
+        pProArray[2] = pProStr;
+    } else if (strcmp(pProStr, "DNS6") == 0) {
+        pProArray[0] = "IPv6";
+        pProArray[1] = "UDP";
+        pProArray[2] = pProStr;
+    }
+
+    return pProArray;
+}
+
 /* Parameter storage processor */
-void StorageInput(char* title, char* value, char mode)
+void StorageInput(char* pTitle, char* pValue, char cType)
 {
     // Protocol analysis in parameters
-    if (strcmp(title, "protocol") == 0) {
+    if (strcmp(pTitle, "protocol") == 0) {
         unsigned int iCounter;
         static char cProtocal[16];
         memset(cProtocal, 0, sizeof(cProtocal));
 
         // Converting arguments to uppercase characters
-        int iStrLength = strlen(value);
+        int iStrLength = strlen(pValue);
         for (iCounter = 0; iCounter < iStrLength; iCounter ++) {
-            cProtocal[iCounter] = toupper(value[iCounter]);
+            cProtocal[iCounter] = toupper(pValue[iCounter]);
         }
 
-        char* pL3Pro = NULL;
-        char* pL4Pro = NULL;
-        char* pL7Pro = NULL;
-        if (strcmp(cProtocal, "ARP") == 0) {
-            pL3Pro = cProtocal;
-        } else if ((strcmp(cProtocal, "ICMP") == 0) 
-            || (strcmp(cProtocal, "UDP") == 0) 
-            || (strcmp(cProtocal, "TCP") == 0)) {
-            pL3Pro = "IPv4";
-            pL4Pro = cProtocal;
-        } else if ((strcmp(cProtocal, "HTTP-GET") == 0)
-            || (strcmp(cProtocal, "HTTP-POST") == 0)) {
-            pL3Pro = "IPv4";
-            pL4Pro = "TCP";
-            pL7Pro = cProtocal;
-        } else if (strcmp(cProtocal, "DNS") == 0) {
-            pL3Pro = "IPv4";
-            pL4Pro = "UDP";
-            pL7Pro = cProtocal;
-        } else if ((strcmp(cProtocal, "ICMP6") == 0) 
-            || (strcmp(cProtocal, "UDP6") == 0) 
-            || (strcmp(cProtocal, "TCP6") == 0)) {
-            pL3Pro = "IPv6";
-            pL4Pro = cProtocal;
-        } else if ((strcmp(cProtocal, "HTTP-GET6") == 0)
-            || (strcmp(cProtocal, "HTTP-POST6") == 0)) {
-            pL3Pro = "IPv6";
-            pL4Pro = "TCP";
-            pL7Pro = cProtocal;
-        } else if (strcmp(cProtocal, "DNS6") == 0) {
-            pL3Pro = "IPv6";
-            pL4Pro = "UDP";
-            pL7Pro = cProtocal;
-        }
-
-        UpdateNode("l3pro", pL3Pro, -1, 0);
-        UpdateNode("l4pro", pL4Pro, -1, 0);
-        UpdateNode("l7pro", pL7Pro, -1, 0);
-    }
-
-    // Test IPv6
-    //UpdateNode("l3pro", "IPv6", -1, 0);
-
-    // Marking parameters are variable 
-    int iParaMode;
-    if (strcmp(value, "random") == 0) {
-        iParaMode = FG_RAND;
-    } else if (strcmp(value, "increase") == 0) {
-        iParaMode = FG_INCR;
-    } else if (strcmp(value, "decrease") == 0) {
-        iParaMode = FG_DECR;
-    } else if (value != NULL) {
-        iParaMode = FG_FIXD;
+        char** pProArray = ProtocolAnalyse(cProtocal);
+        UpdateNode("l3pro", pProArray[0], -1, 0);
+        UpdateNode("l4pro", pProArray[1], -1, 0);
+        UpdateNode("l7pro", pProArray[2], -1, 0);
     } else {
-        iParaMode = FG_NOINPUT;
-    }
+        // Marking parameters are variable 
+        int iParaMode;
+        if (strcmp(pValue, "rand") == 0) {
+            iParaMode = FG_RAND;
+        } else if (strcmp(pValue, "incr") == 0) {
+            iParaMode = FG_INCR;
+        } else if (strcmp(pValue, "decr") == 0) {
+            iParaMode = FG_DECR;
+        } else if (pValue != NULL) {
+            iParaMode = FG_FIXD;
+        }
 
-    // Data stored according to identification 
-    if (mode == 'c') {
-        UpdateNode(title, value, -1, iParaMode);
-    } else if (mode == 'i') {
-        UpdateNode(title, NULL, atoi(value), iParaMode);
+        // Data stored according to identification 
+        if (cType == 'c') {
+            UpdateNode(pTitle, pValue, -1, iParaMode);
+        } else if (cType == 'i') {
+            UpdateNode(pTitle, NULL, atoi(pValue), iParaMode);
+        }
     }
 }
 

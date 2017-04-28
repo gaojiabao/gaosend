@@ -1,3 +1,14 @@
+/*******************************************************
+ *
+ *  Author        : Mr.Gao
+ *  Email         : 729272771@qq.com
+ *  Filename      : main.c
+ *  Last modified : 2017-04-25 14:10
+ *  Description   : All program entry
+ *
+ * *****************************************************/
+
+
 #include    <stdlib.h>
 #include    <getopt.h>
 #include    <string.h>
@@ -58,46 +69,45 @@ void UsageOfProgram()
     LOGRECORD(INFO, \
         "Usage: gaosend [args ...]\n"
         "PACKET ARGS\n" 
-        "\t--smac       -a   Source mac  [ fixed | random | increase ]\n"
-        "\t--sip        -s   Source ip   [ fixed | random | increase ]\n"
-        "\t--sport      -P   Source port [ fixed | random | increase ]\n"
-        "\t--dmac       -b   Destation mac  [ fixed | random | increase ]\n"
-        "\t--dip        -d   Destation ip   [ fixed | random | increase ]\n"
-        "\t--dport      -Q   Destation port [ fixed | random | increase ]\n"
-        "\t--protocol   -p   Protocol [ ip | arp | udp | tcp | icmp | random | HTTP-GET | HTTP-POST | DNS ]\n"
-        "\t--vlan       -V   Vlan tag [ fixed | random | increase ]\n"
-        "\t--qinq       -W   QinQ vlan tag [ fixed | random | increase ]\n"
-        "\t--offset     -O   String offset in data part\n"
-        "\t--url        -u   URL in Http GET or Http POST\n"
-        "\t--length     -l   Packet length  [ fixed | increace | random ]\n"
-        "\t--string     -S   String in data part\n"
-        "\t--rulelen    -y   String length of rule\n"
+        "\t-a, --smac         Source mac address <fixd | rand | incr>\n"
+        "\t-s, --sip          Source ip address  <fixd | rand | incr>\n"
+        "\t-P, --sport        Source port <fixd | rand | incr >\n"
+        "\t-b, --dmac         Destation mac address <fixd | rand | incr>\n"
+        "\t-d, --dip          Destation ip address  <fixd | rand | incr>\n"
+        "\t-Q, --dport        Destation port <fixd | rand | incr>\n"
+        "\t-p, --protocol     Protocol in <arp | icmp | rand | http-get | http-post | dns>\n"
+        "\t-V, --vlan         Vlan tag <fixd | rand | incr>\n"
+        "\t-W, --qinq         QinQ vlan tag <fixd | rand | incr>\n"
+        "\t-O, --offset       String offset in data part\n"
+        "\t-u, --url          URL in Http GET or Http POST\n"
+        "\t-l, --length       Packet length  <fixd | incr | rand>\n"
+        "\t-S, --string       String in data part\n"
+        "\t-y, --rulelen      String length of rule\n"
         "FUNCTION ARGS\n"
-        "\t--build      -B   Build packet with send or write mode\n"
-        "\t--replay     -R   Replay packet, use with -r -I and -c\n"
-        "\t--duplicate  -D   Duplicate N times into original pcap-file, use with -r and -c\n"
-        "\t--devide     -C   Devide the pcap file to single pcap file, use with -r\n"
-        "\t--merge      -m   Merge the pcap files into frist pcap file, use with -r and -w\n"
-        "\t--statistic  -A   Statistic informations, use with -r\n"
-        "\t--modify     -M   Modify packet, use with -r -E and other needed parameters\n"
-        "\t--format     -f   Switch packet format to *.pcap, use with -r and -w\n"
+        "\t-B, --build        Build packet with send or write mode\n"
+        "\t-R, --replay       Replay packet, use with -r -I and -c\n"
+        "\t-D, --duplicate    Duplicate N times into original pcap-file, use with -r and -c\n"
+        "\t-C, --devide       Devide the pcap file to single pcap file, use with -r\n"
+        "\t-m, --merge        Merge the pcap files into frist pcap file, use with -r and -w\n"
+        "\t-A, --statistic    Statistic informations, use with -r\n"
+        "\t-M, --modify       Modify packet, use with -r -E and other needed parameters\n"
+        "\t-f, --format       Switch packet format to *.pcap, use with -r and -w\n"
         "OTHER ARGS\n"
-        "\t--read       -r   Read packet from the  pcap file < filename >\n"
-        "\t--save       -w   Save packet into a pcap file < filename >\n"
-        "\t--ip-flags   -x   Set IP fragment flags\n"
-        "\t--ip-offset  -o   Set IP fragment offset\n"
-        "\t--save       -w   Save packet into a pcap file < filename >\n"
-        "\t--flowcheck  -F   Turn on flow check switch, only use with -A\n"
-        "\t--tcp-flag   -e   TCP flag bit\n"
-        "\t--tcp-seq    -j   TCP sequence number\n"
-        "\t--tcp-ack    -k   TCP acknowledge number\n"
-        "\t--express    -E   Used to find the target packet\n"
-        "\t--ruletype   -Z   Rule type [ aclnmask | aclex | mac_table ]\n"
-        "\t--interval   -i   Interval time\n"
-        "\t--interface  -I   Interface number\n"
-        "\t--count      -c   Packets number\n"
-        "\t--version    -v   Program version\n"
-        "\t--help       -h   Help informations\n"
+        "\t-r, --read         Read packet from the  pcap file <filename>\n"
+        "\t-w, --save         Save packet into a pcap file <filename>\n"
+        "\t-x, --ip-flags     Set IP fragment flags\n"
+        "\t-o, --ip-offset    Set IP fragment offset\n"
+        "\t-F, --flowcheck    Turn on flow check switch\n"
+        "\t-e, --tcp-flag     TCP flag bit\n"
+        "\t-j, --tcp-seq      TCP sequence number\n"
+        "\t-k, --tcp-ack      TCP acknowledge number\n"
+        "\t-E, --express      Used to find the target packet\n"
+        "\t-Z, --ruletype     Rule type <aclnmask | aclex | mac_table>\n"
+        "\t-i, --interval     Interval time\n"
+        "\t-I, --interface    Interface number\n"
+        "\t-c, --count        Cycle times\n"
+        "\t-v, --version      Program version\n"
+        "\t-h, --help         Help informations\n"
     );
 
     LOGRECORD(DEBUG, "Query user manual finished");
@@ -117,32 +127,32 @@ void VersionOfProgram()
 void ParametersInit()
 {
     CreateStorage();
-    InsertNode("smac", SMAC, -1, 0);
-    InsertNode("dmac", DMAC, -1, 0);
-    InsertNode("sip", SIP, -1, 0);
-    InsertNode("dip", DIP, -1, 0);
-    InsertNode("sport", NULL, SPORT, 0);
-    InsertNode("dport", NULL, DPORT, 0);
-    InsertNode("tcp-seq", NULL, 1, 0);
-    InsertNode("tcp-ack", NULL, 0, 0);
-    InsertNode("tcp-flag", NULL, 16, 0);
-    InsertNode("tcp-hdrlen", NULL, 20, 0);
-    InsertNode("dport", NULL, DPORT, 0);
-    InsertNode("vlannum", NULL, 0, 0);
-    InsertNode("ip_flags", NULL, 1, 0);
-    InsertNode("ip_offset", NULL, 0, 0);
-    InsertNode("l3pro", "IPv4", -1, 0);
-    InsertNode("l4pro", "UDP", -1, 0);
-    InsertNode("offset", NULL, OFFSET, 0);
-    InsertNode("debug", NULL, 0, 0);
-    InsertNode("flow", NULL, 0, 0);
-    InsertNode("exec", NULL, 0, 0); // 0:send,1:save
-    InsertNode("interface", INTERFACE, -1, 0);
-    InsertNode("pktlen", NULL, PKTLEN, 0);
-    InsertNode("count", NULL, COUNT, 0);
-    InsertNode("interval", NULL, INTERVAL, 0);
-    InsertNode("entrance", NULL, 99, 0);
-    InsertNode("string", NULL, -1, 1);
+    InsertNode("smac", SMAC, -1, FG_INIT);
+    InsertNode("dmac", DMAC, -1, FG_INIT);
+    InsertNode("sip", SIP, -1, FG_INIT);
+    InsertNode("dip", DIP, -1, FG_INIT);
+    InsertNode("sport", NULL, SPORT, FG_INIT);
+    InsertNode("dport", NULL, DPORT, FG_INIT);
+    InsertNode("tcp-seq", NULL, 1, FG_INIT);
+    InsertNode("tcp-ack", NULL, 0, FG_INIT);
+    InsertNode("tcp-flag", NULL, 16, FG_INIT);
+    InsertNode("tcp-hdrlen", NULL, 20, FG_INIT);
+    InsertNode("dport", NULL, DPORT, FG_INIT);
+    InsertNode("vlannum", NULL, 0, FG_INIT);
+    InsertNode("ip_flags", NULL, 1, FG_INIT);
+    InsertNode("ip_offset", NULL, 0, FG_INIT);
+    InsertNode("l3pro", "IPv4", -1, FG_INIT);
+    InsertNode("l4pro", "UDP", -1, FG_INIT);
+    InsertNode("offset", NULL, OFFSET, FG_INIT);
+    InsertNode("debug", NULL, 0, FG_INIT);
+    InsertNode("flow", NULL, 0, FG_INIT);
+    InsertNode("exec", NULL, 0, FG_INIT); // 0:send,1:save
+    InsertNode("interface", INTERFACE, -1, FG_INIT);
+    InsertNode("pktlen", NULL, PKTLEN, FG_INIT);
+    InsertNode("count", NULL, COUNT, FG_INIT);
+    InsertNode("interval", NULL, INTERVAL, FG_INIT);
+    InsertNode("entrance", NULL, 99, FG_INIT);
+    InsertNode("string", NULL, -1, FG_INIT);
 }
 
 /* Analysis of command line parameters */
@@ -235,7 +245,7 @@ int main(int argc, char* argv[])
     CertificationAuthority(argv);
 
     // Functional program entry
-    switch(GetiValue("entrance")) {
+    switch(GetNum("entrance")) {
         case 101: BuildPacket(); break;
         case 102: DuplicatePacket();break; 
         case 103: SplitPacket(); break; 

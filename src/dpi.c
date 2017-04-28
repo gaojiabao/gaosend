@@ -1,3 +1,14 @@
+/*******************************************************
+ *
+ *  Author        : Mr.Gao
+ *  Email         : 729272771@qq.com
+ *  Filename      : dpi.c
+ *  Last modified : 2017-04-25 14:10
+ *  Description   : Deep packet inspect
+ *
+ * *****************************************************/
+
+
 #include    <unistd.h>
 #include    <string.h>
 #include    "runlog.h"
@@ -91,7 +102,7 @@ void L4HdrInspection(U8 iL4Pro)
             - (stPkt.pIp4Hdr->hdlen * 4)
             - ((stPkt.pTcpHdr->hdrlen >> 4) * 4);
         // TCP flow check
-        if(GetiValue("flow") && stPkt.pMacHdr->pro == htons(IPv4)) {
+        if(GetNum("flow") && stPkt.pMacHdr->pro == htons(IPv4)) {
             char iFiveTupleSum[32];
             sprintf(iFiveTupleSum, "%d", stPkt.pIp4Hdr->sip 
                     + stPkt.pIp4Hdr->dip + stPkt.pTcpHdr->sport 
@@ -191,7 +202,7 @@ int DeepPacketInspection()
     iStatisticCode = 0;
 
     if (iReadFd < 3) {
-        iReadFd = OpenReadFile(GetcValue("read"));
+        iReadFd = OpenReadFile(GetStr("read"));
         PcapHdrInspection(iReadFd);
     }
 

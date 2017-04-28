@@ -1,9 +1,13 @@
-/*
- *  Author: Mr.Gao
+/*******************************************************
  *
- *  Function:deal with socket connect.
+ *  Author        : Mr.Gao
+ *  Email         : 729272771@qq.com
+ *  Filename      : socket.c
+ *  Last modified : 2017-04-25 14:12
+ *  Description   : Send packets 
  *
- */
+ * *****************************************************/
+
 
 #include    <unistd.h>
 #include    <string.h>
@@ -27,7 +31,7 @@ void DeepPacketInspection();
 /* Create socket connection */
 void SendModeInitialization()
 {
-    char* pInterface = GetcValue("interface");
+    char* pInterface = GetStr("interface");
     if (pInterface == NULL) {
         LOGRECORD(ERROR, "Interface input error");
     }
@@ -56,22 +60,25 @@ void SendModeInitialization()
 /* Send data to interface */
 void SendPacketProcess(char* pPacket,int iLength)
 {
-    int iIntervalTime = GetiValue("interval");
+    int iIntervalTime = GetNum("interval");
+    static int iCount = 1;
 
     if (pPacket == NULL || iLength < 0) {
         LOGRECORD(ERROR, "Packet data is NULL");
     }
 
-    if (GetiValue("debug") == 1) {
-        DisplayPacketData(pPacket, iLength);
-    }
-
     if (iSockFd < 0) {
         SendModeInitialization();
+    } else {
+        if ((sendto(iSockFd, (const void*)pPacket, iLength, 0, \
+                        (struct sockaddr*)&sockAddr, sizeof(sockAddr)))<0) {
+            LOGRECORD(ERROR, "Packet send failed");
+        }
     }
-    if ((sendto(iSockFd, (const void*)pPacket, iLength, 0, \
-                    (struct sockaddr*)&sockAddr, sizeof(sockAddr)))<0) {
-        LOGRECORD(ERROR, "Packet send failed");
+
+    if (GetNum("debug")) {
+        LOGRECORD(INFO, "NO.%d", iCount ++);
+        DisplayPacketData(pPacket, iLength);
     }
 
     usleep(iIntervalTime);
@@ -87,7 +94,7 @@ void CloseSendConnect()
 /* Send packet entrance*/
 void ReplayPacket()
 {
-    unsigned int iCounter = GetiValue("count");
+    unsigned int iCounter = GetNum("count");
     unsigned int iSum = iCounter;
 
     if (iCounter == 0) { // Always send
@@ -99,7 +106,6 @@ void ReplayPacket()
             DeepPacketInspection();
             ProgramProgress((iSum - iCounter), iSum);
         }
-        LOGRECORD(INFO, NULL);
     } else {
         LOGRECORD(DEBUG, "Count input invalid");
     }

@@ -1,3 +1,14 @@
+/*******************************************************
+ *
+ *  Author        : Mr.Gao
+ *  Email         : 729272771@qq.com
+ *  Filename      : runlog.c
+ *  Last modified : 2017-04-25 14:10
+ *  Description   : Log handler for software
+ *
+ * *****************************************************/
+
+
 #include    <time.h>
 #include    <fcntl.h>
 #include    <stdio.h>

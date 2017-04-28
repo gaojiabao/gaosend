@@ -1,3 +1,14 @@
+/*******************************************************
+ *
+ *  Author        : Mr.Gao
+ *  Email         : 729272771@qq.com
+ *  Filename      : flow.c
+ *  Last modified : 2017-04-25 14:13
+ *  Description   : Store TCP data flow information
+ *
+ * *****************************************************/
+
+
 #include <stdio.h>  
 #include <stdlib.h>  
 #include <string.h>  

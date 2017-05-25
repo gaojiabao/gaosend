@@ -428,8 +428,10 @@ static void BuildHttpRequest(int iCode)
         pMethod = "POST /";
     }
 
-    int iCookieLen = iPayLen - strlen(pMethod) 
-        - strlen(pUriStr) - strlen(pHostStr) - 276;
+    int iCookieLen = iPayLen - strlen(pMethod) - strlen(pHostStr) - 276;
+    if (pUriStr) {
+        iCookieLen -= strlen(pUriStr);
+    }
     sprintf(pBufCursor, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s", 
             pMethod,
             pUriStr, 
@@ -459,7 +461,7 @@ static void BuildDataContexts()
     int iStrOffset = GetNum("offset");
     int iStrType = GetState("string");
     if (iPayLen < 0) {
-        LOGRECORD(ERROR, "Payload length error");
+        LOGRECORD(ERROR, "Payload length error[%d]", iPayLen);
     } else if (iPayLen > 0) {
         // Dead work
         int iStrLen = 0;
@@ -584,9 +586,9 @@ static void BuildInitialization()
     static char cPacketBuf[PKT_BUF_LEN];
     stPkt.pPacket = cPacketBuf;
 
+    RefreshParameter();
     stInfo.iPktLen = GetNum("pktlen");
     stInfo.iCursor = stInfo.iPktLen;
-    RefreshParameter();
 }
 
 /* Data generator program entry */

@@ -7,7 +7,7 @@
  *  Description   : Modify packet
  *
  * *****************************************************/
- 
+
 
 #include    <string.h>
 #include    "func.h"
@@ -47,17 +47,23 @@ void GenerateVlanTag(char* pTitle, int iVoQ)
     switch(GetState(pTitle)) {
         case FG_FIXD : stChg.vlan[iVoQ] = GetNum(pTitle); break;
         case FG_RAND : stChg.vlan[iVoQ] = GetRandVlan(iVoQ); break;
-        case FG_INCR : stChg.vlan[iVoQ] = GetIncrVlan(iVoQ); break;
     }
 }
 
 void GenerateIp4Addr(char* pTitle, int iSoD)
 {
+    int* stConBakIp[] = {
+        (int*)&stCon.ip1[1],
+        (int*)&stCon.ip2[1]
+    };
+
     switch(GetState(pTitle)) {
         case FG_FIXD : stChg.ip4[iSoD] = inet_addr(GetStr(pTitle)); break;
         case FG_RAND : stChg.ip4[iSoD] = inet_addr(GetRandIp4Addr(iSoD)); break;
         case FG_INCR : stChg.ip4[iSoD] = inet_addr(GetIncrIp4Addr(iSoD)); break;
     }
+
+    *stConBakIp[iSoD] = stChg.ip4[iSoD];
 }
 
 void GeneratePortNum(char* pTitle, int iSoD)
@@ -70,24 +76,40 @@ void GeneratePortNum(char* pTitle, int iSoD)
 }
 
 int JudgeSoD(int iSoD)
-{
+{ 
     int iResNum = -1;
-    if (stPkt.pIp4Hdr->sip == stCon.ip1 
-            || stPkt.pIp4Hdr->dip == stCon.ip2) {
+    if (stPkt.pIp4Hdr->sip == stCon.ip1[0] 
+            || stPkt.pIp4Hdr->dip == stCon.ip2[0]) {
         if (iSoD == M_SRC) {
             iResNum = M_SRC;
         } else if (iSoD == M_DST) {
             iResNum = M_DST;
         }
-    } else if (stPkt.pIp4Hdr->sip == stCon.ip2 
-            || stPkt.pIp4Hdr->dip == stCon.ip1) {
+    } else if (stPkt.pIp4Hdr->sip == stCon.ip2[0] 
+            || stPkt.pIp4Hdr->dip == stCon.ip1[0]) {
         if (iSoD == M_SRC) {
             iResNum = M_DST;
         } else if (iSoD == M_DST) {
             iResNum = M_SRC;
         }
     } else {
-        LOGRECORD(DEBUG, "Packet matching failure");
+        if (stPkt.pIp4Hdr->sip == stCon.ip1[1] 
+                || stPkt.pIp4Hdr->dip == stCon.ip2[1]) {
+            if (iSoD == M_SRC) {
+                iResNum = M_SRC;
+            } else if (iSoD == M_DST) {
+                iResNum = M_DST;
+            }
+        } else if (stPkt.pIp4Hdr->sip == stCon.ip2[1] 
+                || stPkt.pIp4Hdr->dip == stCon.ip1[1]) {
+            if (iSoD == M_SRC) {
+                iResNum = M_DST;
+            } else if (iSoD == M_DST) {
+                iResNum = M_SRC;
+            }
+        } else {
+            LOGRECORD(ERROR, "Packet matching failure");
+        }
     }
 
     return iResNum;
@@ -101,6 +123,70 @@ void ModifyMacAddr(int iSoD)
     }; 
 
     FillInMacAddr(pMacPos[JudgeSoD(iSoD)], stChg.mac[iSoD]); 
+}
+
+/* Modify IPv4 head into IPv6 header */
+void ChangeIp4ToIp6()
+{
+    int iVlanNum = 0;
+    // Determine the premise of data modification
+    if (stPkt.pMacHdr->pro == htons(IPv4)) {
+        stPkt.pMacHdr->pro = htons(IPv6);
+    } else if (stPkt.pQinQHdr != NULL) {
+        iVlanNum = 2;
+        stPkt.pQinQHdr->pro = htons(IPv6);
+    } else if (stPkt.pVlanHdr != NULL) {
+        iVlanNum = 1;
+        stPkt.pVlanHdr->pro = htons(IPv6);
+    } else {
+        return;
+    }
+
+    // Record the valid information in the IPv4 header
+    U16 iL4Pro = stPkt.pIp4Hdr->protocol;
+    int iPktLen = stPkt.pPktHdr->len;
+    int iIp4Len = iPktLen - MAC_HDR_LEN  - iVlanNum * VLAN_TAG_LEN;
+    int iIp4HdrLen = stPkt.pIp4Hdr->hdlen * 4;
+    int iAddLen = IP6_HDR_LEN - iIp4HdrLen;
+    int iPaddingLen = stPkt.pPktHdr->len - MAC_HDR_LEN 
+        - iVlanNum * VLAN_TAG_LEN - htons(stPkt.pIp4Hdr->ttlen);
+    U32 iSip = stPkt.pIp4Hdr->sip;
+    U32 iDip = stPkt.pIp4Hdr->dip;
+
+    // Move backward IPv4 data part
+    int iNum;
+    for (iNum = 0; iNum < iIp4Len; iNum ++) {
+        stPkt.pPacket[iPktLen + iAddLen - 1 - iNum] 
+            = stPkt.pPacket[iPktLen - 1 - iNum]; 
+    }
+
+    // Modify packet length
+    stPkt.pPktHdr->caplen += (iAddLen - iPaddingLen);
+    stPkt.pPktHdr->len += (iAddLen - iPaddingLen);
+
+    // IPv6 initialize and build header information
+    int iCursor = MAC_HDR_LEN + iVlanNum * VLAN_TAG_LEN;
+    stPkt.pIp6Hdr = (_ip6hdr *) (stPkt.pPacket + iCursor);
+    stPkt.pIp6Hdr->version = htons(24576);
+    stPkt.pIp6Hdr->payload = htons(iIp4Len - iIp4HdrLen - iPaddingLen);
+    stPkt.pIp6Hdr->protocol = iL4Pro;
+    stPkt.pIp6Hdr->nextHop = 0xff;
+
+    // Switch IPv4 address to IPv6 address
+    char cIp6SipBuf[SIZE_1K];
+    char cIp6DipBuf[SIZE_1K];
+    sprintf(cIp6SipBuf, "::%u.%u.%u.%u", 
+            ((unsigned char *)&iSip)[0],
+            ((unsigned char *)&iSip)[1],
+            ((unsigned char *)&iSip)[2],
+            ((unsigned char *)&iSip)[3]);
+    sprintf(cIp6DipBuf, "::%u.%u.%u.%u", 
+            ((unsigned char *)&iDip)[0],
+            ((unsigned char *)&iDip)[1],
+            ((unsigned char *)&iDip)[2],
+            ((unsigned char *)&iDip)[3]);
+    inet_pton(AF_INET6, cIp6SipBuf, stPkt.pIp6Hdr->sip);
+    inet_pton(AF_INET6, cIp6DipBuf, stPkt.pIp6Hdr->dip);
 }
 
 /* Add multilayer VLAN Tags */
@@ -243,31 +329,36 @@ void DetectAndProcess(int iGoM)
     }
     char* pParaList[] = {
         "smac" , "dmac", 
-        "vlan" , "qinq",
         "sip"  , "dip", 
-        "sport", "dport" 
+        "sport", "dport", 
+        "vlan" , "qinq",
     };
     int iLength = sizeof(pParaList) / sizeof(char*);
 
     int iNum;
     for (iNum = 0; iNum < iLength; iNum ++) {
         int iSoD = iNum % 2;
-        if (GetState(pParaList[iNum]) > 1) {
+        if (GetState(pParaList[iNum]) > 0) {
             if (iNum == 0 || iNum == 1) {
                 if (!iGoM) GenerateMacAddr(pParaList[iNum], iSoD);
                 else ModifyMacAddr(iSoD);
             } else if (iNum == 2 || iNum == 3) {
-                if (!iGoM) GenerateVlanTag(pParaList[iNum], iSoD);
-                else ModifyVlanTag(iSoD); 
-            } else if (iNum == 4 || iNum == 5) {
                 if (!iGoM) GenerateIp4Addr(pParaList[iNum], iSoD);
                 else ModifyIp4Addr(iSoD);
-            } else if (iNum == 6 || iNum == 7) {
+            } else if (iNum == 4 || iNum == 5) {
                 if (!iGoM) GeneratePortNum(pParaList[iNum], iSoD);
                 else ModifyPortNum(iSoD);
+            } else if (iNum == 6 || iNum == 7) {
+                if (!iGoM) GenerateVlanTag(pParaList[iNum], iSoD);
+                else ModifyVlanTag(iSoD); 
             }
         }
     } // End of for
+
+    // Change IPv4 to IPv6
+    if (iGoM && (strcmp(GetStr("l3pro"), "IPV6") == 0)) {
+            ChangeIp4ToIp6();
+    }
 }
 
 U32 GetHashValue(const char* pKeyStr)  
@@ -289,7 +380,11 @@ U32 RuleInitialization()
     memset(cExpBuf, 0, sizeof(cExpBuf));
 
     char* pExpStr = GetStr("express");
-    memcpy(cExpBuf, pExpStr, strlen(pExpStr));
+    if (pExpStr == NULL) {
+        LOGRECORD(ERROR, "The parameter -E is missing");
+    } else {
+        memcpy(cExpBuf, pExpStr, strlen(pExpStr));
+    }
 
     char* pPosStr = NULL;
     char* pRepStr[2];
@@ -299,12 +394,17 @@ U32 RuleInitialization()
         pRepStr[1] = strtok(NULL, ",");
     }
 
-    stCon.ip1 = inet_addr(pRepStr[0]);
-    stCon.ip2 = inet_addr(pRepStr[1]);
+    // Determine the integrity of parameter -E
+    if (pPosStr == NULL || pRepStr[0] == NULL || pRepStr[1] == NULL) {
+        LOGRECORD(ERROR, "The parameter -E is Incomplete");
+    } else {
+        stCon.ip1[0] = inet_addr(pRepStr[0]);
+        stCon.ip2[0] = inet_addr(pRepStr[1]);
+    }
 
     char cTargetRuleBuf[SIZE_1K];
     if (strcmp(pPosStr, "IP") == 0) {
-        sprintf(cTargetRuleBuf, "%u", (stCon.ip1 + stCon.ip2));
+        sprintf(cTargetRuleBuf, "%u", (stCon.ip1[0] + stCon.ip2[0]));
     } else {
         return -1;
     }
@@ -333,11 +433,14 @@ int IsSameFlow(U32 iTargetValue)
 void ModifyProcessEntrance()
 {
     int iMatchFlag = 0;
-    DetectAndProcess(0);
+    int iGenerateFlag = 0;
+    int iModifyFlag = 1;
+
+    DetectAndProcess(iGenerateFlag);
     U32 iRuleCode = RuleInitialization();
     while (DeepPacketInspection() > 0) {
         if (IsSameFlow(iRuleCode)) {
-            DetectAndProcess(1);
+            DetectAndProcess(iModifyFlag);
             PacketProcessing(stPkt);
             iMatchFlag ++;
         }

@@ -18,6 +18,7 @@
 #include    "common.h"
 #include    "storage.h"
 
+stPktStrc GetPktStrc();
 
 /* Global variable*/
 static int iSockFd = -1;
@@ -43,7 +44,9 @@ void SendModeInitialization()
     // Set interface
     bzero(&ifr, sizeof(ifr));
     strcpy(ifr.ifr_name, pInterface);
-    ioctl(iSockFd, SIOCGIFINDEX, &ifr);
+    if (ioctl(iSockFd, SIOCGIFINDEX, &ifr) < 0) {
+        LOGRECORD(ERROR, "Interface [%s] is not exist", pInterface);
+    }
 
     // Set socket protocol
     bzero(&sockAddr, sizeof(sockAddr));
@@ -60,7 +63,7 @@ void SendModeInitialization()
 /* Send data to interface */
 void SendPacketProcess(char* pPacket,int iLength)
 {
-    int iIntervalTime = GetNum("interval");
+    int iIntervalTime = GetNum("interval") * 1000;
     static int iCount = 1;
 
     if (pPacket == NULL || iLength < 0) {
@@ -70,8 +73,8 @@ void SendPacketProcess(char* pPacket,int iLength)
     if (iSockFd < 0) {
         SendModeInitialization();
     } else {
-        if ((sendto(iSockFd, (const void*)pPacket, iLength, 0, \
-                        (struct sockaddr*)&sockAddr, sizeof(sockAddr)))<0) {
+        if ((sendto(iSockFd, (const void*)pPacket, iLength, 0,
+                        (struct sockaddr*)&sockAddr, sizeof(sockAddr))) < 0) {
             LOGRECORD(ERROR, "Packet send failed");
         }
     }
@@ -100,10 +103,14 @@ void ReplayPacket()
     if (iCounter == 0) { // Always send
         while (1 == 1) {
             DeepPacketInspection();
+            stPktStrc stPkt = GetPktStrc();
+            SendPacketProcess(stPkt.pPacket + PCAP_HDR_LEN, stPkt.pPktHdr->len);
         }
     } else if (iCounter > 0) {
         while (iCounter--) {
             DeepPacketInspection();
+            stPktStrc stPkt = GetPktStrc();
+            SendPacketProcess(stPkt.pPacket , stPkt.pPktHdr->len);
             ProgramProgress((iSum - iCounter), iSum);
         }
     } else {

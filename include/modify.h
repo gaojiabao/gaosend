@@ -17,8 +17,8 @@ typedef struct cList{
 }stChgList;
 
 typedef struct condition{
-    U32 ip1;
-    U32 ip2;
+    U32 ip1[2]; // 0:before modify 1:after modify
+    U32 ip2[2];
 }stCndList;
 
 stPktStrc GetPktStrc();

@@ -90,7 +90,7 @@ static void ErrorProcessing(char* pLog, char* pInfo)
     RecordRunningLog(pLog);
     printf("Error:%s\n", pInfo);
 
-    PROGRAMEND();
+    ABNORMALEND();
 }
 
 /* Log handler entry */

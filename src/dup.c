@@ -10,6 +10,7 @@
 
 
 #include    <stdio.h>
+#include    <libgen.h>
 #include    <unistd.h>
 #include    <string.h>
 #include    "runlog.h"
@@ -143,7 +144,7 @@ char* GenerateFileName(char* pFileName)
     static char cNewFileName[32];
     static int  iNameSuffix = 0;
     char *pNamePrefix = strtok(pFileName, ".");
-    sprintf(cNewFileName, "%s_%d.pcap", pNamePrefix, iNameSuffix ++);
+    sprintf(cNewFileName, "%s_%d.pcap", basename(pNamePrefix), iNameSuffix ++);
 
     return cNewFileName;
 }

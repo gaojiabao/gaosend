@@ -15,7 +15,9 @@ void LogProcessingEntrance(char* , int , int , char* ,...);
 #define PROGRAMSTART()  \
     LOGRECORD(DEBUG, "========Program Start========")
 #define PROGRAMEND() \
-    LOGRECORD(DEBUG, "=========Program End========="); exit(0);
+    LOGRECORD(DEBUG, "=========Program End========="); exit(1);
+#define ABNORMALEND() \
+    LOGRECORD(DEBUG, "=========Abnormal End========"); exit(0);
 
 #endif
 

@@ -18,7 +18,7 @@
 #include    "storage.h"
 
 
-#define     MAXUSETIMES 500
+#define     MAXUSETIMES 1000
 
 char*    pLogName = "/etc/.send";
 

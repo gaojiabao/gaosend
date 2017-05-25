@@ -41,7 +41,7 @@ char* GetRandStr(int iLength)
         if (((iRandNum <= 122) && (iRandNum >= 97)) 
                 || ((iRandNum <= 90)  && (iRandNum >= 65)) 
                 || ((iRandNum <= 57)  && (iRandNum >= 48))) {
-            sprintf(cRandStrBuf+iNum, "%c", iRandNum);
+            sprintf(cRandStrBuf + iNum, "%c", iRandNum);
         } else {
             iNum--;
         }
@@ -54,7 +54,7 @@ char* GetRandStr(int iLength)
 U16 GetCheckSum(U16* pDataBuf, int iLength)
 {
     unsigned long iSum;
-    for (iSum = 0; iLength > 0; iLength--) {
+    for (iSum = 0; iLength > 0; iLength --) {
         iSum += *pDataBuf ++;
     }
     iSum = (iSum >> 16) + (iSum & 0xffff);
@@ -141,7 +141,7 @@ char* GetRandMacAddr(int iSoD)
         if (cMacAddr[iSoD][iMacLenth] == ':') {
             continue;
         }
-        cMacAddr[iSoD][iMacLenth] = GetHexChar(GetRandNum()%15);
+        cMacAddr[iSoD][iMacLenth] = GetHexChar(GetRandNum() % 15);
     }
 
     return cMacAddr[iSoD];
@@ -169,7 +169,7 @@ char* GetIncrMacAddr(int iSoD)
             if (cMacAddr[iSoD][iMacLenth] == 'f') {
                 cMacAddr[iSoD][iMacLenth] = '0';
             }
-            iMacLenth--;
+            iMacLenth --;
         } else {
             cMacAddr[iSoD][iMacLenth] ++;
             break;
@@ -242,12 +242,12 @@ int CheckIpAddrLegal(char* pIpStr)
                 &iIpNum[0], &cIpDot[0], &iIpNum[1], &cIpDot[1],
                 &iIpNum[2], &cIpDot[2], &iIpNum[3]) == 7) {
         int iNum;
-        for (iNum = 0; iNum < 3;  ++iNum) {
+        for (iNum = 0; iNum < 3;  ++ iNum) {
             if (cIpDot[iNum] != '.') {
                 return ERROR;
             }
         }
-        for (iNum = 0; iNum < 4;  ++iNum) {
+        for (iNum = 0; iNum < 4;  ++ iNum) {
             if (iIpNum[iNum] > 255 || iIpNum[iNum] < 0) {
                 return ERROR;
             }
@@ -261,7 +261,7 @@ int CheckIpAddrLegal(char* pIpStr)
 /* Get random IP address */
 char* GetRandIp4Addr(int iSoD)
 {
-    static char cIpAddr[2][SIZE_16B*2];
+    static char cIpAddr[2][SIZE_16B * 2];
 
     sprintf(cIpAddr[iSoD], "%d.%d.%d.%d", 192, GetRandNum() % 256, 
             GetRandNum() % 256, GetRandNum() % 255 + 1);
@@ -279,7 +279,7 @@ char* GetIncrIp4Addr(int iSoD)
     // SIP:192.168.1.1 DIP:10.10.1.1
     static unsigned int iIpAddr[] = {3232235777, 168430081};
     unsigned int iIpSwitch = htonl(iIpAddr[iSoD] ++);
-    static char cIpAddrBuf[2][SIZE_16B*2];
+    static char cIpAddrBuf[2][SIZE_16B * 2];
     if (((unsigned char *)&iIpSwitch)[3] != 0) {
         sprintf(cIpAddrBuf[iSoD], "%u.%u.%u.%u", 
                 ((unsigned char *)&iIpSwitch)[0],
@@ -355,20 +355,11 @@ int GetIncrPktLen()
 int GetRandVlan(int iSoD)
 {
     static int iVlanArray[] = {0, 0};
-    // 0 and 4095 retain VLAN, 1 is Management VLAN
-    iVlanArray[iSoD] = 2 + GetRandNum() % (4095 - 2);
-    return iVlanArray[iSoD];
-}
-
-/* Get increased VLAN ID */
-int GetIncrVlan(int iVoQ)
-{
-    if (iVoQ < 0 || iVoQ > 1) {
-        LOGRECORD(ERROR, "Unrecognized identifier");
+    if (iVlanArray[iSoD] == 0) {
+        // 0 and 4095 retain VLAN, 1 is Management VLAN
+        iVlanArray[iSoD] = 2 + GetRandNum() % (4095 - 2);
     }
-
-    static int iVlanId[] = {1000, 2000};
-    return ((iVlanId[iVoQ] > 4094) ? 1 : iVlanId[iVoQ] ++);
+    return iVlanArray[iSoD];
 }
 
 /* Get random protocol */
@@ -538,8 +529,8 @@ void DisplayPacketData(char* pPacket, int iPacketLength)
 
     int iNum;
     for (iNum = 0; iNum < iPacketLength; iNum += 2) {
-        printf("%02hhx%02hhx ", pPacket[iNum], pPacket[iNum+1]);
-        if (iNum%16 == 14) {
+        printf("%02hhx%02hhx ", pPacket[iNum], pPacket[iNum + 1]);
+        if (iNum % 16 == 14) {
             printf("\n");
         }
     }
@@ -550,8 +541,8 @@ void DisplayPacketData(char* pPacket, int iPacketLength)
 void BufferCopy(char* pDstBuf, int iPos, char* pSrcStr, int iLength)
 {
     int iNum;
-    for (iNum = 0; iNum<iLength; iNum ++)
-        pDstBuf[iPos+iNum] = pSrcStr[iNum];
+    for (iNum = 0; iNum < iLength; iNum ++)
+        pDstBuf[iPos + iNum] = pSrcStr[iNum];
 }
 
 /* Compare IPv6 address */
@@ -559,9 +550,10 @@ int CompareIpv6Address(unsigned char* pSrcIp6Addr, unsigned char* pDstIp6Addr)
 {
     int iNum;
     int iLength = sizeof(struct in6_addr);
-    for (iNum = 0; iNum<iLength; iNum ++) {
-        if (pSrcIp6Addr[8+iNum] != pDstIp6Addr[iNum])
+    for (iNum = 0; iNum < iLength; iNum ++) {
+        if (pSrcIp6Addr[8 + iNum] != pDstIp6Addr[iNum]) {
             return -1 ;
+        }
     }
 
     return 0;
@@ -577,8 +569,8 @@ void SwitchPcapFormat()
         LOGRECORD(ERROR, "Incomplete command");
     }
 
-    char cCmdBuf[SIZE_16B*2] = "tcpdump -r ";
-    sprintf(cCmdBuf, "%s%s%s", pReadFile, " -w ", pSaveFile);
+    char cCmdBuf[SIZE_1K];
+    sprintf(cCmdBuf, "tcpdump -r %s -w %s", pReadFile, pSaveFile);
     if (system(cCmdBuf) > 0) {
         LOGRECORD(ERROR, "Command <tcpdump> not install");
     }

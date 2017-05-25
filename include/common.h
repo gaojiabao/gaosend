@@ -27,7 +27,6 @@ char*       GetIncrIp4Addr(int);
 char*       GetIncrIp6Addr(int);
 int         GetIncrPort(int);
 int         GetIncrPktLen();
-int         GetIncrVlan(int);
 
 char*       GetRandMacAddr(int);
 char*       GetRandIp4Addr();

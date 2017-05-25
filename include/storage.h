@@ -8,7 +8,7 @@ typedef struct Node{
     char* pTitle;
     char* pStr;
     int   iNum;
-    int   iState; //0:unchange,1:no input,2:fix,3:random,4:increase,5:decrease
+    int   iState; //0:init,1:fixed,2:random,3:increase,4:decrease
     struct Node* pNext;
 }st_node, *pNode;
 

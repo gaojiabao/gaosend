@@ -93,8 +93,7 @@ static void UpdateStr(char* pTitle, char* pStr)
     if (NULL != pCur) {
         UpdateNode(pTitle, pStr, pCur->iNum, pCur->iState);
     } else {
-        printf("Update string error[%s:%s]\n", pTitle, pStr);
-        exit(0);
+        LOGRECORD(ERROR, "Update string error\n");
     }
 }
 
@@ -106,8 +105,7 @@ static void UpdateNum(char* pTitle, int iNum)
     if (pCur != NULL) {
         UpdateNode(pTitle, pCur->pStr, iNum, pCur->iState);
     } else {
-        printf("Update number error\n");
-        exit(0);
+        LOGRECORD(ERROR, "Update number error");
     }
 }
 
@@ -186,7 +184,7 @@ void ShowParameter()
     pNode pCur =  pHead->pNext;
 
     for (iCounter = 0; iCounter < iLength; iCounter ++) {
-        printf("%-10s:%18s,%6d[%d]\n", 
+        printf("%-15s:%32s,%10d[%d]\n", 
                 pCur->pTitle, pCur->pStr, pCur->iNum, pCur->iState);    
         pCur = pCur->pNext;
     }
@@ -240,10 +238,6 @@ void RefreshParameter()
                 UpdateNum(pParaName, GetIncrPort(0));
             } else if (strcmp(pParaName, "dport") == 0) {
                 UpdateNum(pParaName, GetIncrPort(1));
-            } else if (strcmp(pParaName, "vlan") == 0) {
-                UpdateNum(pParaName, GetIncrVlan(0));
-            } else if (strcmp(pParaName, "qinq") == 0) {
-                UpdateNum(pParaName, GetIncrVlan(1));
             } else if (strcmp(pParaName, "pktlen") == 0) {
                 UpdateNum(pParaName, GetIncrPktLen());
             }
@@ -263,13 +257,13 @@ char** ProtocolAnalyse(char* pProStr)
     if (strcmp(pProStr, "ARP") == 0) {
         pProArray[0] = pProStr;
     } else if ((strcmp(pProStr, "ICMP") == 0) 
-        || (strcmp(pProStr, "UDP") == 0) 
-        || (strcmp(pProStr, "TCP") == 0)) {
+            || (strcmp(pProStr, "UDP") == 0) 
+            || (strcmp(pProStr, "TCP") == 0)) {
         pProArray[0] = "IPv4";
         pProArray[1] = pProStr;
     } else if ((strcmp(pProStr, "HTTP-GET") == 0)
-        || (strcmp(pProStr, "HTTP-POST") == 0)
-        || (strcmp(pProStr, "HTTP") == 0)) {
+            || (strcmp(pProStr, "HTTP-POST") == 0)
+            || (strcmp(pProStr, "HTTP") == 0)) {
         pProArray[0] = "IPv4";
         pProArray[1] = "TCP";
         pProArray[2] = pProStr;
@@ -278,13 +272,13 @@ char** ProtocolAnalyse(char* pProStr)
         pProArray[1] = "UDP";
         pProArray[2] = pProStr;
     } else if ((strcmp(pProStr, "ICMP6") == 0) 
-        || (strcmp(pProStr, "UDP6") == 0) 
-        || (strcmp(pProStr, "TCP6") == 0)) {
+            || (strcmp(pProStr, "UDP6") == 0) 
+            || (strcmp(pProStr, "TCP6") == 0)) {
         pProArray[0] = "IPv6";
         pProArray[1] = pProStr;
     } else if ((strcmp(pProStr, "HTTP-GET6") == 0)
-        || (strcmp(pProStr, "HTTP-POST6") == 0)
-        || (strcmp(pProStr, "HTTP6") == 0)) {
+            || (strcmp(pProStr, "HTTP-POST6") == 0)
+            || (strcmp(pProStr, "HTTP6") == 0)) {
         pProArray[0] = "IPv6";
         pProArray[1] = "TCP";
         pProArray[2] = pProStr;
@@ -292,6 +286,13 @@ char** ProtocolAnalyse(char* pProStr)
         pProArray[0] = "IPv6";
         pProArray[1] = "UDP";
         pProArray[2] = pProStr;
+    } else if ((strcmp(pProStr, "IPV4") == 0)
+            || (strcmp(pProStr, "IPV6") == 0)) {
+        pProArray[0] = pProStr;
+        pProArray[1] = NULL;
+        pProArray[2] = NULL;
+    } else {
+        LOGRECORD(ERROR, "Unrecognized protocol");
     }
 
     return pProArray;

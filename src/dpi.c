@@ -106,7 +106,7 @@ void L4HdrInspection(U8 iL4Pro)
             char iFiveTupleSum[32];
             sprintf(iFiveTupleSum, "%d", stPkt.pIp4Hdr->sip 
                     + stPkt.pIp4Hdr->dip + stPkt.pTcpHdr->sport 
-                    + stPkt.pTcpHdr->dport + stPkt.pIp4Hdr->protocol);
+                    + stPkt.pTcpHdr->dport + stPkt.pIp4Hdr->pro);
             StreamStorage(iFiveTupleSum, stPkt.pTcpHdr, iTcpDataLen);
         }
 
@@ -140,7 +140,7 @@ U8 L3HdrInspection(U16 pro)
     if (pro == IPv4) {
         stInfo.iCursor += IP4_HDR_LEN;
         stPkt.pIp4Hdr = (_ip4hdr *) pL3Hdr;
-        iPro = stPkt.pIp4Hdr->protocol;
+        iPro = stPkt.pIp4Hdr->pro;
         iStatisticCode += EMPRO_L3_IPv4 * 10000;
         L4HdrInspection(iPro);
     } else if (pro == VLAN) {
@@ -160,7 +160,7 @@ U8 L3HdrInspection(U16 pro)
     } else if (pro == IPv6) {
         stInfo.iCursor += IP6_HDR_LEN;
         stPkt.pIp6Hdr = (_ip6hdr *) pL3Hdr;
-        iPro = stPkt.pIp6Hdr->protocol;
+        iPro = stPkt.pIp6Hdr->pro;
         L4HdrInspection(iPro);
         iStatisticCode += EMPRO_L3_IPv6 * 10000;
     } else {
@@ -229,3 +229,4 @@ int GetStatisticCode()
 {
     return iStatisticCode;
 }
+

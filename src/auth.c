@@ -3,22 +3,25 @@
  *  Author        : Mr.Gao
  *  Email         : 729272771@qq.com
  *  Filename      : auth.c
- *  Last modified : 2017-04-25 14:10
+ *  Last modified : 2017-06-26 13:53
  *  Description   : Check software usage rights 
  *
  * *****************************************************/
- 
 
+
+#include    <time.h>
 #include    <stdio.h> 
+#include    <errno.h> 
 #include    <fcntl.h>
 #include    <stdlib.h>
 #include    <unistd.h>
 #include    <string.h>
+#include    <termios.h>  
+#include    "common.h"
 #include    "runlog.h"
 #include    "storage.h"
 
-
-#define     MAXUSETIMES 1000
+#define ECHOFLAGS (ECHO | ECHOE | ECHOK | ECHONL)  
 
 char*    pLogName = "/etc/.send";
 
@@ -50,13 +53,13 @@ typedef struct
 #define S43 15   
 #define S44 21   
 
-static unsigned char PADDING[64] = {   
+static unsigned char PADDING[SIZE_16B * 4] = {   
     0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0   
 };   
 
-static unsigned char ACTIVEPASSWD[16] = {
+static unsigned char ACTIVEPASSWD[SIZE_16B] = {
     0x2D, 0xDE, 0x07, 0xF5, 0x9C, 0x85, 0x6E, 0x3D, 
     0x29, 0x6B, 0x6D, 0xF6, 0x2C, 0x0E, 0xE5, 0x9D
 };
@@ -66,7 +69,7 @@ static unsigned char ACTIVEPASSWD[16] = {
 #define H(x, y, z) ((x) ^ (y) ^ (z))   
 #define I(x, y, z) ((y) ^ ((x) | (~z)))   
 
-#define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32-(n))))   
+#define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32 - (n))))   
 
 #define FF(a, b, c, d, x, s, ac) {(a) += F((b), (c), (d)) + (x) + (UINT4)(ac); (a) = ROTATE_LEFT((a), (s)); (a) += (b);}   
 #define GG(a, b, c, d, x, s, ac) {(a) += G((b), (c), (d)) + (x) + (UINT4)(ac); (a) = ROTATE_LEFT((a), (s)); (a) += (b);}   
@@ -80,9 +83,9 @@ static void Encode(unsigned char* pOutPut, UINT4* pInput, unsigned int iLength)
 
     for (iNumI = 0, iNumJ = 0; iNumJ < iLength; iNumI ++, iNumJ += 4) {   
         pOutPut[iNumJ] = (unsigned char)(pInput[iNumI] & 0xff);   
-        pOutPut[iNumJ+1] = (unsigned char)((pInput[iNumI] >> 8) & 0xff);   
-        pOutPut[iNumJ+2] = (unsigned char)((pInput[iNumI] >> 16) & 0xff);   
-        pOutPut[iNumJ+3] = (unsigned char)((pInput[iNumI] >> 24) & 0xff);   
+        pOutPut[iNumJ + 1] = (unsigned char)((pInput[iNumI] >> 8) & 0xff);   
+        pOutPut[iNumJ + 2] = (unsigned char)((pInput[iNumI] >> 16) & 0xff);   
+        pOutPut[iNumJ + 3] = (unsigned char)((pInput[iNumI] >> 24) & 0xff);   
     }   
 }   
 
@@ -92,9 +95,9 @@ static void Decode(UINT4 *pOutPut, unsigned char *pInput, unsigned int iLength)
 
     for (iNumI = 0, iNumJ = 0; iNumJ < iLength; iNumI ++, iNumJ += 4) {  
         pOutPut[iNumI] = ((UINT4)pInput[iNumJ]) 
-            | (((UINT4)pInput[iNumJ+1]) << 8) 
-            | (((UINT4)pInput[iNumJ+2]) << 16) 
-            | (((UINT4)pInput[iNumJ+3]) << 24);   
+            | (((UINT4)pInput[iNumJ + 1]) << 8) 
+            | (((UINT4)pInput[iNumJ + 2]) << 16) 
+            | (((UINT4)pInput[iNumJ + 3]) << 24);   
     }
 }   
 
@@ -176,8 +179,7 @@ static void MD5Transform(UINT4 cState[4], unsigned char cBlock[64])
 // Echo MD5 value 
 static char* MD5DigestDisplay(unsigned char* pMD5Value) 
 {
-    static char cMd5Buf[100];
-
+    static char cMd5Buf[SIZE_128B]; 
     int iNum;
     for (iNum = 0; iNum < MD5LEN; iNum ++) {
         sprintf(&cMd5Buf[iNum], "%02X", pMD5Value[iNum]);
@@ -269,76 +271,415 @@ unsigned char* MD5Digest(char* pszInput)
     return pszOutPut;
 }   
 
+/* Set up terminal echo switch */
+void SetDisplayMode(int iEchoFd,int iSwitch)  
+{  
+    int iErrno;  
+    struct termios stTerm;  
+    if(tcgetattr(iEchoFd, &stTerm) < 0){  
+        LOGRECORD(ERROR, "Cannot get the attribution of the terminal");  
+    }  
+    if(iSwitch) {  
+        stTerm.c_lflag |= ECHOFLAGS;  
+    } else { 
+        stTerm.c_lflag &= ~ECHOFLAGS;  
+    }
+    iErrno = tcsetattr(iEchoFd, TCSAFLUSH, &stTerm);  
+    if(iErrno == -1 && iErrno == EINTR){  
+        LOGRECORD(ERROR, "Cannot set the attribution of the terminal");  
+    }  
+}  
+
+// Base64 character set
+const char* pBase64Char= 
+    "jTxoQa/IS9UedXi5MzGvYB0NO2LmgubK+hZV4rtWks8DlwRHynEC3p1JP6fcF7Aq";
+    //"M8fAkhqTQdJ7erxObw4FcPvnYVDW52zgisyKH0B1RuU63XC9Nj/ElLItaZmSG+op";
+    //"Vb6OizXrd/h9D1QCcxHJWGIk3NvapZjwq70tyenYUuoM2fsPBRLlE8S5KFTAmg+4";
+    //"gRV2d/ZDKpuqvkMiT79NW1PoFt+Oh5GyIxBaeJ0C3A6Hm8wjQl4fcbnsXUESrLYz";
+    //"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+/* Base64 encoding */
+char* Base64Encode(char* pRawData, char* pBase64Str, int iRawDataLen)
+{
+    int iNumI, iNumJ;
+    int iCurPos;
+
+    for (iNumI = 0, iNumJ = 0; iNumI < iRawDataLen; iNumI += 3) {
+        iCurPos = (pRawData[iNumI] >> 2) ;
+        iCurPos &= 0x3F;
+        pBase64Str[iNumJ ++] = pBase64Char[iCurPos];
+
+        iCurPos = ((pRawData[iNumI] << 4 )) & (0x30) ;
+        if ((iNumI + 1) >= iRawDataLen) {
+            pBase64Str[iNumJ++] = pBase64Char[iCurPos];
+            pBase64Str[iNumJ++] = '=';
+            pBase64Str[iNumJ++] = '=';
+            break;
+        }
+        iCurPos |= ((pRawData[iNumI+1] >> 4)) & (0x0F);
+        pBase64Str[iNumJ++] = pBase64Char[iCurPos];
+
+        iCurPos = ((pRawData[iNumI+1] << 2)) & (0x3C) ;
+        if ((iNumI + 2) >= iRawDataLen) {
+            pBase64Str[iNumJ++] = pBase64Char[iCurPos];
+            pBase64Str[iNumJ++] = '=';
+            break;
+        }
+        iCurPos |= ((pRawData[iNumI+2] >> 6)) & (0x03);
+        pBase64Str[iNumJ++] = pBase64Char[iCurPos];
+
+        iCurPos = (pRawData[iNumI+2]) & (0x3F);
+        pBase64Str[iNumJ++] = pBase64Char[iCurPos];
+    }
+    pBase64Str[iNumJ] = '\0';
+
+    return pBase64Str;
+}
+
+/* Base64 decode */
+int Base64Decode(char* pBase64Str, char* pRawData) {
+    int iNumI, iNumJ, iNumK;
+    char cTmpBuf[4];
+    for (iNumI = 0, iNumJ = 0; pBase64Str[iNumI] != '\0'; iNumI += 4) {
+        memset(cTmpBuf, 0xFF, sizeof(cTmpBuf));
+        for (iNumK = 0; iNumK < 64; iNumK ++) {
+            if (pBase64Char[iNumK] == pBase64Str[iNumI]) {
+                cTmpBuf[0]= iNumK;
+            }
+        }
+        for (iNumK = 0; iNumK < 64; iNumK ++) {
+            if (pBase64Char[iNumK] == pBase64Str[iNumI + 1]) {
+                cTmpBuf[1]= iNumK;
+            }
+        }
+        for (iNumK = 0; iNumK < 64; iNumK ++) {
+            if (pBase64Char[iNumK] == pBase64Str[iNumI + 2]) {
+                cTmpBuf[2]= iNumK;
+            }
+        }
+        for (iNumK = 0; iNumK < 64; iNumK ++) {
+            if (pBase64Char[iNumK] == pBase64Str[iNumI + 3]) {
+                cTmpBuf[3]= iNumK;
+            }
+        }
+
+        pRawData[iNumJ ++] = ((((cTmpBuf[0] << 2)) & 0xFC))
+            | (((cTmpBuf[1] >> 4) & 0x03));
+        if ( pBase64Str[iNumI + 2] == '=' ) {
+            break;
+        }
+
+        pRawData[iNumJ ++] = ((((cTmpBuf[1] << 4)) & 0xF0))
+            | (((cTmpBuf[2] >> 2) & 0x0F));
+        if ( pBase64Str[iNumI + 3] == '=' ) {
+            break;
+        }
+
+        pRawData[iNumJ ++] = ((((cTmpBuf[2] << 6)) & 0xF0))
+            | ((cTmpBuf[3] & 0x3F));
+    }
+
+    return iNumJ;
+}
+
+/* Parse certificate file contents */
+char* ReadConfiguration(int iUseFd)
+{
+    char cContent[SIZE_128B];
+    memset(cContent, 0, sizeof(cContent));
+    if (read(iUseFd, cContent, sizeof(cContent)) < 0) {
+        LOGRECORD(ERROR, "License file read error");
+    }
+
+    static char cRawData[SIZE_128B];
+    Base64Decode(cContent, cRawData);
+
+    // Calculate MD5 value
+    unsigned int iMd5Sum = 0;
+    unsigned char* pMd5 = MD5Digest(strchr(cRawData, '|'));   
+
+    int iNum;
+    for (iNum = 0; iNum < MD5LEN; iNum ++) {
+        iMd5Sum += pMd5[iNum];
+    }
+
+    // Pick out checksum
+    int iCheckSum;
+    if (sscanf(cRawData, "%d|*", &iCheckSum) < 0) {
+        LOGRECORD(ERROR, "Get checksum failed");
+    }
+
+    // Check MD5 value
+    if (iCheckSum != iMd5Sum) {
+        LOGRECORD(ERROR, "Certificate file corrupted");
+    }
+
+    return cRawData;
+}
+
+/* Save certificate validation information */
+void SaveConfiguration(int iUseFd, char* pContent)
+{
+    // Calculation new MD5 checksum
+    unsigned int iMd5Sum = 0;
+    unsigned char* pMd5 = MD5Digest(pContent);
+
+    int iNum;
+    for (iNum = 0; iNum < MD5LEN; iNum ++) {
+        iMd5Sum += pMd5[iNum];
+    }
+
+    // Construction certificate information
+    char cLicense[SIZE_128B];
+    memset(cLicense, 0, sizeof(cLicense));
+    if (sprintf(cLicense, "%u%s", iMd5Sum , pContent) < 0) {
+        LOGRECORD(ERROR, "License initialization failed");
+    }
+
+    // Base64 encryption
+    char cBase64[SIZE_128B];
+    memset(cBase64, 0, sizeof(cBase64));
+    Base64Encode(cLicense, cBase64, strlen(cLicense));
+
+    if (ftruncate(iUseFd, 0) < 0) {
+        LOGRECORD(ERROR, "Configuration empty failed");
+    }
+
+    if (lseek(iUseFd, 0, SEEK_SET) < 0) {
+        LOGRECORD(ERROR, "Cursor moved failed");
+    }
+
+    // Save configuration
+    if (write(iUseFd, cBase64, strlen(cBase64)) < 0) {
+        LOGRECORD(ERROR, "License file write failed");
+    }
+}
+
+/* Get current time */
+char* GetTime()
+{
+    time_t tRawTime;
+    tRawTime = time(NULL);
+
+    struct tm* stTimeInfo;
+    stTimeInfo = localtime(&tRawTime);
+
+    static char cNowTime[SIZE_16B];
+    memset(cNowTime, 0, sizeof(cNowTime));
+    strftime(cNowTime, 24, "%Y%m%d%H%M%S", stTimeInfo);
+
+    return cNowTime;
+}
+
+/* Program trial initialization */
+void ConfigureInit(int iUseFd)
+{
+    char cTmpBuf[SIZE_128B];
+    char* pNowTime = GetTime();
+    if (sprintf(cTmpBuf, "|0|500|1|%s|%s|%s", 
+                pNowTime, pNowTime, pNowTime) < 0) {
+        LOGRECORD(ERROR, "License write buffer error");
+    }
+
+    SaveConfiguration(iUseFd, cTmpBuf);
+}
+
+/* Verify the new license */
+void CheckNewCert(int iUseFd)
+{
+    // Input new license
+    char cInputLicense[SIZE_128B];
+    LOGRECORD(INFO, "Please input new license:");
+    if (scanf("%s", cInputLicense) < 0) {
+        LOGRECORD(ERROR, "License input error[s]");
+    }
+
+    char cRawData[SIZE_16B * 2];
+    memset(cRawData, 0, sizeof(cRawData));
+    Base64Decode(cInputLicense, cRawData);
+
+    int iRawDataLen = strlen(cRawData);
+    int iCode;
+    if (sscanf(cRawData, "%*[^|]|%d", &iCode) < 0) {
+        LOGRECORD(ERROR, "License input error");
+    }
+
+    // Verify the validity of the license
+    if (iRawDataLen != 16 || iCode % 3 != 2) {
+        LOGRECORD(ERROR, "The license check failed. Please re-enter it");
+    }
+
+    // Read original certificate information
+    char* pRawData = ReadConfiguration(iUseFd);
+    unsigned int iMd5, iUseTimes, iUseBase, iAuthNum;
+    unsigned long int iFirstUse, iLastAuth, iLastUse;
+    if (sscanf(pRawData, "%d|%d|%d|%d|%lu|%lu|%lu", 
+                &iMd5, &iUseTimes, &iUseBase, &iAuthNum,
+                &iFirstUse, &iLastAuth, &iLastUse) < 0) {
+        LOGRECORD(ERROR, "Configuration analyse failed");
+    }
+
+
+    // Increase one access base for user
+    char cTmpBuf[SIZE_128B];
+    char* pNowTime = GetTime();
+    if (sprintf(cTmpBuf, "|%d|%d|%d|%lu|%s|%s", 
+                iUseTimes, iUseBase, ++ iAuthNum, 
+                iFirstUse, pNowTime, pNowTime) < 0) {
+        LOGRECORD(ERROR, "License write buffer error");
+    }
+
+    SaveConfiguration(iUseFd, cTmpBuf);
+    PROGRAMEND();
+}
+
+/* Validation of permissions */
+void VerifyPermission(int iUseFd)
+{
+    char* pRawData = ReadConfiguration(iUseFd);
+
+    unsigned int iMd5, iUseTimes, iUseBase, iAuthNum;
+    unsigned long int iFirstUse, iLastAuth, iLastUse;
+    if (sscanf(pRawData, "%d|%d|%d|%d|%lu|%lu|%lu", 
+                &iMd5, &iUseTimes, &iUseBase, &iAuthNum,
+                &iFirstUse, &iLastAuth, &iLastUse) < 0) {
+        LOGRECORD(ERROR, "Configuration analyse failed");
+    }
+
+    // Verify the upper limit of use times
+    if (iUseTimes < iUseBase * iAuthNum) {
+        iUseTimes ++;
+    } else {
+        CheckNewCert(iUseFd);
+    }
+
+    // Increase the number of times to use and update the usage time
+    char cTmpBuf[SIZE_128B];
+    if (sprintf(cTmpBuf, "|%d|%d|%d|%lu|%lu|%s", 
+                iUseTimes, iUseBase, iAuthNum, 
+                iFirstUse, iLastAuth, GetTime()) < 0) {
+        LOGRECORD(ERROR, "License write buffer error");
+    }
+
+    SaveConfiguration(iUseFd, cTmpBuf);
+}
+
 /* Superman user login authentication */
 void SuperManUser()
 {
-    char    cInputPasswd[32];
+    char cInputPasswd[SIZE_16B * 2];
 
     LOGRECORD(DEBUG, "User login authentication start");
     LOGRECORD(INFO, "Please input password:");
 
+    // Check superman user password
+    SetDisplayMode(STDIN_FILENO, 0); // Turn OFF 
     if (scanf("%s", cInputPasswd) < 0) {
+        SetDisplayMode(STDIN_FILENO, 1);
         LOGRECORD(ERROR, "Input error");
     }
+    SetDisplayMode(STDIN_FILENO, 1); // Turn ON 
 
     if (IsPasswdOK(MD5Digest(cInputPasswd))) {
-        remove(pLogName);
-        LOGRECORD(INFO, "Execute successfully and please run the software again");
+        int iUseFd;
+        if ((iUseFd = open(pLogName, O_RDWR)) < 0) {
+            LOGRECORD(ERROR, "Configure file open failed");
+        }
+
+        LOGRECORD(INFO, "What do you want?");
+        char cWantTo[SIZE_16B];
+        SetDisplayMode(STDIN_FILENO, 0);
+        if (scanf("%s", cWantTo) < 0) {
+            SetDisplayMode(STDIN_FILENO, 1);
+            LOGRECORD(ERROR, "What ???");
+        }
+        SetDisplayMode(STDIN_FILENO, 1);
+
+        // Determine the actions of superman user
+        if ((strcmp("show", cWantTo) == 0)
+                || (strcmp("ss", cWantTo) == 0)) {
+            // Displays the current certificate information
+            char* pRawData = ReadConfiguration(iUseFd);
+            unsigned int iMd5, iUseTimes, iUseBase, iAuthNum;
+            unsigned long int iFirstUse, iLastAuth, iLastUse;
+            if (sscanf(pRawData, "%d|%d|%d|%d|%lu|%lu|%lu", 
+                        &iMd5, &iUseTimes, &iUseBase, &iAuthNum,
+                        &iFirstUse, &iLastAuth, &iLastUse) < 0) {
+                LOGRECORD(ERROR, "Configuration analyse failed");
+            }
+
+            LOGRECORD(INFO, "Totle : %d", iUseBase * iAuthNum);
+            LOGRECORD(INFO, "Used  : %d", iUseTimes);
+            LOGRECORD(INFO, "First Use  Time : %lu", iFirstUse);
+            LOGRECORD(INFO, "Last  Use  Time : %lu", iLastUse);
+            LOGRECORD(INFO, "Last  Auth Time : %lu", iLastAuth);
+        } else if ((strcmp("license", cWantTo) == 0)
+                || (strcmp("ll", cWantTo) == 0)) {
+            // Create a new license
+            char cLicense[SIZE_16B * 2];
+            memset(cLicense, 0, sizeof(cLicense));
+            strcat(cLicense, GetRandStr(16));
+            char cVertCode[SIZE_16B];
+            memset(cVertCode, 0, sizeof(cVertCode));
+            sprintf(cVertCode, "|%d|", (GetRandNum() % 300) * 3 + 2);
+            memcpy((cLicense + (GetRandNum() % 10)), cVertCode, strlen(cVertCode));
+            char cBase64[SIZE_128B];
+            Base64Encode(cLicense, cBase64, 16);
+            LOGRECORD(INFO, "%s", cBase64);
+        } else if (atoi(cWantTo) > 0) {
+            // Increase the number of access permissions
+            char* pRawData = ReadConfiguration(iUseFd);
+            unsigned int iMd5, iUseTimes, iUseBase, iAuthNum;
+            unsigned long int iFirstUse, iLastAuth, iLastUse;
+            if (sscanf(pRawData, "%d|%d|%d|%d|%lu|%lu|%lu", 
+                        &iMd5, &iUseTimes, &iUseBase, &iAuthNum,
+                        &iFirstUse, &iLastAuth, &iLastUse) < 0) {
+                LOGRECORD(ERROR, "Configuration analyse failed");
+            }
+
+            char cTmpBuf[SIZE_128B];
+            char* pNowTime = GetTime();
+            if (sprintf(cTmpBuf, "|%d|%d|%d|%lu|%s|%s", 
+                        iUseTimes, iUseBase, iAuthNum + atoi(cWantTo), 
+                        iFirstUse, pNowTime, pNowTime) < 0) {
+                LOGRECORD(ERROR, "License write buffer error");
+            }
+
+            LOGRECORD(INFO, "Use Times : %u/%u", 
+                    iUseTimes, (iUseBase * (iAuthNum + atoi(cWantTo))));
+            SaveConfiguration(iUseFd, cTmpBuf);
+        } else {
+            LOGRECORD(ERROR, "Are you kidding?");
+        }
+
     } else {
-        LOGRECORD(ERROR, "Password input error");
+        LOGRECORD(ERROR, "Wrong password");
     }
 
-    LOGRECORD(DEBUG, "User login authentication success");
+    LOGRECORD(INFO, "Execute successfully. Rerun the program");
+    PROGRAMEND();
 }
-
-/* Software use counter */
-static void UseTimesFunction(int iUseNumber, int iNum)
-{
-    int     iUseFd;
-    char    cUseNumber[10];
-
-    if ((iUseFd = open(pLogName, O_WRONLY | O_CREAT, PERM)) < 0) {
-        LOGRECORD(ERROR, "License file open failed");
-    }
-
-    memset(cUseNumber, 0, sizeof(cUseNumber));
-    iUseNumber += iNum;
-    sprintf(cUseNumber, "%d", iUseNumber);
-
-    if (write(iUseFd, cUseNumber, strlen(cUseNumber)) < 0) {
-        LOGRECORD(ERROR, "License file write failed");
-    }
-
-    close(iUseFd);
-    LOGRECORD(DEBUG, "Use Times: [%d/%d]", iUseNumber, MAXUSETIMES);
-} 
 
 /* Verify user permissions */
 void CertificationAuthority()
 {
-    int     iUseFd;
-    int     iUseNumber;
-    char    cUseNumber[10];
-
     if (GetNum("entrance") == 111) {
         SuperManUser();
         PROGRAMEND();
     }
-    if ((iUseFd = open(pLogName, O_RDONLY | O_CREAT, PERM)) < 0) {
-        LOGRECORD(ERROR, "License file open error");
-    }
 
-    memset(cUseNumber, 0, sizeof(cUseNumber));
-    if (read(iUseFd, cUseNumber, sizeof(cUseNumber)) < 0) {
-        LOGRECORD(ERROR, "License file read error");
-    }
-
-    iUseNumber = atoi(cUseNumber);
-    if (iUseNumber > MAXUSETIMES) {
-        LOGRECORD(ERROR, "The number of users has reached the upper limit");
+    int iUseFd;
+    if ((iUseFd = open(pLogName, O_RDWR)) < 0) {
+        // First use, generate certificate file
+        if ((iUseFd = open(pLogName, O_RDWR | O_CREAT, PERM)) < 0) {
+            LOGRECORD(ERROR, "License file create failed");
+        }
+        // Initialize the trial configuration
+        ConfigureInit(iUseFd);
+    } else {
+        VerifyPermission(iUseFd);
     }
 
     close(iUseFd);
-    UseTimesFunction(iUseNumber, 1);
 }
 

@@ -269,7 +269,7 @@ def main():
         print "Input error"
 
     display_result()
-    #os.popen3("rm *.pcap")
+    os.popen3("rm *.pcap")
 
 
 if __name__ == "__main__":

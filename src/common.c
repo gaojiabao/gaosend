@@ -600,7 +600,7 @@ int OpenReadFile(char* pFileName)
     }
     //if ((iReadFd = open(pFileName, O_RDONLY)) < 0 ) {
     if ((iReadFd = open(pFileName, O_RDWR)) < 0 ) {
-        LOGRECORD(ERROR, "Open read-file failed:%d", iReadFd);
+        LOGRECORD(ERROR, "Open read-file failed:[%s:%d]", pFileName, iReadFd);
     }
 
     return iReadFd;

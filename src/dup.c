@@ -82,7 +82,7 @@ void DuplicatePacket()
 /* Parse file list */
 char* ParseReadList(char* pCmd)
 {
-    static char cCmdBuf[1000];
+    static char cCmdBuf[1024 * 1000];
     char* pVar = strtok(pCmd, "-");
     while(1 == 1) {
         pVar = strtok(NULL, "-");

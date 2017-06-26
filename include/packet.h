@@ -42,7 +42,7 @@ typedef struct pseudohdr{
     U32    sip;
     U32    dip;
     U8     flag;
-    U8     protocol;
+    U8     pro;
     U16    len;
 }_pseudohdr;
 
@@ -77,7 +77,7 @@ typedef struct ip4hdr {
     U16    ident;
     U16    flag_offset;
     U8     ttl;
-    U8     protocol;
+    U8     pro;
     U16    checksum;
     U32    sip;    
     U32    dip;
@@ -91,7 +91,7 @@ typedef struct ip6hdr {
             */
     U32    version;
     U16    payload;
-    U8     protocol;
+    U8     pro;
     U8     nextHop;
     U8     sip[sizeof(struct in6_addr)];
     U8     dip[sizeof(struct in6_addr)];

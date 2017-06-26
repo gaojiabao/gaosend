@@ -65,7 +65,7 @@ static U16 BuildPseduoPacket(void* pData)
     pPseudoHdr->sip = stPkt.pIp4Hdr->sip;
     pPseudoHdr->dip = stPkt.pIp4Hdr->dip;
     pPseudoHdr->flag = 0;
-    pPseudoHdr->protocol = iL4Pro;
+    pPseudoHdr->pro = iL4Pro;
     pPseudoHdr->len = iDataLen;
 
     // Build pseudo packet data
@@ -173,7 +173,7 @@ static void BuildIp4Header()
     stPkt.pIp4Hdr->flag_offset = (GetNum("ip_flags") << 6) 
         | (htons(GetNum("ip_offset") / 8));
     stPkt.pIp4Hdr->ttl = 128;
-    stPkt.pIp4Hdr->protocol = iL4Pro;
+    stPkt.pIp4Hdr->pro = iL4Pro;
     stPkt.pIp4Hdr->checksum = 0;
     stPkt.pIp4Hdr->sip = inet_addr(GetStr("sip"));
     stPkt.pIp4Hdr->dip = inet_addr(GetStr("dip"));
@@ -201,7 +201,7 @@ static void BuildIp6Header()
        stPkt.pIp6Hdr->flowLabel = 0;
        */
     stPkt.pIp6Hdr->payload = htons(iPayLen);
-    stPkt.pIp6Hdr->protocol = iL4Pro;
+    stPkt.pIp6Hdr->pro = iL4Pro;
     stPkt.pIp6Hdr->nextHop = 0xff;
     inet_pton(AF_INET6, "::192.168.1.1", stPkt.pIp6Hdr->sip);
     inet_pton(AF_INET6, "2a01:198:603:0::", stPkt.pIp6Hdr->dip);

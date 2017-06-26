@@ -143,7 +143,7 @@ void ChangeIp4ToIp6()
     }
 
     // Record the valid information in the IPv4 header
-    U16 iL4Pro = stPkt.pIp4Hdr->protocol;
+    U16 iL4Pro = stPkt.pIp4Hdr->pro;
     int iPktLen = stPkt.pPktHdr->len;
     int iIp4Len = iPktLen - MAC_HDR_LEN  - iVlanNum * VLAN_TAG_LEN;
     int iIp4HdrLen = stPkt.pIp4Hdr->hdlen * 4;
@@ -169,7 +169,7 @@ void ChangeIp4ToIp6()
     stPkt.pIp6Hdr = (_ip6hdr *) (stPkt.pPacket + iCursor);
     stPkt.pIp6Hdr->version = htons(24576);
     stPkt.pIp6Hdr->payload = htons(iIp4Len - iIp4HdrLen - iPaddingLen);
-    stPkt.pIp6Hdr->protocol = iL4Pro;
+    stPkt.pIp6Hdr->pro = iL4Pro;
     stPkt.pIp6Hdr->nextHop = 0xff;
 
     // Switch IPv4 address to IPv6 address
@@ -313,9 +313,9 @@ void ModifyPortNum(int iSoD)
 
     U8 iL4Pro = 0;
     if (stPkt.pMacHdr->pro == htons(IPv4)) {
-        iL4Pro = stPkt.pIp4Hdr->protocol;
+        iL4Pro = stPkt.pIp4Hdr->pro;
     } else if (stPkt.pMacHdr->pro == htons(IPv6)) {
-        iL4Pro = stPkt.pIp6Hdr->protocol;
+        iL4Pro = stPkt.pIp6Hdr->pro;
     }
 
     int iPos = ((iL4Pro == UDP) ? 0 : 2);
@@ -357,7 +357,7 @@ void DetectAndProcess(int iGoM)
 
     // Change IPv4 to IPv6
     if (iGoM && (strcmp(GetStr("l3pro"), "IPV6") == 0)) {
-            ChangeIp4ToIp6();
+        ChangeIp4ToIp6();
     }
 }
 

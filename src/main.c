@@ -163,7 +163,7 @@ void TerminalParametersAnalyse(int argc, char *argv[])
                 "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:x:I:S:y:o:O:Z:e:j:k:q:E:";
 
     int   iCounter;
-    char  cCmdBuf[1024];
+    char  cCmdBuf[1024 * 1000]; 
 
     // Save command line input
     memset(cCmdBuf, 0 , sizeof(cCmdBuf));

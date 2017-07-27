@@ -34,7 +34,7 @@ typedef struct
     UINT4 state[4];   
     UINT4 count[2];   
     unsigned char buffer[64];   
-}   MD5_CTX;   
+}MD5_CTX;   
 
 #define S11 7   
 #define S12 12   
@@ -383,7 +383,7 @@ int Base64Decode(char* pBase64Str, char* pRawData) {
 }
 
 /* Parse certificate file contents */
-char* ReadConfiguration(int iUseFd)
+long int* ReadConfiguration(int iUseFd)
 {
     char cContent[SIZE_128B];
     memset(cContent, 0, sizeof(cContent));
@@ -403,26 +403,35 @@ char* ReadConfiguration(int iUseFd)
         iMd5Sum += pMd5[iNum];
     }
 
-    // Pick out checksum
-    int iCheckSum;
-    if (sscanf(cRawData, "%d|*", &iCheckSum) < 0) {
-        LOGRECORD(ERROR, "Get checksum failed");
+    static long int iLicenseArray[7];
+    if (sscanf(cRawData, "%ld|%ld|%ld|%ld|%ld|%ld|%ld", &iLicenseArray[0], 
+            &iLicenseArray[1], &iLicenseArray[2], &iLicenseArray[3],
+            &iLicenseArray[4], &iLicenseArray[5], &iLicenseArray[6]) < 0) {
+        LOGRECORD(ERROR, "Analyse licnese failed");
     }
 
     // Check MD5 value
-    if (iCheckSum != iMd5Sum) {
+    if (iMd5Sum != iLicenseArray[0]) {
         LOGRECORD(ERROR, "Certificate file corrupted");
     }
 
-    return cRawData;
+    return iLicenseArray;
 }
 
 /* Save certificate validation information */
-void SaveConfiguration(int iUseFd, char* pContent)
+void SaveConfiguration(int iUseFd, long int* plRawLic)
 {
+    char cTmpBuf[SIZE_128B];
+    memset(cTmpBuf, 0, sizeof(cTmpBuf));
+    if (sprintf(cTmpBuf, "|%ld|%ld|%ld|%ld|%ld|%ld", 
+            plRawLic[1], plRawLic[2], plRawLic[3], 
+            plRawLic[4], plRawLic[5], plRawLic[6]) < 0) {
+        LOGRECORD(ERROR, "License write buffer error");
+    }
+
     // Calculation new MD5 checksum
     unsigned int iMd5Sum = 0;
-    unsigned char* pMd5 = MD5Digest(pContent);
+    unsigned char* pMd5 = MD5Digest(cTmpBuf);
 
     int iNum;
     for (iNum = 0; iNum < MD5LEN; iNum ++) {
@@ -432,7 +441,7 @@ void SaveConfiguration(int iUseFd, char* pContent)
     // Construction certificate information
     char cLicense[SIZE_128B];
     memset(cLicense, 0, sizeof(cLicense));
-    if (sprintf(cLicense, "%u%s", iMd5Sum , pContent) < 0) {
+    if (sprintf(cLicense, "%u%s", iMd5Sum , cTmpBuf) < 0) {
         LOGRECORD(ERROR, "License initialization failed");
     }
 
@@ -456,7 +465,7 @@ void SaveConfiguration(int iUseFd, char* pContent)
 }
 
 /* Get current time */
-char* GetTime()
+long int GetTimeNum()
 {
     time_t tRawTime;
     tRawTime = time(NULL);
@@ -468,20 +477,22 @@ char* GetTime()
     memset(cNowTime, 0, sizeof(cNowTime));
     strftime(cNowTime, 24, "%Y%m%d%H%M%S", stTimeInfo);
 
-    return cNowTime;
+    long int iTimeNum;
+    if (sscanf(cNowTime, "%ld", &iTimeNum) < 0) {
+        LOGRECORD(ERROR, "Get time num failed");
+    }
+
+    return iTimeNum;
 }
 
 /* Program trial initialization */
 void ConfigureInit(int iUseFd)
 {
-    char cTmpBuf[SIZE_128B];
-    char* pNowTime = GetTime();
-    if (sprintf(cTmpBuf, "|0|500|1|%s|%s|%s", 
-                pNowTime, pNowTime, pNowTime) < 0) {
-        LOGRECORD(ERROR, "License write buffer error");
-    }
+    // MD5|UT|UB|AN|FU|LA|LU
+    long int iRawLic[7] = {0, 1, 500, 1, 0, 0, 0};
+    iRawLic[4] = iRawLic[5] = iRawLic[6] = GetTimeNum();
 
-    SaveConfiguration(iUseFd, cTmpBuf);
+    SaveConfiguration(iUseFd, iRawLic);
 }
 
 /* Verify the new license */
@@ -504,64 +515,37 @@ void CheckNewCert(int iUseFd)
         LOGRECORD(ERROR, "License input error");
     }
 
-    // Verify the validity of the license
-    if (iRawDataLen != 16 || iCode % 3 != 2) {
-        LOGRECORD(ERROR, "The license check failed. Please re-enter it");
-    }
-
     // Read original certificate information
-    char* pRawData = ReadConfiguration(iUseFd);
-    unsigned int iMd5, iUseTimes, iUseBase, iAuthNum;
-    unsigned long int iFirstUse, iLastAuth, iLastUse;
-    if (sscanf(pRawData, "%d|%d|%d|%d|%lu|%lu|%lu", 
-                &iMd5, &iUseTimes, &iUseBase, &iAuthNum,
-                &iFirstUse, &iLastAuth, &iLastUse) < 0) {
-        LOGRECORD(ERROR, "Configuration analyse failed");
+    long int* plRawLic = ReadConfiguration(iUseFd);
+
+    // Verify the validity of the license
+    if (iRawDataLen != 16 || iCode != plRawLic[0]) {
+        LOGRECORD(ERROR, "The license check failed. Please re-enter it");
+    } else {
+        // Increase one access base for user
+        long int iNowTime = GetTimeNum();
+        plRawLic[3] ++;
+        plRawLic[5] = plRawLic[6] = iNowTime;
+        LOGRECORD(INFO, "License verification successful. You can use it 500 times");
+        SaveConfiguration(iUseFd, plRawLic);
+        PROGRAMEND();
     }
-
-
-    // Increase one access base for user
-    char cTmpBuf[SIZE_128B];
-    char* pNowTime = GetTime();
-    if (sprintf(cTmpBuf, "|%d|%d|%d|%lu|%s|%s", 
-                iUseTimes, iUseBase, ++ iAuthNum, 
-                iFirstUse, pNowTime, pNowTime) < 0) {
-        LOGRECORD(ERROR, "License write buffer error");
-    }
-
-    SaveConfiguration(iUseFd, cTmpBuf);
-    PROGRAMEND();
 }
 
 /* Validation of permissions */
 void VerifyPermission(int iUseFd)
 {
-    char* pRawData = ReadConfiguration(iUseFd);
-
-    unsigned int iMd5, iUseTimes, iUseBase, iAuthNum;
-    unsigned long int iFirstUse, iLastAuth, iLastUse;
-    if (sscanf(pRawData, "%d|%d|%d|%d|%lu|%lu|%lu", 
-                &iMd5, &iUseTimes, &iUseBase, &iAuthNum,
-                &iFirstUse, &iLastAuth, &iLastUse) < 0) {
-        LOGRECORD(ERROR, "Configuration analyse failed");
-    }
+    long int* plRawLic = ReadConfiguration(iUseFd);
 
     // Verify the upper limit of use times
-    if (iUseTimes < iUseBase * iAuthNum) {
-        iUseTimes ++;
+    if (plRawLic[1] < plRawLic[2] * plRawLic[3]) {
+        plRawLic[1] ++;
+        plRawLic[6] = GetTimeNum();
     } else {
         CheckNewCert(iUseFd);
     }
 
-    // Increase the number of times to use and update the usage time
-    char cTmpBuf[SIZE_128B];
-    if (sprintf(cTmpBuf, "|%d|%d|%d|%lu|%lu|%s", 
-                iUseTimes, iUseBase, iAuthNum, 
-                iFirstUse, iLastAuth, GetTime()) < 0) {
-        LOGRECORD(ERROR, "License write buffer error");
-    }
-
-    SaveConfiguration(iUseFd, cTmpBuf);
+    SaveConfiguration(iUseFd, plRawLic);
 }
 
 /* Superman user login authentication */
@@ -595,63 +579,40 @@ void SuperManUser()
         }
         SetDisplayMode(STDIN_FILENO, 1);
 
+        long int* plRawLic = ReadConfiguration(iUseFd);
         // Determine the actions of superman user
         if ((strcmp("show", cWantTo) == 0)
                 || (strcmp("ss", cWantTo) == 0)) {
             // Displays the current certificate information
-            char* pRawData = ReadConfiguration(iUseFd);
-            unsigned int iMd5, iUseTimes, iUseBase, iAuthNum;
-            unsigned long int iFirstUse, iLastAuth, iLastUse;
-            if (sscanf(pRawData, "%d|%d|%d|%d|%lu|%lu|%lu", 
-                        &iMd5, &iUseTimes, &iUseBase, &iAuthNum,
-                        &iFirstUse, &iLastAuth, &iLastUse) < 0) {
-                LOGRECORD(ERROR, "Configuration analyse failed");
-            }
-
-            LOGRECORD(INFO, "Totle : %d", iUseBase * iAuthNum);
-            LOGRECORD(INFO, "Used  : %d", iUseTimes);
-            LOGRECORD(INFO, "First Use  Time : %lu", iFirstUse);
-            LOGRECORD(INFO, "Last  Use  Time : %lu", iLastUse);
-            LOGRECORD(INFO, "Last  Auth Time : %lu", iLastAuth);
+            LOGRECORD(INFO, "Totle : %ld", plRawLic[2] * plRawLic[3]);
+            LOGRECORD(INFO, "Used  : %ld", plRawLic[1]);
+            LOGRECORD(INFO, "First Use  Time : %ld", plRawLic[4]);
+            LOGRECORD(INFO, "Last  Auth Time : %ld", plRawLic[5]);
+            LOGRECORD(INFO, "Last  Use  Time : %ld", plRawLic[6]);
         } else if ((strcmp("license", cWantTo) == 0)
                 || (strcmp("ll", cWantTo) == 0)) {
-            // Create a new license
             char cLicense[SIZE_16B * 2];
             memset(cLicense, 0, sizeof(cLicense));
             strcat(cLicense, GetRandStr(16));
             char cVertCode[SIZE_16B];
             memset(cVertCode, 0, sizeof(cVertCode));
-            sprintf(cVertCode, "|%d|", (GetRandNum() % 300) * 3 + 2);
+            sprintf(cVertCode, "|%ld|", plRawLic[0]);
             memcpy((cLicense + (GetRandNum() % 10)), cVertCode, strlen(cVertCode));
             char cBase64[SIZE_128B];
             Base64Encode(cLicense, cBase64, 16);
             LOGRECORD(INFO, "%s", cBase64);
         } else if (atoi(cWantTo) > 0) {
             // Increase the number of access permissions
-            char* pRawData = ReadConfiguration(iUseFd);
-            unsigned int iMd5, iUseTimes, iUseBase, iAuthNum;
-            unsigned long int iFirstUse, iLastAuth, iLastUse;
-            if (sscanf(pRawData, "%d|%d|%d|%d|%lu|%lu|%lu", 
-                        &iMd5, &iUseTimes, &iUseBase, &iAuthNum,
-                        &iFirstUse, &iLastAuth, &iLastUse) < 0) {
-                LOGRECORD(ERROR, "Configuration analyse failed");
-            }
-
-            char cTmpBuf[SIZE_128B];
-            char* pNowTime = GetTime();
-            if (sprintf(cTmpBuf, "|%d|%d|%d|%lu|%s|%s", 
-                        iUseTimes, iUseBase, iAuthNum + atoi(cWantTo), 
-                        iFirstUse, pNowTime, pNowTime) < 0) {
-                LOGRECORD(ERROR, "License write buffer error");
-            }
-
+            plRawLic[3] += atol(cWantTo);
+            plRawLic[5] = plRawLic[6] = GetTimeNum();
             LOGRECORD(INFO, "Use Times : %u/%u", 
-                    iUseTimes, (iUseBase * (iAuthNum + atoi(cWantTo))));
-            SaveConfiguration(iUseFd, cTmpBuf);
+                    plRawLic[1], (plRawLic[2] * plRawLic[3]));
+            SaveConfiguration(iUseFd, plRawLic);
         } else {
             LOGRECORD(ERROR, "Are you kidding?");
         }
 
+        close(iUseFd);
     } else {
         LOGRECORD(ERROR, "Wrong password");
     }

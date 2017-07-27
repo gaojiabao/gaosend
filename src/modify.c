@@ -381,7 +381,8 @@ U32 RuleInitialization()
 
     char* pExpStr = GetStr("express");
     if (pExpStr == NULL) {
-        LOGRECORD(ERROR, "The parameter -E is missing");
+        LOGRECORD(DEBUG, "The parameter -E is missing");
+        return 0;
     } else {
         memcpy(cExpBuf, pExpStr, strlen(pExpStr));
     }
@@ -406,7 +407,7 @@ U32 RuleInitialization()
     if (strcmp(pPosStr, "IP") == 0) {
         sprintf(cTargetRuleBuf, "%u", (stCon.ip1[0] + stCon.ip2[0]));
     } else {
-        return -1;
+        LOGRECORD(ERROR, "Parameter format error\nEg: -E IP,1.1.1.1,2.2.2.2");
     }
 
     return GetHashValue(cTargetRuleBuf);
@@ -422,9 +423,13 @@ int IsSameFlow(U32 iTargetValue)
     iHashValue = GetHashValue(cMatchRuleBuf);
 
     int iResNum = 0;
-    if (iHashValue == iTargetValue) {
-        iResNum = 1;
-    } 
+    if (iTargetValue == 0) {
+        stCon.ip1[0] = stPkt.pIp4Hdr->sip;
+        stCon.ip2[0] = stPkt.pIp4Hdr->dip;
+        iResNum = iHashValue;
+    } else if (iHashValue == iTargetValue) {
+        iResNum = iHashValue;
+    }
 
     return iResNum;
 }
@@ -439,7 +444,8 @@ void ModifyProcessEntrance()
     DetectAndProcess(iGenerateFlag);
     U32 iRuleCode = RuleInitialization();
     while (DeepPacketInspection() > 0) {
-        if (IsSameFlow(iRuleCode)) {
+        iRuleCode = IsSameFlow(iRuleCode);
+        if (iRuleCode > 0) {
             DetectAndProcess(iModifyFlag);
             PacketProcessing(stPkt);
             iMatchFlag ++;

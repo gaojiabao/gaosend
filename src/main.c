@@ -16,6 +16,7 @@
 #include    "runlog.h"
 #include    "storage.h"
 #include    "default.h"
+#include    <stdio.h>
 
 
 /* Command line parameter control table */
@@ -84,8 +85,8 @@ void UsageOfProgram()
         "\t-u, --url          URL in Http-GET, Http POST of DNS\n"
         "FUNCTION ARGS\n"
         "\t-B, --build        Build packet with send or save mode\n"
-        "\t-R, --replay       Replay packet, use with -r -I and -c\n"
-        "\t-D, --dup          Duplicate N times into original pcap-file, use with -r and -c\n"
+        "\t-R, --replay       Replay packet, use with -r and -c\n"
+        "\t-D, --dup          Duplicate N times into original pcap-file, use with -r -w and -c\n"
         "\t-C, --devide       Devide the pcap file to single pcap file, use with -r\n"
         "\t-m, --merge        Merge the pcap files into frist pcap file, use with -r and -w\n"
         "\t-A, --statistic    Statistic informations, use with -r and -f\n"
@@ -162,15 +163,15 @@ void TerminalParametersAnalyse(int argc, char *argv[])
     char* pParaOption = "fBFgDCmAMvhRX"
                 "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:x:I:S:y:o:O:Z:e:j:k:q:E:";
 
+    // Save command line input
     int   iCounter;
     char  cCmdBuf[1024 * 1000]; 
-
-    // Save command line input
     memset(cCmdBuf, 0 , sizeof(cCmdBuf));
     for (iCounter = 0; iCounter < argc; iCounter ++) {
         strcat(cCmdBuf, argv[iCounter]);
         strcat(cCmdBuf, " ");
     }
+    LOGRECORD(DEBUG, "User Input:%s", cCmdBuf);
 
     // Storage container initialization
     ParametersInit();
@@ -251,8 +252,8 @@ int main(int argc, char* argv[])
         case 104: MergePacket(argc, argv); break; 
         case 105: StatisticPacket(); break;
         case 106: ModifyPacket(); break;
-        case 107: VersionOfProgram (); break; 
-        case 108: UsageOfProgram (); break; 
+        case 107: VersionOfProgram(); break; 
+        case 108: UsageOfProgram(); break; 
         case 109: SwitchPcapFormat(); break; 
         case 110: ReplayPacket(); break; 
         default : BuildPacket(); break;

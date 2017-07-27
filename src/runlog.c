@@ -67,7 +67,7 @@ static void RecordRunningLog(char* pLog)
 /* Program info handling */
 static void InfoProcessing(char* pLog, char* pInfo)
 {
-    RecordRunningLog(pLog);
+    //RecordRunningLog(pLog);
     printf("%s\n", pInfo);
 }
 

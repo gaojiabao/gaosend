@@ -59,7 +59,7 @@ void DuplicatePacket()
     char* pPcapData = malloc(iPcapDataLen);
 
     if (read(iReadFd, pPcapData, iPcapDataLen) < 0) {
-        LOGRECORD(ERROR, "Data partial read failed");
+        LOGRECORD(ERROR, "Data partial read failed[D]");
     }
 
     int iCopyCount = GetNum("count");
@@ -123,7 +123,7 @@ void MergePacket(int argc, char* argv[])
         char* pPcapData = malloc(iPcapDataLen);
 
         if (read(iReadFd, pPcapData, iPcapDataLen) < 0) {
-            LOGRECORD(ERROR, "Data partial read failed");
+            LOGRECORD(ERROR, "Data partial read failed[M]");
         }
 
         if (write(iSaveFd, pPcapData, iPcapDataLen) < 0) {

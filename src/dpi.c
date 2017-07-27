@@ -214,7 +214,10 @@ int DeepPacketInspection()
         PacketInspection(iReadFd);
         iPktNum ++;
     } else {
-        close(iReadFd);
+        if (close(iReadFd) < 0) {
+            LOGRECORD(ERROR, "Pcap file close failed");
+        }
+        iReadFd = 0;
     }
 
     return stInfo.iPktLen;

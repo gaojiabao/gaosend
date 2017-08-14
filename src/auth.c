@@ -71,10 +71,18 @@ static unsigned char ACTIVEPASSWD[SIZE_16B] = {
 
 #define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32 - (n))))   
 
-#define FF(a, b, c, d, x, s, ac) {(a) += F((b), (c), (d)) + (x) + (UINT4)(ac); (a) = ROTATE_LEFT((a), (s)); (a) += (b);}   
-#define GG(a, b, c, d, x, s, ac) {(a) += G((b), (c), (d)) + (x) + (UINT4)(ac); (a) = ROTATE_LEFT((a), (s)); (a) += (b);}   
-#define HH(a, b, c, d, x, s, ac) {(a) += H((b), (c), (d)) + (x) + (UINT4)(ac); (a) = ROTATE_LEFT((a), (s)); (a) += (b);}   
-#define II(a, b, c, d, x, s, ac) {(a) += I((b), (c), (d)) + (x) + (UINT4)(ac); (a) = ROTATE_LEFT((a), (s)); (a) += (b);}   
+#define FF(a, b, c, d, x, s, ac) \
+        {(a) += F((b), (c), (d)) + (x) + (UINT4)(ac); \
+            (a) = ROTATE_LEFT((a), (s)); (a) += (b);}   
+#define GG(a, b, c, d, x, s, ac) \
+        {(a) += G((b), (c), (d)) + (x) + (UINT4)(ac); \
+            (a) = ROTATE_LEFT((a), (s)); (a) += (b);}   
+#define HH(a, b, c, d, x, s, ac) \
+        {(a) += H((b), (c), (d)) + (x) + (UINT4)(ac); \
+            (a) = ROTATE_LEFT((a), (s)); (a) += (b);}   
+#define II(a, b, c, d, x, s, ac) \
+        {(a) += I((b), (c), (d)) + (x) + (UINT4)(ac); \
+            (a) = ROTATE_LEFT((a), (s)); (a) += (b);}   
 
 
 static void Encode(unsigned char* pOutPut, UINT4* pInput, unsigned int iLength)   
@@ -223,7 +231,8 @@ static void MD5Update(MD5_CTX *pContext,
         iNum = 0;   
     }
 
-    memcpy((POINTER)&pContext->buffer[iIndex], (POINTER)&pInput[iNum], iInputLen-iNum);   
+    memcpy((POINTER)&pContext->buffer[iIndex], 
+            (POINTER)&pInput[iNum], iInputLen-iNum);   
 }   
 
 static void MD5Final(unsigned char cDigest[16], MD5_CTX *pContext)   
@@ -597,7 +606,8 @@ void SuperManUser()
             char cVertCode[SIZE_16B];
             memset(cVertCode, 0, sizeof(cVertCode));
             sprintf(cVertCode, "|%ld|", plRawLic[0]);
-            memcpy((cLicense + (GetRandNum() % 10)), cVertCode, strlen(cVertCode));
+            memcpy((cLicense + (GetRandNum() % 10)), 
+                    cVertCode, strlen(cVertCode));
             char cBase64[SIZE_128B];
             Base64Encode(cLicense, cBase64, 16);
             LOGRECORD(INFO, "%s", cBase64);

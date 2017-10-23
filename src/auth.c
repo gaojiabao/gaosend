@@ -23,7 +23,7 @@
 
 #define ECHOFLAGS (ECHO | ECHOE | ECHOK | ECHONL)  
 
-char*    pLogName = "/etc/.send";
+char*   pLogName = "/etc/.send";
 
 typedef unsigned char  *POINTER;   
 typedef unsigned short int UINT2;   
@@ -112,7 +112,7 @@ static void Decode(UINT4 *pOutPut, unsigned char *pInput, unsigned int iLength)
 static void MD5Transform(UINT4 cState[4], unsigned char cBlock[64])   
 {   
     UINT4 a = cState[0], b = cState[1], c = cState[2], d = cState[3], x[16];   
-    Decode   (x,   cBlock,   64);   
+    Decode(x, cBlock, 64);   
     FF(a, b, c, d, x[0],  S11, 0xd76aa478);   /*   1   */   
     FF(d, a, b, c, x[1],  S12, 0xe8c7b756);   /*   2   */   
     FF(c, d, a, b, x[2],  S13, 0x242070db);   /*   3   */   

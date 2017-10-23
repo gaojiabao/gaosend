@@ -280,13 +280,16 @@ char* GetIncrIp4Addr(int iSoD)
     static unsigned int iIpAddr[] = {3232235777, 168430081};
     unsigned int iIpSwitch = htonl(iIpAddr[iSoD] ++);
     static char cIpAddrBuf[2][SIZE_16B * 2];
-    if (((unsigned char *)&iIpSwitch)[3] != 0) {
-        sprintf(cIpAddrBuf[iSoD], "%u.%u.%u.%u", 
-                ((unsigned char *)&iIpSwitch)[0],
-                ((unsigned char *)&iIpSwitch)[1],
-                ((unsigned char *)&iIpSwitch)[2],
-                ((unsigned char *)&iIpSwitch)[3]);
+    if (((unsigned char *)&iIpSwitch)[3] == 255) {
+        iIpAddr[iSoD] ++;
+        iIpSwitch = htonl(iIpAddr[iSoD] ++);
     }
+
+    sprintf(cIpAddrBuf[iSoD], "%u.%u.%u.%u", 
+            ((unsigned char *)&iIpSwitch)[0],
+            ((unsigned char *)&iIpSwitch)[1],
+            ((unsigned char *)&iIpSwitch)[2],
+            ((unsigned char *)&iIpSwitch)[3]);
 
     return cIpAddrBuf[iSoD];
 }

@@ -91,24 +91,24 @@ void L7HdrInspection(int iSport, int iDport)
 }
 
 /* Layer four protocol analysis */
-void L4HdrInspection(U8 iL4Pro)
+void L4HdrInspection(U16 iL3Pro, U8 iL4Pro)
 {
     char * pL4Hdr =  stPkt.pPacket + stInfo.iCursor;
 
-    if (iL4Pro == TCP) {
+    if (GetNum("flow") && iL4Pro == TCP) {
         stPkt.pTcpHdr = (_tcphdr *) pL4Hdr;
         stInfo.iCursor += ((stPkt.pTcpHdr->hdrlen >> 4) * 4);
-        int iTcpDataLen = htons(stPkt.pIp4Hdr->ttlen) 
-            - (stPkt.pIp4Hdr->hdlen * 4)
-            - ((stPkt.pTcpHdr->hdrlen >> 4) * 4);
-        // TCP flow check
-        if(GetNum("flow") && stPkt.pMacHdr->pro == htons(IPv4)) {
+        if (iL3Pro == IPv4) {
+            int iTcpDataLen = htons(stPkt.pIp4Hdr->ttlen) 
+                - (stPkt.pIp4Hdr->hdlen * 4)
+                - ((stPkt.pTcpHdr->hdrlen >> 4) * 4);
+            // TCP flow check
             char iFiveTupleSum[32];
             sprintf(iFiveTupleSum, "%d", stPkt.pIp4Hdr->sip 
                     + stPkt.pIp4Hdr->dip + stPkt.pTcpHdr->sport 
                     + stPkt.pTcpHdr->dport + stPkt.pIp4Hdr->pro);
             StreamStorage(iFiveTupleSum, stPkt.pTcpHdr, iTcpDataLen);
-        }
+        } 
 
         // PacketProcessing();
         iStatisticCode += EMPRO_L4_TCP * 100;
@@ -142,7 +142,7 @@ U8 L3HdrInspection(U16 pro)
         stPkt.pIp4Hdr = (_ip4hdr *) pL3Hdr;
         iPro = stPkt.pIp4Hdr->pro;
         iStatisticCode += EMPRO_L3_IPv4 * 10000;
-        L4HdrInspection(iPro);
+        L4HdrInspection(pro, iPro);
     } else if (pro == VLAN) {
         stInfo.iCursor += VLAN_TAG_LEN;
         if (stInfo.iCursor == (MAC_HDR_LEN + VLAN_TAG_LEN)) { // VLAN
@@ -161,7 +161,7 @@ U8 L3HdrInspection(U16 pro)
         stInfo.iCursor += IP6_HDR_LEN;
         stPkt.pIp6Hdr = (_ip6hdr *) pL3Hdr;
         iPro = stPkt.pIp6Hdr->pro;
-        L4HdrInspection(iPro);
+        L4HdrInspection(pro, iPro);
         iStatisticCode += EMPRO_L3_IPv6 * 10000;
     } else {
         iStatisticCode = EMPRO_L3_OTHER * 10000;

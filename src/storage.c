@@ -320,11 +320,14 @@ void StorageInput(char* pTitle, char* pValue, char cType)
     } else {
         // Marking parameters are variable 
         int iParaMode;
-        if (strcmp(pValue, "rand") == 0) {
+        if (strcmp(pValue, "rand") == 0 
+                || strcmp(pValue, "random") == 0) {
             iParaMode = FG_RAND;
-        } else if (strcmp(pValue, "incr") == 0) {
+        } else if (strcmp(pValue, "incr") == 0 
+                || strcmp(pValue, "increase") == 0 ) {
             iParaMode = FG_INCR;
-        } else if (strcmp(pValue, "decr") == 0) {
+        } else if (strcmp(pValue, "decr") == 0 
+                || strcmp(pValue, "decrease") == 0) {
             iParaMode = FG_DECR;
         } else if (pValue != NULL) {
             iParaMode = FG_FIXD;

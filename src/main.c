@@ -82,7 +82,7 @@ void UsageOfProgram()
         "\t-l, --length       Packet length  <fixd | incr | rand>\n"
         "\t-S, --string       Content of the text data section\n"
         "\t-O, --offset       The offset of a string in the data portion of a packet\n"
-        "\t-u, --url          URL in Http-GET, Http POST of DNS\n"
+        "\t-u, --url          URL in Http-GET, Http POST or DNS\n"
         "FUNCTION ARGS\n"
         "\t-B, --build        Build packet with send or save mode\n"
         "\t-R, --replay       Replay packet, use with -r and -c\n"

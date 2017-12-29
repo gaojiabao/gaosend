@@ -358,7 +358,7 @@ static void BuildDnsMessage()
     memcpy(pDnsData, cDomain, iDomainLen); 
     pDnsData += iDomainLen;
     *(pDnsData+0) = 0x00;
-    *(pDnsData+1) = 0x01;
+    *(pDnsData+1) = 0x01; // 0xff: qtype = ANY;
     *(pDnsData+2) = 0x00;
     *(pDnsData+3) = 0x01;
 }

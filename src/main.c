@@ -139,7 +139,7 @@ void ParametersInit()
     InsertNode("tcp-flag", NULL, 16, FG_INIT);
     InsertNode("tcp-hdrlen", NULL, 20, FG_INIT);
     InsertNode("vlannum", NULL, 0, FG_INIT);
-    InsertNode("ip_flags", NULL, 1, FG_INIT);
+    InsertNode("ip_flags", NULL, 0, FG_INIT);
     InsertNode("ip_offset", NULL, 0, FG_INIT);
     InsertNode("l3pro", "IPv4", -1, FG_INIT);
     InsertNode("l4pro", "UDP", -1, FG_INIT);
@@ -165,13 +165,14 @@ void TerminalParametersAnalyse(int argc, char *argv[])
 
     // Save command line input
     int   iCounter;
-    char  cCmdBuf[1024 * 1000]; 
-    memset(cCmdBuf, 0 , sizeof(cCmdBuf));
+    char* pCmdBuf = calloc(argc, 80);
     for (iCounter = 0; iCounter < argc; iCounter ++) {
-        strcat(cCmdBuf, argv[iCounter]);
-        strcat(cCmdBuf, " ");
+        strcat(pCmdBuf, argv[iCounter]);
+        strcat(pCmdBuf, " ");
     }
-    LOGRECORD(DEBUG, "User Input:%s", cCmdBuf);
+    if ( strlen(pCmdBuf) < 1024 * 100) {
+        LOGRECORD(DEBUG, "User Input:%s", pCmdBuf);
+    }
 
     // Storage container initialization
     ParametersInit();
@@ -197,7 +198,7 @@ void TerminalParametersAnalyse(int argc, char *argv[])
             case 'c': StorageInput("count", optarg, 'i'); break;
             case 'r': StorageInput("read", optarg, 'c'); 
                       StorageInput("filelist", \
-                          ParseReadList(cCmdBuf), 'c'); break; 
+                          ParseReadList(pCmdBuf), 'c'); break; 
             case 'w': StorageInput("save", optarg, 'c'); 
                       StorageInput("exec", "1", 'i'); break;
             case 'i': StorageInput("interface", optarg, 'c'); break;
@@ -230,6 +231,7 @@ void TerminalParametersAnalyse(int argc, char *argv[])
     } // end of while for parameter analysis
 
     
+    free(pCmdBuf);
     LOGRECORD(DEBUG, "Terminal parameters analyse finished");
 }
 

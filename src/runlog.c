@@ -97,8 +97,8 @@ static void ErrorProcessing(char* pLog, char* pInfo)
 void LogProcessingEntrance(char* pFileName, 
         int iLineNum, int iLevel, char* pFmt, ...)
 {
-    char       cLogMessage[SIZE_1K*4];
-    char       cInfoMessage[SIZE_1K*4];
+    char       cLogMessage[SIZE_1K * 100];
+    char       cInfoMessage[SIZE_1K * 100];
     va_list    vaArgPtr;
 
     va_start(vaArgPtr, pFmt);

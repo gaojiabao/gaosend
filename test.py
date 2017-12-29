@@ -233,18 +233,11 @@ def execution_case(case_no):
 
 def compile_program():
     os.system("ctags -R")
-    stdin, stdout, stderr = os.popen3('gcc -o /usr/local/bin/gaosend src/*.c -I./include -O2  -Wall -g')
-    context = stderr.read()
-    if context: 
-        print context
-        try:
-            if context.index("error"):
-                print "\033[1;31;1mCompile failed...\033[0m"
-                exit(0)
-        except Exception, e:
-            pass
-        
-    print "\033[1;32;1mCompile finished...\033[0m"
+    exec_res = os.system('gcc -o /usr/local/bin/gaosend src/*.c -I./include -O2  -Wall -g')
+    if exec_res != 0:
+        print "\033[1;31;1mCompile failed...\033[0m"
+    else:
+        print "\033[1;32;1mCompile finished...\033[0m"
     time.sleep(2)
 
 
@@ -259,7 +252,6 @@ def display_result():
 
 def main():
     compile_program()
-    os.popen3("rm *.pcap")
     argc = len(sys.argv)
     if argc == 1:
         exit(0)
@@ -269,7 +261,6 @@ def main():
         print "Input error"
 
     display_result()
-    os.popen3("rm *.pcap")
 
 
 if __name__ == "__main__":

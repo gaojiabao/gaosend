@@ -72,12 +72,13 @@ void SendPacketProcess(char* pPacket,int iLength)
 
     if (iSockFd < 0) {
         SendModeInitialization();
-    } else {
-        if ((sendto(iSockFd, (const void*)pPacket, iLength, 0,
-                        (struct sockaddr*)&sockAddr, sizeof(sockAddr))) < 0) {
-            LOGRECORD(ERROR, "Packet send failed");
-        }
+    } 
+
+    if ((sendto(iSockFd, (const void*)pPacket, iLength, 0,
+                    (struct sockaddr*)&sockAddr, sizeof(sockAddr))) < 0) {
+        LOGRECORD(ERROR, "Packet send failed");
     }
+    
 
     if (GetNum("debug")) {
         LOGRECORD(INFO, "NO.%d", iCount ++);

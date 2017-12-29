@@ -146,7 +146,7 @@ void ChangeIp4ToIp6()
     U16 iL4Pro = stPkt.pIp4Hdr->pro;
     int iPktLen = stPkt.pPktHdr->len;
     int iIp4Len = iPktLen - MAC_HDR_LEN  - iVlanNum * VLAN_TAG_LEN;
-    int iIp4HdrLen = stPkt.pIp4Hdr->hdlen * 4;
+    int iIp4HdrLen = stPkt.pIp4Hdr->hdlen;
     int iAddLen = IP6_HDR_LEN - iIp4HdrLen;
     int iPaddingLen = stPkt.pPktHdr->len - MAC_HDR_LEN 
         - iVlanNum * VLAN_TAG_LEN - htons(stPkt.pIp4Hdr->ttlen);

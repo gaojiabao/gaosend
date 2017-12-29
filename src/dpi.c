@@ -95,10 +95,10 @@ void L4HdrInspection(U16 iL3Pro, U8 iL4Pro)
 {
     char * pL4Hdr =  stPkt.pPacket + stInfo.iCursor;
 
-    if (GetNum("flow") && iL4Pro == TCP) {
+    if (iL4Pro == TCP) {
         stPkt.pTcpHdr = (_tcphdr *) pL4Hdr;
         stInfo.iCursor += ((stPkt.pTcpHdr->hdrlen >> 4) * 4);
-        if (iL3Pro == IPv4) {
+        if (GetNum("flow") && iL3Pro == IPv4) {
             int iTcpDataLen = htons(stPkt.pIp4Hdr->ttlen) 
                 - (stPkt.pIp4Hdr->hdlen * 4)
                 - ((stPkt.pTcpHdr->hdrlen >> 4) * 4);

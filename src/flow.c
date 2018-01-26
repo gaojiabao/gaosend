@@ -14,6 +14,7 @@
 #include <string.h>  
 #include <time.h>  
 #include "packet.h"
+#include "default.h"
 
 
 #define HASH_TABLE_MAX_SIZE 10000000  
@@ -56,6 +57,12 @@ unsigned int CalcPosWithKey(const char* pKeyStr)
 /* Insert key-value into hash table */ 
 void StreamStorage(const char* pKey, _tcphdr* pTcpHdr, int iDataLen)  
 {  
+    static int iFirstInit = 0;
+    if (iFirstInit == 0) {
+        StreamStorageInit();
+        iFirstInit ++;
+    }
+
     if (iHashTableSize >= HASH_TABLE_MAX_SIZE) {  
         printf("out of hash table memory!\n");  
         return;  
@@ -82,13 +89,14 @@ void StreamStorage(const char* pKey, _tcphdr* pTcpHdr, int iDataLen)
                 }
             } 
 
+            // SYN,SYN+ACK,ACK,RST,FIN+ACK,ACK,FIN+ACK,ACK
             if (pTcpHdr->flag & 0x04) { // RST
-                pHead->iState |= (1 << 7);
+                pHead->iState |= (1 << 4);
             } else if (pTcpHdr->flag == 0x012) { // SYN + ACK
-                pHead->iState |= (1 << 5);
+                pHead->iState |= (1 << 6);
             } else if (pHead->iFFlag == 0x012 
                     && pTcpHdr->flag == 0x010) { // ACK
-                pHead->iState |= (1 << 4);
+                pHead->iState |= (1 << 5);
             } else if ((pTcpHdr->flag & 0x001) && (pTcpHdr->flag & 0x010)) {
                 pHead->iState |= 
                     (pHead->iState & (1 << 3)) ? (1 << 1) : (1 << 3);
@@ -118,7 +126,7 @@ void StreamStorage(const char* pKey, _tcphdr* pTcpHdr, int iDataLen)
     pNewNode->iDSeq = 0;  
     pNewNode->iDLen = iDataLen;  
     pNewNode->iFFlag = pTcpHdr->flag;  
-    pNewNode->iState = (1 << 6); // SYN
+    pNewNode->iState = (1 << 7); // SYN
     pNewNode->iHit = 1;
 
     pNewNode->pNext = pcHashTable[iPos];  
@@ -173,9 +181,23 @@ stHashNode* QueryStreamStorage(const char* pkey)
     return NULL;  
 }  
 
+int JudgePerfectStream(const char* pkey)
+{
+    stHashNode* pCur = QueryStreamStorage(pkey);
+    if (pCur && pCur->iState >= 0xef) {
+        return 1;
+    }
+
+    return 0;
+}
+
 /* Display the contents of the hash table */
 void DisplayStreamStorage()  
 {  
+    if (iHashTableSize == 0) {
+        return;
+    }
+
     int iNum;  
     int iAllFlowNum = 0;
     int iPerfectNum = 0;
@@ -184,23 +206,43 @@ void DisplayStreamStorage()
         if (pcHashTable[iNum]) {  
             iAllFlowNum ++;
             stHashNode* pHead = pcHashTable[iNum];  
-            if (pHead->iState < 0x7e) { // At least one ACK
-                continue;
-            }
-            while (pHead) {  
+            // Contains three handshakes and four waving or RST
+            while (pHead && pHead->iState >= 0xef) {  
                 printf("Node[%7d] => %s:0x%x,0x%x,0x%x,%d  ", 
                         iNum, pHead->sKey, pHead->iState, 
                         pHead->iSSeq, pHead->iDSeq, pHead->iHit);  
                 iPerfectNum ++;
                 pHead = pHead->pNext;  
+                printf("\n");  
             }  
-            printf("\n");  
         }  
     }
     printf("Total flow num:%d\n", iAllFlowNum);
     printf("Perfect flow num:%d\n", iPerfectNum);
     printf("===========================END===========================\n");
 }  
+
+void GetPrefectFlowInfo()
+{
+    int iNum;  
+    int iAllFlowNum = 0;
+    int iPerfectNum = 0;
+    for (iNum = 0; iNum < HASH_TABLE_MAX_SIZE;  ++iNum) {
+        if (pcHashTable[iNum]) {  
+            iAllFlowNum ++;
+            stHashNode* pHead = pcHashTable[iNum];  
+            // Contains three handshakes and four waving or RST
+            while (pHead && pHead->iState >= 0xef) {  
+                printf("Node[%7d] => %s:0x%x,0x%x,0x%x,%d  ", 
+                        iNum, pHead->sKey, pHead->iState, 
+                        pHead->iSSeq, pHead->iDSeq, pHead->iHit);  
+                iPerfectNum ++;
+                pHead = pHead->pNext;  
+                printf("\n");  
+            }  
+        }  
+    }
+}
 
 /* Free the memory of the hash table */ 
 void ReleaseStreamStorage()  
@@ -220,4 +262,19 @@ void ReleaseStreamStorage()
         }  
     } // End of for  
 }  
+
+void BuildFMT(stPktStrc stPkt)
+{
+    if (stPkt.pIp4Hdr && stPkt.pIp4Hdr->pro == TCP) {
+        int iTcpDataLen = htons(stPkt.pIp4Hdr->ttlen) 
+            - (stPkt.pIp4Hdr->hdlen * 4)
+            - ((stPkt.pTcpHdr->hdrlen >> 4) * 4);
+        // TCP flow check
+        char iFiveTupleSum[32];
+        sprintf(iFiveTupleSum, "%d", stPkt.pIp4Hdr->sip 
+                + stPkt.pIp4Hdr->dip + stPkt.pTcpHdr->sport 
+                + stPkt.pTcpHdr->dport + stPkt.pIp4Hdr->pro);
+        StreamStorage(iFiveTupleSum, stPkt.pTcpHdr, iTcpDataLen);
+    } 
+}
 

@@ -56,6 +56,8 @@ int iPRO_POP3[2];
 int iPRO_IMAP[2];
 int iPRO_L7OR[2];
 
+
+stPktStrc GetPktStrc();
 int GetStatisticCode();
 
 #endif

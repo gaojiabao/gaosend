@@ -43,11 +43,11 @@ struct option LongOptions[] = {
     {.name = "rule",      .has_arg = required_argument, .val = 'Z'}, 
     {.name = "ip-flags",  .has_arg = required_argument, .val = 'x'}, 
     {.name = "ip-offset", .has_arg = required_argument, .val = 'o'}, 
-    {.name = "tcp-flag",  .has_arg = required_argument, .val = 'e'}, 
+    {.name = "tcp-flag",  .has_arg = required_argument, .val = 'z'}, 
     {.name = "tcp-seq",   .has_arg = required_argument, .val = 'j'}, 
     {.name = "tcp-ack",   .has_arg = required_argument, .val = 'k'}, 
     {.name = "tcp-hdrlen",.has_arg = required_argument, .val = 'q'}, 
-    {.name = "express",   .has_arg = required_argument, .val = 'E'}, 
+    {.name = "express",   .has_arg = required_argument, .val = 'e'}, 
     {.name = "flow",      .has_arg = no_argument,       .val = 'f'}, 
     {.name = "debug",     .has_arg = no_argument,       .val = 'g'}, 
     {.name = "build",     .has_arg = no_argument,       .val = 'B'}, 
@@ -61,6 +61,7 @@ struct option LongOptions[] = {
     {.name = "version",   .has_arg = no_argument,       .val = 'v'}, 
     {.name = "help",      .has_arg = no_argument,       .val = 'h'}, 
     {.name = "superman",  .has_arg = no_argument,       .val = 'X'}, 
+    {.name = "extract",   .has_arg = no_argument,       .val = 'E'}, 
     {NULL}, 
 };
 
@@ -101,10 +102,10 @@ void UsageOfProgram()
         "\t-x, --ip-flags     Set IP fragment flags\n"
         "\t-o, --ip-offset    Set IP fragment offset\n"
         "\t-f, --flowcheck    Turn on flow check switch\n"
-        "\t-e, --tcp-flag     Set TCP flag bit\n"
+        "\t-z, --tcp-flag     Set TCP flag bit\n"
         "\t-j, --tcp-seq      Set TCP sequence number\n"
         "\t-k, --tcp-ack      Set TCP acknowledge number\n"
-        "\t-E, --express      Used to find the target packet\n"
+        "\t-e, --express      Used to find the target packet\n"
         "\t-y, --rulelen      String length of rule\n"
         "\t-Z, --ruletype     Rule type <aclnmask | aclex | mac_table>\n"
         "\t-v, --version      Program version\n"
@@ -160,8 +161,8 @@ void TerminalParametersAnalyse(int argc, char *argv[])
 {
     char  cCmdInput;
     // Residual parameter: ntz GHJKLNTUY
-    char* pParaOption = "fBFgDCmAMvhRX"
-                "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:x:I:S:y:o:O:Z:e:j:k:q:E:";
+    char* pParaOption = "fBFgDCmAMvhRXE"
+                "a:b:s:d:P:Q:V:W:p:l:u:i:c:r:w:x:I:S:y:o:O:Z:e:j:k:q:z:";
 
     // Save command line input
     int   iCounter;
@@ -208,9 +209,9 @@ void TerminalParametersAnalyse(int argc, char *argv[])
             case 'o': StorageInput("ip_offset", optarg, 'i'); break;
             case 'O': StorageInput("offset", optarg, 'i'); break;
             case 'Z': StorageInput("rule", optarg, 'c'); break;
-            case 'E': StorageInput("express", optarg, 'c'); break;
+            case 'e': StorageInput("express", optarg, 'c'); break;
             case 'f': StorageInput("flow", "1", 'i'); break;
-            case 'e': StorageInput("tcp-flag", optarg, 'i'); break;
+            case 'z': StorageInput("tcp-flag", optarg, 'i'); break;
             case 'j': StorageInput("tcp-seq", optarg, 'i'); break;
             case 'k': StorageInput("tcp-ack", optarg, 'i'); break;
             case 'q': StorageInput("tcp-hdrlen", optarg, 'i'); break;
@@ -225,7 +226,8 @@ void TerminalParametersAnalyse(int argc, char *argv[])
             case 'h': StorageInput("entrance", "108", 'i'); break; 
             case 'F': StorageInput("entrance", "109", 'i'); break; 
             case 'R': StorageInput("entrance", "110", 'i'); break; 
-            case 'X': StorageInput("entrance", "111", 'i'); break; 
+            case 'E': StorageInput("entrance", "111", 'i'); break; 
+            case 'X': StorageInput("entrance", "112", 'i'); break; 
             default : LOGRECORD(ERROR, "Without this parameter '%c'", cCmdInput); 
         } // end of switch 
     } // end of while for parameter analysis
@@ -258,6 +260,7 @@ int main(int argc, char* argv[])
         case 108: UsageOfProgram(); break; 
         case 109: SwitchPcapFormat(); break; 
         case 110: ReplayPacket(); break; 
+        case 111: ExtractPacket(); break; 
         default : BuildPacket(); break;
     }
 

@@ -98,19 +98,6 @@ void L4HdrInspection(U16 iL3Pro, U8 iL4Pro)
     if (iL4Pro == TCP) {
         stPkt.pTcpHdr = (_tcphdr *) pL4Hdr;
         stInfo.iCursor += ((stPkt.pTcpHdr->hdrlen >> 4) * 4);
-        if (GetNum("flow") && iL3Pro == IPv4) {
-            int iTcpDataLen = htons(stPkt.pIp4Hdr->ttlen) 
-                - (stPkt.pIp4Hdr->hdlen * 4)
-                - ((stPkt.pTcpHdr->hdrlen >> 4) * 4);
-            // TCP flow check
-            char iFiveTupleSum[32];
-            sprintf(iFiveTupleSum, "%d", stPkt.pIp4Hdr->sip 
-                    + stPkt.pIp4Hdr->dip + stPkt.pTcpHdr->sport 
-                    + stPkt.pTcpHdr->dport + stPkt.pIp4Hdr->pro);
-            StreamStorage(iFiveTupleSum, stPkt.pTcpHdr, iTcpDataLen);
-        } 
-
-        // PacketProcessing();
         iStatisticCode += EMPRO_L4_TCP * 100;
         L7HdrInspection(htons(stPkt.pTcpHdr->sport), 
                 htons(stPkt.pTcpHdr->dport));

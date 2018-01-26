@@ -14,6 +14,7 @@ int   DeepPacketInspection();
 void  SuperManUser();
 void  ModifyPacket();
 void  StatisticPacket();
+void  ExtractPacket();
 
 // Parse file name list
 char* ParseReadList(char* pCmd);

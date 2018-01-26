@@ -381,7 +381,7 @@ U32 RuleInitialization()
 
     char* pExpStr = GetStr("express");
     if (pExpStr == NULL) {
-        LOGRECORD(DEBUG, "The parameter -E is missing");
+        LOGRECORD(DEBUG, "The parameter -e is missing");
         return 0;
     } else {
         memcpy(cExpBuf, pExpStr, strlen(pExpStr));
@@ -407,7 +407,7 @@ U32 RuleInitialization()
     if (strcmp(pPosStr, "IP") == 0) {
         sprintf(cTargetRuleBuf, "%u", (stCon.ip1[0] + stCon.ip2[0]));
     } else {
-        LOGRECORD(ERROR, "Parameter format error\nEg: -E IP,1.1.1.1,2.2.2.2");
+        LOGRECORD(ERROR, "Parameter format error\neg: -E IP,1.1.1.1,2.2.2.2");
     }
 
     return GetHashValue(cTargetRuleBuf);
@@ -415,20 +415,23 @@ U32 RuleInitialization()
 
 int IsSameFlow(U32 iTargetValue)
 {
+    int iResNum = 0;
     stPkt = GetPktStrc();
     U32 iHashValue = 0;
     char cMatchRuleBuf[SIZE_1K];
-    sprintf(cMatchRuleBuf, "%u", 
-            (stPkt.pIp4Hdr->sip + stPkt.pIp4Hdr->dip));
-    iHashValue = GetHashValue(cMatchRuleBuf);
 
-    int iResNum = 0;
-    if (iTargetValue == 0) {
-        stCon.ip1[0] = stPkt.pIp4Hdr->sip;
-        stCon.ip2[0] = stPkt.pIp4Hdr->dip;
-        iResNum = iHashValue;
-    } else if (iHashValue == iTargetValue) {
-        iResNum = iHashValue;
+    if (stPkt.pIp4Hdr) {
+        sprintf(cMatchRuleBuf, "%u", 
+                (stPkt.pIp4Hdr->sip + stPkt.pIp4Hdr->dip));
+        iHashValue = GetHashValue(cMatchRuleBuf);
+
+        if (iTargetValue == 0) {
+            stCon.ip1[0] = stPkt.pIp4Hdr->sip;
+            stCon.ip2[0] = stPkt.pIp4Hdr->dip;
+            iResNum = iHashValue;
+        } else if (iHashValue == iTargetValue) {
+            iResNum = iHashValue;
+        }
     }
 
     return iResNum;
@@ -444,8 +447,7 @@ void ModifyProcessEntrance()
     DetectAndProcess(iGenerateFlag);
     U32 iRuleCode = RuleInitialization();
     while (DeepPacketInspection() > 0) {
-        iRuleCode = IsSameFlow(iRuleCode);
-        if (iRuleCode > 0) {
+        if (IsSameFlow(iRuleCode)) {
             DetectAndProcess(iModifyFlag);
             PacketProcessing(stPkt);
             iMatchFlag ++;

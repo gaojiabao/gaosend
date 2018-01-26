@@ -634,7 +634,7 @@ void SuperManUser()
 /* Verify user permissions */
 void CertificationAuthority()
 {
-    if (GetNum("entrance") == 111) {
+    if (GetNum("entrance") == 112) {
         SuperManUser();
         PROGRAMEND();
     }

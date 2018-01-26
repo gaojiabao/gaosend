@@ -584,7 +584,7 @@ int OpenSaveFile(char* pFileName)
 {
     int iSaveFd = 0;
     if (pFileName == NULL) {
-        LOGRECORD(ERROR, "Filename is NULL");
+        LOGRECORD(ERROR, "-w filename is NULL");
     }
     if ((iSaveFd = open(pFileName, \
                     O_WRONLY | O_CREAT | O_APPEND, PERM)) < 0 ) {
@@ -599,7 +599,7 @@ int OpenReadFile(char* pFileName)
 {
     int iReadFd = 0;
     if (pFileName == NULL) {
-        LOGRECORD(ERROR, "Filename is NULL");
+        LOGRECORD(ERROR, "-r filename is NULL");
     }
     //if ((iReadFd = open(pFileName, O_RDONLY)) < 0 ) {
     if ((iReadFd = open(pFileName, O_RDWR)) < 0 ) {

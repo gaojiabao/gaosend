@@ -11,6 +11,8 @@
 
 #include    "func.h"
 #include    "flow.h"
+#include    "stdio.h"
+#include    "common.h"
 #include    "runlog.h"
 #include    "storage.h"
 #include    "statistic.h"
@@ -144,12 +146,11 @@ void DisplayStatisticsResults()
 /* Packet protocol analysis statistics */
 void StatisticPacket()
 {
-    // Turn on flow assoition
-    if(GetNum("flow") > 0) {
-        StreamStorageInit();
-    }
-
+    int iFlowSwitch = GetNum("flow");
     while (DeepPacketInspection() > 0) {
+        if (iFlowSwitch) {
+            BuildFMT(GetPktStrc());
+        }
         iPRO_TOTLE ++;
         int iCode = GetStatisticCode();
         int iL3Code = (iCode / 10000);
@@ -159,10 +160,7 @@ void StatisticPacket()
         L7Statistic(iL3Code, (iCode % 100));
     }
 
-    if (GetNum("flow") > 0) {
-        DisplayStreamStorage();
-    }
-
+    DisplayStreamStorage();
     DisplayStatisticsResults();
 }
 

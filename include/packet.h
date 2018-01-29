@@ -105,6 +105,14 @@ typedef struct icmp4hdr {
     U16    seq;
 }_icmp4hdr;
 
+typedef struct icmp6hdr {
+    U8     type;
+    U8     code;
+    U16    checksum;
+    U16    identifier;
+    U16    seq;
+}_icmp6hdr;
+
 typedef struct udphdr {
     U16    sport;
     U16    dport;
@@ -138,14 +146,15 @@ typedef struct pkt{
     _pcaphdr*    pPcapHdr;
     _pkthdr*     pPktHdr;
     _machdr*     pMacHdr;
-    _arphdr*     pArpHdr;
     _vlanhdr*    pVlanHdr;
     _vlanhdr*    pQinQHdr;
+    _arphdr*     pArpHdr;
     _ip4hdr*     pIp4Hdr;
     _ip6hdr*     pIp6Hdr;
     _udphdr*     pUdpHdr;
     _tcphdr*     pTcpHdr;
     _icmp4hdr*   pIcmp4Hdr;
+    _icmp6hdr*   pIcmp6Hdr;
     char*        pData;
 }stPktStrc;
 

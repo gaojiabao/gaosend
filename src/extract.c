@@ -12,11 +12,11 @@
 #include    <string.h>
 #include    "func.h"
 #include    "flow.h"
-#include    "stdio.h"
 #include    "common.h"
 #include    "runlog.h"
 #include    "storage.h"
 #include    "statistic.h"
+
 
 void ExtractPrefectStream(stPktStrc stPkt)
 {
@@ -31,7 +31,6 @@ void ExtractPrefectStream(stPktStrc stPkt)
         }
     }
 }
-
 
 char** AnalyseExpress()
 {
@@ -64,7 +63,6 @@ char** AnalyseExpress()
 
     return pRepStr;
 }
-
 
 void ExtractPacket()
 {

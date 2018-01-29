@@ -35,30 +35,32 @@ enum {
     EMPRO_L7_OTHER
 };
 
-int iPRO_TOTLE;
-int iPRO_VLAN[2];
+long long int iPRO_TOTLE;
+long long int iPRO_VLAN[2];
 
-int iPRO_ARP;
-int iPRO_IP[2];
-int iPRO_L3OR;
+long long int iPRO_ARP;
+long long int iPRO_IP[2];
+long long int iPRO_L3OR;
 
-int iPRO_TCP[2];
-int iPRO_UDP[2];
-int iPRO_ICMP[2];
-int iPRO_L4OR[2];
+long long int iPRO_TCP[2];
+long long int iPRO_UDP[2];
+long long int iPRO_ICMP[2];
+long long int iPRO_L4OR[2];
 
-int iPRO_DNS[2];
-int iPRO_SMB[2];
-int iPRO_FTP[2];
-int iPRO_HTTP[2];
-int iPRO_SMTP[2];
-int iPRO_POP3[2];
-int iPRO_IMAP[2];
-int iPRO_L7OR[2];
+long long int iPRO_DNS[2];
+long long int iPRO_SMB[2];
+long long int iPRO_FTP[2];
+long long int iPRO_HTTP[2];
+long long int iPRO_SMTP[2];
+long long int iPRO_POP3[2];
+long long int iPRO_IMAP[2];
+long long int iPRO_L7OR[2];
 
+long long int iPKT_LEN;
+long long int iPKT_TCP_LEN;
+long long int iPKT_UDP_LEN;
 
 stPktStrc GetPktStrc();
-int GetStatisticCode();
 
 #endif
 

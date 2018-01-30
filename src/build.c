@@ -597,9 +597,7 @@ static void MessageGenerator()
     int iLoop = 0;
     int iCount = GetNum("count");
 
-    if (GetNum("debug")) {
-        ShowParameter();
-    }
+    ShowParameter();
 
     while (!iCount || iLoop < iCount) {
         BuildInitialization();

@@ -177,18 +177,20 @@ void DestoryStorage()
 /* Display input parameters */
 void ShowParameter()
 {
-    int iCounter = 0;
-    int iLength = 0;
+    if (GetNum("debug")) {
+        int iCounter = 0;
+        int iLength = 0;
 
-    iLength = CalcStorageSize();
-    pNode pCur =  pHead->pNext;
+        iLength = CalcStorageSize();
+        pNode pCur =  pHead->pNext;
 
-    for (iCounter = 0; iCounter < iLength; iCounter ++) {
-        printf("%-15s:%32s,%10d[%d]\n", 
-                pCur->pTitle, pCur->pStr, pCur->iNum, pCur->iState);    
-        pCur = pCur->pNext;
+        for (iCounter = 0; iCounter < iLength; iCounter ++) {
+            printf("%-15s:%32s,%10d[%d]\n", 
+                    pCur->pTitle, pCur->pStr, pCur->iNum, pCur->iState);    
+            pCur = pCur->pNext;
+        }
+        printf("\n");
     }
-    printf("\n");
 }
 
 /* Refresh the value of the parameter based on the input parameters */

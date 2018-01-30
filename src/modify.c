@@ -78,38 +78,44 @@ void GeneratePortNum(char* pTitle, int iSoD)
 int JudgeSoD(int iSoD)
 { 
     int iResNum = -1;
-    if (stPkt.pIp4Hdr->sip == stCon.ip1[0] 
-            || stPkt.pIp4Hdr->dip == stCon.ip2[0]) {
-        if (iSoD == M_SRC) {
-            iResNum = M_SRC;
-        } else if (iSoD == M_DST) {
-            iResNum = M_DST;
-        }
-    } else if (stPkt.pIp4Hdr->sip == stCon.ip2[0] 
-            || stPkt.pIp4Hdr->dip == stCon.ip1[0]) {
-        if (iSoD == M_SRC) {
-            iResNum = M_DST;
-        } else if (iSoD == M_DST) {
-            iResNum = M_SRC;
-        }
-    } else {
-        if (stPkt.pIp4Hdr->sip == stCon.ip1[1] 
-                || stPkt.pIp4Hdr->dip == stCon.ip2[1]) {
+    if (GetNum("flow")) {
+        if (stPkt.pIp4Hdr->sip == stCon.ip1[0] 
+                || stPkt.pIp4Hdr->dip == stCon.ip2[0]) {
             if (iSoD == M_SRC) {
                 iResNum = M_SRC;
             } else if (iSoD == M_DST) {
                 iResNum = M_DST;
             }
-        } else if (stPkt.pIp4Hdr->sip == stCon.ip2[1] 
-                || stPkt.pIp4Hdr->dip == stCon.ip1[1]) {
+        } else if (stPkt.pIp4Hdr->sip == stCon.ip2[0] 
+                || stPkt.pIp4Hdr->dip == stCon.ip1[0]) {
             if (iSoD == M_SRC) {
                 iResNum = M_DST;
             } else if (iSoD == M_DST) {
                 iResNum = M_SRC;
             }
         } else {
-            LOGRECORD(ERROR, "Packet matching failure");
+            if (stPkt.pIp4Hdr->sip == stCon.ip1[1] 
+                    || stPkt.pIp4Hdr->dip == stCon.ip2[1]) {
+                if (iSoD == M_SRC) {
+                    iResNum = M_SRC;
+                } else if (iSoD == M_DST) {
+                    iResNum = M_DST;
+                }
+            } else if (stPkt.pIp4Hdr->sip == stCon.ip2[1] 
+                    || stPkt.pIp4Hdr->dip == stCon.ip1[1]) {
+                if (iSoD == M_SRC) {
+                    iResNum = M_DST;
+                } else if (iSoD == M_DST) {
+                    iResNum = M_SRC;
+                }
+            } else {
+                // Not match
+                iResNum = -1;
+            }
         }
+    } else {
+        // Flow switch is OFF
+        iResNum = iSoD;
     }
 
     return iResNum;
@@ -122,7 +128,10 @@ void ModifyMacAddr(int iSoD)
         (char *)stPkt.pMacHdr->dmac
     }; 
 
-    FillInMacAddr(pMacPos[JudgeSoD(iSoD)], stChg.mac[iSoD]); 
+    int iSoDPos = JudgeSoD(iSoD);
+    if (iSoDPos >= 0) {
+        FillInMacAddr(pMacPos[iSoDPos], stChg.mac[iSoD]); 
+    }
 }
 
 /* Modify IPv4 head into IPv6 header */
@@ -269,7 +278,7 @@ void ModifyVlanTag(int iVoQ)
             } else {
                 DeleteVlanInfo(iHasVlanNum, M_HEAD);
             }
-        } else {
+        } else if (stChg.vlan[iVoQ] > 0) {
             InsertVlanInfo(iHasVlanNum);
         }
     } else if (iVoQ == M_QinQ) { // QinQ
@@ -280,10 +289,10 @@ void ModifyVlanTag(int iVoQ)
             } else {
                 DeleteVlanInfo(iHasVlanNum, M_REAR);
             }
-        } else if (stPkt.pVlanHdr != NULL) {
+        } else if (stPkt.pVlanHdr != NULL && stChg.vlan[iVoQ] > 0) {
             iHasVlanNum = 1;
             InsertVlanInfo(iHasVlanNum);
-        } else {
+        } else if (stChg.vlan[iVoQ] > 0) {
             while (iHasVlanNum < 2) {
                 InsertVlanInfo(iHasVlanNum);
                 iHasVlanNum ++;
@@ -294,12 +303,19 @@ void ModifyVlanTag(int iVoQ)
 
 void ModifyIp4Addr(int iSoD)
 {
+    if (stPkt.pIp4Hdr == NULL) {
+        return ;
+    }
+
     U32* pIpPos[] = {
         (U32 *)&stPkt.pIp4Hdr->sip, 
         (U32 *)&stPkt.pIp4Hdr->dip
     }; 
 
-    *pIpPos[JudgeSoD(iSoD)] = stChg.ip4[iSoD];
+    int iSoDPos = JudgeSoD(iSoD);
+    if (iSoDPos >= 0) {
+        *pIpPos[iSoDPos] = stChg.ip4[iSoD];
+    }
 }
 
 void ModifyPortNum(int iSoD)
@@ -319,7 +335,10 @@ void ModifyPortNum(int iSoD)
     }
 
     int iPos = ((iL4Pro == UDP) ? 0 : 2);
-    *pPortPos[JudgeSoD(iSoD) + iPos] = stChg.port[iSoD];
+    int iSoDPos = JudgeSoD(iSoD);
+    if (iSoDPos >= 0) {
+        *pPortPos[iSoDPos + iPos] = stChg.port[iSoD];
+    }
 }
 
 void DetectAndProcess(int iGoM)
@@ -335,8 +354,8 @@ void DetectAndProcess(int iGoM)
     };
     int iLength = sizeof(pParaList) / sizeof(char*);
 
-    int iNum;
-    for (iNum = 0; iNum < iLength; iNum ++) {
+    int iNum = 0;
+    for (; iNum < iLength; iNum ++) {
         int iSoD = iNum % 2;
         if (GetState(pParaList[iNum]) > 0) {
             if (iNum == 0 || iNum == 1) {
@@ -376,13 +395,17 @@ U32 GetHashValue(const char* pKeyStr)
 
 U32 RuleInitialization()
 {
+    if (GetNum("flow") == 0) {
+        return 0;
+    }
+
     char  cExpBuf[SIZE_1K];
     memset(cExpBuf, 0, sizeof(cExpBuf));
 
     char* pExpStr = GetStr("express");
     if (pExpStr == NULL) {
         LOGRECORD(DEBUG, "The parameter -e is missing");
-        return 0;
+        return 1;
     } else {
         memcpy(cExpBuf, pExpStr, strlen(pExpStr));
     }
@@ -413,9 +436,9 @@ U32 RuleInitialization()
     return GetHashValue(cTargetRuleBuf);
 }
 
-int IsSameFlow(U32 iTargetValue)
+U32 IsSameFlow(U32 iTargetValue)
 {
-    int iResNum = 0;
+    U32 iResNum = 0;
     stPkt = GetPktStrc();
     U32 iHashValue = 0;
     char cMatchRuleBuf[SIZE_1K];
@@ -425,7 +448,7 @@ int IsSameFlow(U32 iTargetValue)
                 (stPkt.pIp4Hdr->sip + stPkt.pIp4Hdr->dip));
         iHashValue = GetHashValue(cMatchRuleBuf);
 
-        if (iTargetValue == 0) {
+        if (iTargetValue == 1) {
             stCon.ip1[0] = stPkt.pIp4Hdr->sip;
             stCon.ip2[0] = stPkt.pIp4Hdr->dip;
             iResNum = iHashValue;
@@ -441,25 +464,23 @@ int IsSameFlow(U32 iTargetValue)
 void ModifyProcessEntrance()
 {
     int iMatchFlag = 0;
-    int iGenerateFlag = 0;
-    int iModifyFlag = 1;
 
-    DetectAndProcess(iGenerateFlag);
+    DetectAndProcess(iMatchFlag);
     U32 iRuleCode = RuleInitialization();
     while (DeepPacketInspection() > 0) {
-        if (IsSameFlow(iRuleCode)) {
-            DetectAndProcess(iModifyFlag);
+        if ((iRuleCode = IsSameFlow(iRuleCode)) == 0 
+                && iRuleCode != 0) {    
+            continue;
+        } else {
+            DetectAndProcess(++ iMatchFlag);
             PacketProcessing(stPkt);
-            iMatchFlag ++;
         }
     }
 }
 
 void ModifyPacket()
 {
-    if (GetNum("debug")) {
-        ShowParameter();
-    }
+    ShowParameter();
 
     int iCount = GetNum("count");
     while (iCount --) {

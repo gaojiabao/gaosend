@@ -28,7 +28,7 @@ void StreamStorage(const char*, _tcphdr*, int);
 /* Packet structure pointer Initialization */
 void PacketStrcInit()
 {
-    stPkt.pMacHdr   = NULL;
+    stPkt.pEtherHdr = NULL;
     stPkt.pArpHdr   = NULL;
     stPkt.pVlanHdr  = NULL;
     stPkt.pQinQHdr  = NULL;
@@ -120,9 +120,9 @@ U8 L3HdrInspection(U16 pro)
 /* Layer two protocol analysis */
 void L2HdrInspection()
 {
-    stPkt.pMacHdr = (_machdr *) (stPkt.pPacket + stInfo.iCursor);
+    stPkt.pEtherHdr = (_etherhdr *) (stPkt.pPacket + stInfo.iCursor);
     stInfo.iCursor += MAC_HDR_LEN;
-    L3HdrInspection(htons(stPkt.pMacHdr->pro));
+    L3HdrInspection(htons(stPkt.pEtherHdr->pro));
 }
 
 /* Data content resolution portal */

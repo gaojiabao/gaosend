@@ -183,11 +183,11 @@ void VLANStatistic(_vlanhdr* pVlanHdr, _vlanhdr* pQinQHdr)
 }
 
 /* Layer two protocol analysis statistics */
-void L2Statistic(_machdr* pMacHdr)
+void L2Statistic(_etherhdr* pEtherHdr)
 {
-    if (pMacHdr != NULL) {
+    if (pEtherHdr != NULL) {
         iPRO_TOTLE += 1;
-        iProTag = htons(pMacHdr->pro);
+        iProTag = htons(pEtherHdr->pro);
     } else {
         LOGRECORD(WARNING, "Not Ethernet packet");
     }
@@ -218,7 +218,7 @@ void StatisticPacket()
         }
         stPktStrc stPkt = GetPktStrc();
         PKTStatistic(stPkt.pPktHdr, stPkt.pTcpHdr, stPkt.pUdpHdr);
-        L2Statistic(stPkt.pMacHdr);
+        L2Statistic(stPkt.pEtherHdr);
         VLANStatistic(stPkt.pVlanHdr, stPkt.pQinQHdr);
         L3Statistic(stPkt.pArpHdr, stPkt.pIp4Hdr, stPkt.pIp6Hdr);
         L4Statistic(stPkt.pUdpHdr, 

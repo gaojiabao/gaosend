@@ -9,12 +9,15 @@
  * *****************************************************/
 
 
-#include <stdio.h>  
-#include <stdlib.h>  
-#include <string.h>  
-#include <time.h>  
-#include "packet.h"
-#include "default.h"
+#include    <time.h>  
+#include    <stdio.h>
+#include    <stdlib.h>  
+#include    <string.h>  
+#include    "common.h"
+#include    "runlog.h"
+#include    "packet.h"
+#include    "default.h"
+#include    "storage.h"
 
 
 #define HASH_TABLE_MAX_SIZE 10000000  
@@ -64,8 +67,7 @@ void StreamStorage(const char* pKey, _tcphdr* pTcpHdr, int iDataLen)
     }
 
     if (iHashTableSize >= HASH_TABLE_MAX_SIZE) {  
-        printf("out of hash table memory!\n");  
-        return;  
+        LOGRECORD(ERROR, "out of hash table memory!\n");  
     }
 
     unsigned int iPos = CalcPosWithKey(pKey) % HASH_TABLE_MAX_SIZE;  
@@ -191,6 +193,13 @@ int JudgePerfectStream(const char* pkey)
     return 0;
 }
 
+void DisplayHashTableContent(stHashNode* pHead, int iNum)
+{
+    LOGRECORD(INFO, "Node[%7d] => %s:0x%x,0x%x,0x%x,%d  ", 
+            iNum, pHead->sKey, pHead->iState, 
+            pHead->iSSeq, pHead->iDSeq, pHead->iHit);  
+}
+
 /* Display the contents of the hash table */
 void DisplayStreamStorage()  
 {  
@@ -201,48 +210,27 @@ void DisplayStreamStorage()
     int iNum;  
     int iAllFlowNum = 0;
     int iPerfectNum = 0;
-    printf("================The content of Hash table================\n");
+    int iDebugFlag = GetNum("debug");
     for (iNum = 0; iNum < HASH_TABLE_MAX_SIZE;  ++iNum) {
         if (pcHashTable[iNum]) {  
             iAllFlowNum ++;
             stHashNode* pHead = pcHashTable[iNum];  
             // Contains three handshakes and four waving or RST
             while (pHead && pHead->iState >= 0xef) {  
-                printf("Node[%7d] => %s:0x%x,0x%x,0x%x,%d  ", 
-                        iNum, pHead->sKey, pHead->iState, 
-                        pHead->iSSeq, pHead->iDSeq, pHead->iHit);  
+                if (iDebugFlag) {
+                    DisplayHashTableContent(pHead, iNum);
+                }
                 iPerfectNum ++;
                 pHead = pHead->pNext;  
-                printf("\n");  
+                //LOGRECORD(INFO, NULL);
             }  
         }  
     }
-    printf("Total flow num:%d\n", iAllFlowNum);
-    printf("Perfect flow num:%d\n", iPerfectNum);
-    printf("===========================END===========================\n");
+    LOGRECORD(INFO, "=================[Hash table statistic]==================");
+    LOGRECORD(INFO, "Total flow num:%d", iAllFlowNum);
+    LOGRECORD(INFO, "Perfect flow num:%d", iPerfectNum);
+    LOGRECORD(INFO, "===========================END===========================");
 }  
-
-void GetPrefectFlowInfo()
-{
-    int iNum;  
-    int iAllFlowNum = 0;
-    int iPerfectNum = 0;
-    for (iNum = 0; iNum < HASH_TABLE_MAX_SIZE;  ++iNum) {
-        if (pcHashTable[iNum]) {  
-            iAllFlowNum ++;
-            stHashNode* pHead = pcHashTable[iNum];  
-            // Contains three handshakes and four waving or RST
-            while (pHead && pHead->iState >= 0xef) {  
-                printf("Node[%7d] => %s:0x%x,0x%x,0x%x,%d  ", 
-                        iNum, pHead->sKey, pHead->iState, 
-                        pHead->iSSeq, pHead->iDSeq, pHead->iHit);  
-                iPerfectNum ++;
-                pHead = pHead->pNext;  
-                printf("\n");  
-            }  
-        }  
-    }
-}
 
 /* Free the memory of the hash table */ 
 void ReleaseStreamStorage()  

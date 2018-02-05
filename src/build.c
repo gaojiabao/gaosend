@@ -130,13 +130,13 @@ static void RecycleProgram()
 static void BuildMacHeader()
 {
     stInfo.iCursor -= MAC_HDR_LEN;
-    stPkt.pMacHdr = (_machdr *)(stPkt.pPacket + stInfo.iCursor);
+    stPkt.pEtherHdr = (_etherhdr *)(stPkt.pPacket + stInfo.iCursor);
 
-    FillInMacAddr((char*)&stPkt.pMacHdr->dmac, GetStr("dmac"));
-    FillInMacAddr((char*)&stPkt.pMacHdr->smac, GetStr("smac"));
+    FillInMacAddr((char*)&stPkt.pEtherHdr->dmac, GetStr("dmac"));
+    FillInMacAddr((char*)&stPkt.pEtherHdr->smac, GetStr("smac"));
     U16 iNextPro = GetNum("vlannum") ? 
         htons(VLAN) : htons(GetL3HexPro(GetStr("l3pro"))); 
-    stPkt.pMacHdr->pro = iNextPro;
+    stPkt.pEtherHdr->pro = iNextPro;
 }
 
 /* Constructing vlan tag */

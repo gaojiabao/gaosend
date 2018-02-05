@@ -46,11 +46,11 @@ typedef struct pseudohdr{
     U16    len;
 }_pseudohdr;
 
-typedef struct machdr {
+typedef struct etherhdr {
     U8     dmac[6];
     U8     smac[6];
     U16    pro;
-}_machdr;
+}_etherhdr;
 
 typedef struct vlanhdr {
     U16    id;
@@ -145,7 +145,7 @@ typedef struct pkt{
     char*        pPacket;
     _pcaphdr*    pPcapHdr;
     _pkthdr*     pPktHdr;
-    _machdr*     pMacHdr;
+    _etherhdr*   pEtherHdr;
     _vlanhdr*    pVlanHdr;
     _vlanhdr*    pQinQHdr;
     _arphdr*     pArpHdr;

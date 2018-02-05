@@ -124,8 +124,8 @@ int JudgeSoD(int iSoD)
 void ModifyMacAddr(int iSoD)
 {
     char* pMacPos[] = {
-        (char *)stPkt.pMacHdr->smac, 
-        (char *)stPkt.pMacHdr->dmac
+        (char *)stPkt.pEtherHdr->smac, 
+        (char *)stPkt.pEtherHdr->dmac
     }; 
 
     int iSoDPos = JudgeSoD(iSoD);
@@ -139,8 +139,8 @@ void ChangeIp4ToIp6()
 {
     int iVlanNum = 0;
     // Determine the premise of data modification
-    if (stPkt.pMacHdr->pro == htons(IPv4)) {
-        stPkt.pMacHdr->pro = htons(IPv6);
+    if (stPkt.pEtherHdr->pro == htons(IPv4)) {
+        stPkt.pEtherHdr->pro = htons(IPv6);
     } else if (stPkt.pQinQHdr != NULL) {
         iVlanNum = 2;
         stPkt.pQinQHdr->pro = htons(IPv6);
@@ -225,8 +225,8 @@ void InsertVlanInfo(int iHasVlanLayer)
 
     if (iHasVlanLayer == 0) {
         stPkt.pVlanHdr = pVlanInfo[iHasVlanLayer];
-        pVlanInfo[iHasVlanLayer]->pro = stPkt.pMacHdr->pro;    
-        stPkt.pMacHdr->pro = htons(VLAN);
+        pVlanInfo[iHasVlanLayer]->pro = stPkt.pEtherHdr->pro;    
+        stPkt.pEtherHdr->pro = htons(VLAN);
     } else if (iHasVlanLayer == 1) {
         pVlanInfo[iHasVlanLayer]->pro = stPkt.pVlanHdr->pro;    
         pVlanInfo[iHasVlanLayer-1]->pro = htons(VLAN);   
@@ -240,11 +240,11 @@ void DeleteVlanInfo(int iHasVlanLayer, int iDirect)
     if (iHasVlanLayer > 0) {
         if (iDirect == 0) { // Delete a VLAN ID from the front 
             iCursor = MAC_HDR_LEN;
-            stPkt.pMacHdr->pro = stPkt.pVlanHdr->pro;
+            stPkt.pEtherHdr->pro = stPkt.pVlanHdr->pro;
         } else if (iDirect == 1) { // Delete a VLAN ID from the rear
             iCursor = MAC_HDR_LEN + (iHasVlanLayer - 1) * VLAN_TAG_LEN;
             if (iHasVlanLayer == 1) {
-                stPkt.pMacHdr->pro = stPkt.pVlanHdr->pro;
+                stPkt.pEtherHdr->pro = stPkt.pVlanHdr->pro;
             } else if (iHasVlanLayer == 2) {
                 stPkt.pVlanHdr->pro = stPkt.pQinQHdr->pro;
             }
@@ -328,9 +328,9 @@ void ModifyPortNum(int iSoD)
     }; 
 
     U8 iL4Pro = 0;
-    if (stPkt.pMacHdr->pro == htons(IPv4)) {
+    if (stPkt.pEtherHdr->pro == htons(IPv4)) {
         iL4Pro = stPkt.pIp4Hdr->pro;
-    } else if (stPkt.pMacHdr->pro == htons(IPv6)) {
+    } else if (stPkt.pEtherHdr->pro == htons(IPv6)) {
         iL4Pro = stPkt.pIp6Hdr->pro;
     }
 

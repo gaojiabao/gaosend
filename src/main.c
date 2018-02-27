@@ -121,8 +121,7 @@ void VersionOfProgram()
 {
     LOGRECORD(INFO, "Author  : GaoJiabao\n" 
             "E-mail  : 729272771@qq.com\n"
-            "Version : %s-%s-%s",
-            __DATE__, __TIME__, VERSION);
+            "Version : %s.%s", VERSION, COMPILETIME);
     LOGRECORD(DEBUG, "Query software version finished");
 }
 

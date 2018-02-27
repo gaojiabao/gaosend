@@ -2,12 +2,12 @@
 
 import re
 import os
-import sys
 import time
+import argparse
 
 
 # Global statistical counter
-totle_num = 0
+totle_no = 0
 success_no = 0
 failed_no = 0
 other_no = 0
@@ -230,8 +230,38 @@ def execution_case(case_no):
         print "\033[1;31;1mTest case not exist\033[0m"
         exit(0)
         
+        
+def make_date_version():
+    sub_version = time.strftime('%Y%m%d%H%M%S',time.localtime(time.time()))
+    with open('include/default.h', 'r') as f:
+        lines=f.readlines()
+        f.close()
+    with open('include/default.h', 'w') as w:
+        for line in lines:
+            if 'COMPILETIME' in line:
+                sp = line.rsplit(' ', 1)
+                line = '%s "%s"\n' % (sp[0], sub_version)
+            w.write(line)
+        w.close()
 
-def compile_program():
+
+def version_add_one():
+    with open('include/default.h', 'r') as f:
+        lines=f.readlines()
+        f.close()
+    with open('include/default.h', 'w') as w:
+        for line in lines:
+            if 'VERSION' in line:
+                sp = line.rsplit('"', 1)[0].rsplit(".", 1)
+                line = '%s.%d"\n' % (sp[0], int(sp[1])+1)
+            w.write(line)
+        w.close()
+    
+
+def compile_program(add_version=False):
+    if add_version:
+        version_add_one()
+    make_date_version()
     os.system("ctags -R")
     exec_res = os.system('gcc -o /usr/local/bin/gaosend src/*.c -I./include -O2  -Wall -g')
     if exec_res != 0:
@@ -251,16 +281,19 @@ def display_result():
 
 
 def main():
-    compile_program()
-    argc = len(sys.argv)
-    if argc == 1:
-        exit(0)
-    elif argc == 2:
-        execution_case(sys.argv[1])
-    else:
-        print "Input error"
+    parser = argparse.ArgumentParser(description='Compile program or perform test cases')
+    parser.add_argument('-n', '--number')
+    parser.add_argument('-c', '--compile', action='store_true')
+    args = parser.parse_args()
 
-    display_result()
+    if args.compile:
+        compile_program(True)
+    elif args.number:
+        if args.number.isdigit():
+            execution_case(args.number)
+        display_result()
+    else:
+        compile_program()
 
 
 if __name__ == "__main__":

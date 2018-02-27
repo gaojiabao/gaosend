@@ -96,7 +96,6 @@ void ExtractPacket()
 
     DisplayStreamStorage();
     if (iFlowSwitch && GetNum("exec") == 1) {
-        LOGRECORD(INFO, "Extract perfect stream start...");
         while (DeepPacketInspection() > 0) {
             ExtractPrefectStream(GetPktStrc());
         }
